@@ -1,0 +1,38 @@
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local Android SDK configuration
+local.properties
+
+# Generated files
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing / secrets
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.key
+secrets.properties
+
+# Environment files
+.env
+.env.*
+
+# Firebase / service credentials
+service-account*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
