@@ -1,4 +1,4 @@
-# MEMORIA TÉCNICA — THEHOUSE MOBILE
+﻿# MEMORIA TÉCNICA — THEHOUSE MOBILE
 
 Memoria persistente de decisiones técnicas y arquitectónicas. No es un diario. Cada entrada registra una decisión vigente o una propuesta futura con estado explícito.
 
@@ -352,3 +352,12 @@ Estados permitidos: `APROBADO`, `PROPUESTO`, `PENDIENTE`, `DESCARTADO`.
 - **Estado:** APROBADO
 - **Justificación:** Mitigación mínima de MASVS-STORAGE/AUTH según lo exigido por NV-04 v1.0.0.
 - **Impacto:** Implementación de renovación (OkHttp Authenticator + Mutex) queda documentada y `BLOCKED-BACKEND` hasta contrato real.
+
+## M-MOB-047 — Contrato register resuelto (corrección 2026-11-05)
+
+- **Decisión:** Backend confirmó POST /api/v1/auth/register con body exacto {"email","password"} (password 12–128, campos extra NO permitidos, Content-Type: application/json, sin 
+ame). Prueba real Azure: 201 Created. BLOCKED-REGISTER-CONTRACT resuelto y eliminado de evidencia NV-04.
+- **Estado:** APROBADO
+- **Justificación:** Verificación real contra backend más cambios unitarios verdes: 40/40 tests.
+- **Impacto:** RegisterRequestDto solo email+password; AuthRepositoryImpl no envía 
+ame/consentimientos (quedan solo en la UI); AuthValidators registra mínimo 12 y máximo 128 en registro; login limitado sin cambio de contrato (validadores login intactos). No se cambiaron otros endpoints.

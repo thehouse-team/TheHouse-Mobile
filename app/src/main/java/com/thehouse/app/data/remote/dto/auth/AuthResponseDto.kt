@@ -1,6 +1,5 @@
 package com.thehouse.app.data.remote.dto.auth
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -12,13 +11,15 @@ import kotlinx.serialization.Serializable
  * contrato detallado de respuesta aún no se capturó: no se inventan campos
  * obligatorios ni endpoints adicionales.
  */
+/**
+ * Contrato real confirmado del backend (POST /api/v1/auth/register):
+ * body con EXACTAMENTE `email` y `password`. Campos extra NO permitidos:
+ * no se envía `name` ni consentimientos (seman en la UI, no viajan al backend).
+ */
 @Serializable
 data class RegisterRequestDto(
-    val name: String,
     val email: String,
     val password: String,
-    @SerialName("acceptedTerms") val acceptedTerms: Boolean = true,
-    @SerialName("acceptedPrivacy") val acceptedPrivacy: Boolean = true,
 )
 
 @Serializable

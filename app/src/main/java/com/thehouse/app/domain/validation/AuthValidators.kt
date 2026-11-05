@@ -67,11 +67,22 @@ object AuthValidators {
         buildList {
             validateName(name)?.let { add(it) }
             validateEmail(email)?.let { add(it) }
-            validatePassword(password)?.let { add(it) }
+            when {
+                password.length < MIN_REGISTER_PASSWORD_LENGTH ->
+                    add(MESSAGE_REGISTER_PASSWORD_SHORT)
+                password.length > MAX_REGISTER_PASSWORD_LENGTH ->
+                    add(MESSAGE_REGISTER_PASSWORD_LONG)
+            }
             if (!acceptedTerms) add(MESSAGE_TERMS_REQUIRED)
             if (!acceptedPrivacy) add(MESSAGE_PRIVACY_REQUIRED)
         },
     )
 
     const val MIN_PASSWORD_LENGTH = 8
+
+    /** Reglas reales de register confirmadas en el backend: password 12–128. */
+    const val MIN_REGISTER_PASSWORD_LENGTH = 12
+    const val MAX_REGISTER_PASSWORD_LENGTH = 128
+    const val MESSAGE_REGISTER_PASSWORD_SHORT = "La contraseña debe tener al menos 12 caracteres."
+    const val MESSAGE_REGISTER_PASSWORD_LONG = "La contraseña no puede exceder 128 caracteres."
 }

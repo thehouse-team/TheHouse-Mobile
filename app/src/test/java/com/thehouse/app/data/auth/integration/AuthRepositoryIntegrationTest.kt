@@ -21,6 +21,8 @@ import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 
 /**
@@ -75,12 +77,18 @@ class AuthRepositoryIntegrationTest {
                     "accessToken":"access-abc","refreshToken":"refresh-xyz"}""",
             ),
         )
-        val result = repository.register("Victor", "v@correo.mx", "password123", true, true)
+        val result = repository.register("Victor", "v@correo.mx", "PasswordSegura123!", true, true)
         val session = result.getOrNull()
         assertTrue(result.isSuccess)
         assertEquals("u7", session?.userId)
         assertEquals("Victor", session?.displayName)
         assertEquals("refresh-xyz", storage.lastRaw)
+        // Contrato confirmado: el body enviado contiene SOLO email y password.
+        val sent = server.takeRequest().body!!.utf8()
+        val jsonSent = Json.parseToJsonElement(sent).jsonObject
+        assertEquals(setOf("email", "password"), jsonSent.keys)
+        assertEquals("v@correo.mx", jsonSent["email"]?.jsonPrimitive?.content)
+        assertEquals(false, sent.contains("nombre") || sent.contains("name"))
     }
 
     @Test

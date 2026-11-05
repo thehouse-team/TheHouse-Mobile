@@ -49,12 +49,11 @@ class AuthRepositoryImpl(
     ): Result<UserSession?> = runNetwork {
         toSessionResult(
             api.register(
+                // Contrato backend: SOLO email y password. `nombre` y
+                // consentimientos son solo UI y NO se envían.
                 RegisterRequestDto(
-                    name = name.trim(),
                     email = email.trim(),
                     password = password,
-                    acceptedTerms = acceptedTerms,
-                    acceptedPrivacy = acceptedPrivacy,
                 ),
             ),
         )

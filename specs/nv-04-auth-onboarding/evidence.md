@@ -31,7 +31,6 @@ Validación final limpia: `BUILD SUCCESSFUL in 1m 23s`; `assembleDebug`, `testDe
 NV04-T009  BLOCKED-BACKEND  (/auth/refresh NO confirmado → Authenticator/Mutex sin implementar)
 NV04-T016  BLOCKED-BACKEND  (/users/me NO confirmado → bienvenida usa nombre real de login/register)
 BLOCKED-PRIVACY-URL         (URL_AVISO_PRIVACIDAD pendiente humano; UI sin enlace inventado)
-BLOCKED-REGISTER-CONTRACT   (ver prueba Azure: 400 en register para payload razonable)
 ```
 
 ## 4. Pruebas
@@ -51,11 +50,11 @@ POST /api/v1/auth/register       → 400 {"title":"Validation failed","detail":"
                                    para los payloads {name,email,password,acceptedTerms,acceptedPrivacy}, camelCase+confirmPassword y PascalCase.
 ```
 
-Conclusión: `register` no acepta el cuerpo de registro que la app envía. **No se inventa contrato**: se requieren los nombres/validaciones exactos del DTO de registro (dependencia backend.). Login/logout con sesión no se pueden validar punta a punta hasta desbloquear register.
+Conclusión (2026-11-05): backend confirmó el contrato real de register: `POST /api/v1/auth/register` con body EXACTO `{"email","password"}` (sin `name`, sin consentimientos; password 12–128). Prueba real Azure 2026-11-05 con `{"email":"qa.register.u2.1105@ejemplo.com","password":"PasswordSegura123!"}` → **201 Created** (usuario creado). `BLOCKED-REGISTER-CONTRACT` resuelto y eliminado; la app enviará solo `email` y `password` (`RegisterRequestDto` y `AuthRepositoryImpl` actualizados; `nombre` permanece solo en UI). Login/logout punta a punta pueden revalidarse tras register 201.
 
 ## 6. Pendientes humanos
 
-- Contrato exacto del body de `POST /api/v1/auth/register` (BLOCKED-REGISTER-CONTRACT).
+- ~~Contrato exacto del body de `POST /api/v1/auth/register`~~ Resuelto 2026-11-05: `{"email","password"}` verificado con 201 contra Azure.
 - `URL_AVISO_PRIVACIDAD`.
 - Fidelidad visual: los HTML de la maqueta NO estuvieron accesibles en la sesión (`C:\Users\vicko\...` inexistente en esta máquina); el diseño U2 es Material 3 neutro. Requiere revisión humana contra la maqueta.
 - Re-firmar AAB (ver evidencia NV-03).
