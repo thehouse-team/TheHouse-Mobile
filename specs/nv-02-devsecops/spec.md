@@ -8,10 +8,11 @@
 |---|---|
 | Spec ID | NV-02 |
 | Nombre | DevSecOps |
-| Versión | 1.0.0 |
-| Fecha | 2026-10-31 |
+| Versión | 1.1.0 |
+| Fecha | 2026-11-04 |
 | Estado | ⛔ NO EJECUTAR |
 | Autorización | PENDIENTE |
+| Alcance | Documentar ahora; ejecutar después de NV-04 en el orden U2 |
 | Dependencia | NV-01 Foundation |
 | Estado de dependencia | ✅ EJECUTADA / VALIDADA / CERRADA |
 
@@ -418,10 +419,22 @@ T025–T028 constituyen la **VALIDACIÓN GLOBAL NV-02** y se trazan a `NV02-REQ-
 - Gates que bloquean sin criterio de remediación.
 - Uso indebido de `DEFERRED JUSTIFICADO` para evitar pruebas posibles.
 - Scope creep de CI hacia release/publicación.
-- Ejecución remota de GitHub Actions sin repositorio/remote real.
+- Ejecución remota de GitHub Actions sin acceso al remoto GitHub existente (verificar antes de ejecutar).
 - Umbrales de cobertura arbitrarios sin baseline.
 
-## 10. Estado
+## 10. CD futuro (documentación, coordinado con NV-03)
+
+El CD de TheHouse Mobile, cuando se ejecute (después del CI de NV-02 y coordinado con NV-03 Release/Play), será:
+
+- Activado **solo después de CI** con quality gates pasados.
+- Genera AAB release firmado (Play App Signing; upload key y credenciales vía secretos GitHub; nunca en el repositorio).
+- Subida únicamente a **pista interna** de Play Console.
+- Disparo manual del deploy con `workflow_dispatch`.
+- **GitHub Environment** con aprobación humana requerida antes de subir.
+- El **primer AAB se sube manualmente** a Play Console; la automatización solo se considerará después de un éxito manual verificado.
+- No crear workflows de CD en fases de documentación.
+
+## 11. Estado
 
 ```text
 ⛔ NO EJECUTAR

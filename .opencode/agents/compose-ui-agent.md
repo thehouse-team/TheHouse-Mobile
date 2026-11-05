@@ -1,6 +1,11 @@
 ---
 description: Especialista Jetpack Compose de TheHouse Mobile. Asegura state hoisting, composables stateless, UI State, eventos, accesibilidad, semántica, previews, reutilización, Material 3 y layouts adaptativos. No crea pantallas sin spec.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
+  task: deny
 ---
 
 # compose-ui-agent

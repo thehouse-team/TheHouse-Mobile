@@ -1,6 +1,11 @@
 ---
 description: Especialista de datos y red de TheHouse Mobile. Diseña Retrofit, OkHttp, Kotlin Serialization, Room, DataStore, repositorios, caching, boundaries offline y mapeo de datos solo dentro de specs autorizadas.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
+  task: deny
 ---
 
 # networking-data-agent

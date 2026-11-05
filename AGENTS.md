@@ -2,7 +2,7 @@
 
 ## 1. Propósito
 
-Este documento define cómo deben actuar los agentes de IA dentro de `C:\THEHOUSE\Mobile`.
+Este documento define cómo deben actuar los agentes de IA dentro de la raíz actual del repositorio TheHouse Mobile. El repositorio es un repositorio Git con remoto GitHub existente; el trabajo se realiza mediante ramas feature.
 
 Su función es impedir implementaciones sin autorización, preservar la trazabilidad SDD y asegurar que cada cambio respete la Constitución Mobile.
 
@@ -25,6 +25,18 @@ task activo
 Si existe conflicto, prevalece el documento de mayor jerarquía.
 
 Una spec no puede ejecutar tareas de otra spec. Una task no puede ampliar el alcance de su plan. Un agente no puede inventar aprobaciones.
+
+Reglas de gobernanza obligatorias:
+
+- **Spec primero:** ninguna funcionalidad, pantalla, endpoint, entidad ni integración se implementa sin una spec aprobada previamente.
+- **Autorización humana explícita:** cada ejecución de spec, plan o task requiere autorización humana confirmada antes de implementar.
+- **Iteración acotada:** cada iteración de trabajo debe comprobar al menos:
+  1. `constitution.md`;
+  2. `AGENTS.md`;
+  3. `memoria.md`;
+  4. spec activa (y su plan/task);
+  5. brechas OWASP MASVS aplicables al alcance.
+- Corregir y repetir como máximo **2 ciclos** de coherencia/corrección; si persiste la inconsistencia, detenerse y escalar a decisión humana.
 
 ## 3. Declaración obligatoria antes de implementar
 
@@ -51,9 +63,18 @@ El agente debe detenerse y solicitar autorización humana.
 - Las dependencias técnicas base fueron agregadas y validadas.
 - La estructura SDD fue creada.
 - `NV-01 Foundation`: **✅ EJECUTADA / VALIDADA** (30/30 tasks).
-- `NV-02 DevSecOps`: creada, **⛔ NO EJECUTAR**.
-- `NV-03 Release / Play`: creada, **⛔ NO EJECUTAR**.
-- `NV-04+`: no creadas, **⛔ NO EJECUTAR**.
+- `NV-03 Release / Play`: documentada para U2, **⛔ NO EJECUTAR**.
+- `NV-04 Auth + Onboarding`: creada, **⛔ NO EJECUTAR**, Alcance U2.
+- `NV-02 DevSecOps / CI-CD`: documentada ahora, ejecución después de NV-04, **⛔ NO EJECUTAR**.
+
+Orden oficial de specs para U2:
+
+| Orden | Spec | Estado |
+|---|---|---|
+| 1 | NV-01 Foundation | Ejecutada / validada |
+| 2 | NV-03 Release / Google Play | U2 — Ejecutar tras autorización humana |
+| 3 | NV-04 Auth + Onboarding | U2 — Nueva, ⛔ NO EJECUTAR |
+| 4 | NV-02 DevSecOps / CI-CD | Documentar ahora, ejecutar después |
 - No existe una spec funcional autorizada.
 - No hay funcionalidades de negocio implementadas.
 - Firebase, Maps, ML, IA generativa y Google Play no están configurados.
@@ -239,3 +260,12 @@ Cualquier resultado distinto de `PASS` debe explicar la causa y la acción reque
 ## 17. Principio final
 
 La velocidad no justifica romper la Constitución. Si una tarea no puede ejecutarse de forma segura, trazable y a costo $0, debe detenerse y escalarse para decisión humana.
+
+## 18. MCP (Model Context Protocol)
+
+Decisiones vigentes (registradas también en `memoria.md`):
+
+- **Firebase MCP:** comando soportado `npx -y firebase-tools@latest mcp`. Debe permanecer **deshabilitado / no usado** hasta la futura spec de notificaciones (FCM). No instalar ni ejecutar sin spec autorizada.
+- **GitHub MCP:** se referencia el servidor oficial `github/github-mcp-server`. No se inventan tokens; si requiere autenticación, se referencia una variable de entorno. Se prefiere modo read-only para agentes de análisis.
+- Durante fases de documentación no se instalan ni ejecutan servidores MCP.
+- La configuración corresponde a `opencode.json` en la raíz del repositorio; no incluye secretos.

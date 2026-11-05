@@ -1,6 +1,11 @@
 ---
 description: Guardián de gobernanza SDD de TheHouse Mobile. Valida Constitución, AGENTS, memoria, spec, plan, task, autorización, alcance y trazabilidad antes de permitir cualquier implementación.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
+  task: deny
 ---
 
 # sdd-guardian

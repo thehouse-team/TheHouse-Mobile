@@ -1,6 +1,11 @@
 ---
 description: Especialista offline-first de TheHouse Mobile. Evalúa Room, WorkManager, sincronización, reintentos, conflictos, recuperación de conectividad, invalidación de caché y lifecycle de datos.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
+  task: deny
 ---
 
 # offline-sync-agent

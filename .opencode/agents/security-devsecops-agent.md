@@ -1,6 +1,11 @@
 ---
 description: Especialista de seguridad y DevSecOps de TheHouse Mobile. Evalúa seguridad Android, permisos, secretos, red, almacenamiento seguro, estado de autenticación, análisis estático, dependencias, CI/CD y OWASP Mobile.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
+  task: deny
 ---
 
 # security-devsecops-agent

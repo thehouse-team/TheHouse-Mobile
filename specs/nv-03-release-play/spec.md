@@ -8,15 +8,18 @@
 |---|---|
 | Spec ID | NV-03 |
 | Nombre | Release / Google Play |
-| Versión | 1.0.0 |
-| Fecha | 2026-10-31 |
+| Versión | 1.1.0 |
+| Fecha | 2026-11-04 |
 | Estado | ⛔ NO EJECUTAR |
 | Autorización | PENDIENTE |
-| Dependencia | NV-01 y NV-02 aprobadas; funcionalidad lista |
+| Alcance | U2 |
+| Dependencia | NV-01 ✅ ejecutada; se ejecuta antes de NV-04 en el orden U2; NV-02 documenta ahora y ejecuta después |
 
 ## 1. Contexto
 
 TheHouse Mobile aún no tiene funcionalidades de negocio ni release configurado. Esta spec define el proceso futuro para versionar, firmar, empaquetar y preparar Google Play sin exponer secretos ni publicar automáticamente.
+
+Nota U2: la cuenta de Play Console **ya existe y ya está pagada**; no hay task de creación de cuenta. Para U2 la entrega es AAB firmado disponible (verificación); la subida a pista interna requiere autorización humana.
 
 ## 2. Objetivo
 
@@ -44,9 +47,9 @@ Establecer un release seguro, reproducible y conforme a Google Play, con signing
 ## 4. Fuera de alcance
 
 - Publicar la aplicación.
-- Crear cuenta de Play Console.
+- Crear cuenta de Play Console (ya existe y está pagada).
 - Comprar servicios.
-- Subir AAB.
+- Subir AAB (U2 entrega AAB firmado disponible; la subida requiere autorización humana).
 - Configurar Firebase, Maps, ML o IA.
 - Implementar funcionalidades.
 - Cambiar el toolchain.
@@ -76,19 +79,36 @@ Separar signing debug y release.
 
 Definir almacenamiento seguro de keystore y passwords.
 
-**Aceptación:** ningún secreto está en el repositorio; se usan secrets locales o CI.
+Detalles U2:
+
+- Play App Signing con upload key.
+- Upload key en keystore **fuera del repositorio**.
+- Nunca guardar contraseñas en Git; usar variables de entorno o `local.properties` (ignorado).
+- El `signingConfig` de release obtiene credenciales desde esas fuentes.
+
+**Aceptación:** ningún secreto está en el repositorio; se usan secrets locales ignorados o CI.
 
 ### NV03-REQ-005 — Debug vs release
 
 Definir diferencias de build, logging, endpoints y optimización.
 
+Detalles U2: logging de aplicación desactivado/reducido en release; `API_BASE_URL` configurable (`BuildConfig`), con valor U2 conocido `https://ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io`; no hardcodear la URL dentro de clases Kotlin.
+
 **Aceptación:** release no habilita logging sensible ni configuración de debug.
 
 ### NV03-REQ-006 — Release build y minificación
 
-Definir optimización, minificación y reglas de preservación.
+Definir optimización, minificación y reglas de preservación. U2: AAB firmado con **R8 activo** en release.
 
 **Aceptación:** el build release es reproducible y no rompe APIs necesarias.
+
+### NV03-REQ-017 — Identidad de la aplicación
+
+- `applicationId` definitivo: `<APPLICATION_ID>` — **PENDIENTE HUMANO** hasta recibir el valor real.
+- Es permanente después del primer AAB publicado.
+- Alternativa de referencia actual documentada: `com.thehouse.app` (M-MOB-024) como placeholder hasta decisión humana.
+
+**Aceptación:** el `applicationId` existe, es visto por el humano antes del primer AAB y no cambia después.
 
 ### NV03-REQ-007 — AAB
 
@@ -100,13 +120,43 @@ Definir la generación y verificación de Android App Bundle.
 
 Definir checklist de ficha, clasificación, países, testing y requisitos de Play Console.
 
+Detalle U2 y de producción futura:
+
+- **U2:** pista interna de Play Console.
+- **Producción futura:** prueba cerrada solo si la política aplicable a la cuenta lo exige. Si es cuenta personal nueva sujeta a esa regla: mínimo 12 testers y 14 días consecutivos. **No afirmar que aplica hasta verificar el tipo y la fecha de creación de la cuenta** (`PENDIENTE HUMANO`).
+
 **Aceptación:** el checklist está completo y no se publica automáticamente.
 
 ### NV03-REQ-009 — Privacy notice
 
 Definir enlace y contenido mínimo del aviso de privacidad.
 
+URL del aviso: `<URL_AVISO_PRIVACIDAD>` — **PENDIENTE HUMANO**.
+
 **Aceptación:** la política es accesible y coherente con el manejo de datos.
+
+### NV03-REQ-009b — Store listing
+
+Documentar para Play: URL del aviso de privacidad (`<URL_AVISO_PRIVACIDAD>`), Data Safety, clasificación de contenido, público **18+** y capturas de pantalla.
+
+**Aceptación:** el listing está completo sin datos falsos en Data Safety.
+
+### NV03-REQ-018 — Manifest y seguridad de red
+
+Tasks U2:
+
+- `android.permission.INTERNET` como único permiso (justificado: comunicación HTTPS con el backend).
+- Tráfico en claro deshabilitado (`usesCleartextTraffic=false`).
+- `network_security_config` restringido al dominio del backend.
+- Reglas de backup: `fullBackupContent` y `data_extraction_rules` que **excluyan cualquier almacenamiento de sesión/token**.
+
+**Aceptación:** manifest verificado, cleartext deshabilitado y backups excluyen tokens.
+
+### NV03-REQ-019 — Eliminación de cuenta
+
+`Posterior — obligatorio antes de producción`. Documentado en store listing y Data Safety cuando aplique.
+
+**Aceptación:** estado registrado y bloqueo de producción hasta cumplimiento.
 
 ### NV03-REQ-010 — Permissions disclosure
 
@@ -171,14 +221,22 @@ Definir validaciones previas y estrategia de rollback/versionado.
 | NV03-REQ-015 | P6 | NV03-T021, NV03-T023 |
 | NV03-REQ-016 | P6 | NV03-T020, NV03-T022, NV03-T024 |
 
+| NV03-REQ-016 | P6 | NV03-T020, NV03-T022, NV03-T024 |
+| NV03-REQ-017 | P1 | NV03-T001 |
+| NV03-REQ-009b | P4 | NV03-T013, NV03-T015 |
+| NV03-REQ-018 | P3/P4 | NV03-T025 |
+| NV03-REQ-019 | P4 | NV03-T015 |
+
 ## 7. Criterios de aceptación globales
 
-- `versionCode` válido.
-- AAB validado.
-- Signing seguro.
+- `versionName`/`versionCode` coherentes con `VERSIONING.md`.
+- `applicationId` definitivo autorizado por el humano (`<APPLICATION_ID>`).
+- AAB release firmado con R8 activo y logging reducido.
+- Signing seguro (Play App Signing, upload key fuera del repo, sin contraseñas en Git).
+- Manifest/red: INTERNET justificado, cleartext deshabilitado, backups excluyen tokens.
 - Tests y lint exitosos.
-- Privacy notice y Data Safety completos.
-- Permisos justificados.
+- Privacy notice (`<URL_AVISO_PRIVACIDAD>`) y Data Safety completos.
+- Permisos justificados, público 18+.
 - COST-001 en $0.
 - Ninguna publicación ejecutada sin autorización.
 

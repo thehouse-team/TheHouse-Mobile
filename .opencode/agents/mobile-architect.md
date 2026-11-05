@@ -1,6 +1,11 @@
 ---
 description: Arquitecto Android de TheHouse Mobile. Valida y diseña MVVM, Clean Architecture, UDF, Coroutines, Flow, Navigation, boundaries, lifecycle, performance y modularidad solo dentro de una spec autorizada.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
+  task: deny
 ---
 
 # mobile-architect
