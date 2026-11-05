@@ -2,13 +2,13 @@
 
 > ## ⚙ EJECUTADA EN FASE B U2 (PARCIAL)
 >
-> Tasks P1–P6 + manifest/red ejecutadas con autorización humana (Victor Manuel Jose Jose, 2026-11-04). La subida a Play y la firma del AAB requieren acción humana adicional (ver evidence.md). No marcar tasks nuevas sin autorización explícita.
+> Tasks P1–P6 + manifest/red ejecutadas con autorización humana (Victor Manuel Jose Jose, 2026-11-04). AAB generado, firmado y verificado por acción humana (2026-11-05, ver evidence.md). La subida a Play requiere autorización humana adicional. No marcar tasks nuevas sin autorización explícita.
 >
 > | Campo | Valor |
 > |---|---|
 > | Spec | NV-03 Release / Google Play |
 > | Plan | NV03-PLAN-1.1 |
-> | Estado | ✅ EJECUTADA U2/PARCIAL — BLOCKED-SIGNING-ENV, BLOCKED-PRIVACY-URL |
+> | Estado | ✅ EJECUTADA U2/PARCIAL — AAB firmado y verificado (`jar verified.`); BLOCKED-PRIVACY-URL |
 
 | Campo | Valor |
 |---|---|

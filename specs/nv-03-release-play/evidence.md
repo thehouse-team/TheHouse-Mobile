@@ -23,22 +23,27 @@
 
 ```powershell
 .\gradlew.bat clean assembleDebug testDebugUnitTest lintDebug   # BUILD SUCCESSFUL (1m 23s)
-.\gradlew.bat bundleRelease                                      # BUILD SUCCESSFUL (2m 53s)
+.\gradlew.bat bundleRelease                                      # BUILD SUCCESSFUL (2m 53s) — re-ejecutado con éxito por el autorizador con variables THEHOUSE_* (2026-11-05)
 # AAB: app/build/outputs/bundle/release/app-release.aab
-# jarsigner -verify: "jar is unsigned" en la shell del agente
+# jarsigner -verify -verbose -certs: "jar verified." (2026-11-05, sesión del autorizador)
 ```
 
-## 3. Estado del signing (pendiente humano)
+## 3. Estado del signing (resuelto por acción humana 2026-11-05)
 
-Las variables `THEHOUSE_KEYSTORE_PATH | THEHOUSE_KEYSTORE_PASSWORD | THEHOUSE_KEY_ALIAS | THEHOUSE_KEY_PASSWORD` fueron cargadas por el autorizador en SU sesión, pero NO están visibles en la shell del agente (ni Machine ni User). Por decisión de seguridad (no terminar secretos vía prompt) el agente NO las establecó. Resultado:
+Las variables `THEHOUSE_*` fueron cargadas por el autorizador en SU sesión PowerShell y `bundleRelease` se ejecutó desde ahí. Resultado real (hechos comprobados):
 
 ```text
-AAB release SIN FIRMAR en esta sesión. Tarea de cierre con autorización humana (sesión con variables):
-  .\gradlew.bat bundleRelease
-  jarsigner -verify app\build\outputs\bundle\release\app-release.aab   # debe decir "jar verified"
+AAB: app\build\outputs\bundle\release\app-release.aab   (BUILD SUCCESSFUL)
+jarsigner -verify -verbose -certs                     → "jar verified."
+Firmante: CN=TheHouse Team, OU=Development, O=TheHouse, ST=Hidalgo, C=MX
+Clave: RSA 2048 bits | versionName=1.0.0 | versionCode=10000
 ```
 
-`BLOCKED-SIGNING-ENV` (no bloquea el resto de U2).
+- Los warnings de certificado autofirmado/PKIX NO se registran como fallo: `jarsigner` terminó en `jar verified.`.
+- Secretos del keystore permanecen fuera del repo; nada versionado.
+- NV03-T010 (generación) y NV03-T011 (verificación de firma/integridad) quedan COMPLETADAS con esta evidencia. No se tocó código ni se ejecutó Gradle en esta actualización.
+
+BLOQUEO RESUELTO: ~~`BLOCKED-SIGNING-ENV`~~ eliminado (2026-11-05).
 
 ## 4. Bloqueo adicional
 

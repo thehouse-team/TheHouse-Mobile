@@ -39,7 +39,8 @@ Los tags Git se crean solo con autorización humana explícita y en coordinació
 
 | Fecha | versionName | versionCode | Pista | Resultado |
 |---|---|---|---|---|
-| 2026-11-04 | 1.0.0 | 10000 | interna (U2) | AAB generado sin firmar en shell del agente — re-firmar en sesión con variables `THEHOUSE_*` (`BLOCKED-SIGNING-ENV`) |
+| 2026-11-04 | 1.0.0 | 10000 | interna (U2) | AAB generado en build U2 |
+| 2026-11-05 | 1.0.0 | 10000 | interna (U2) | AAB re-firmado por el autorizador: `jarsigner -verify` → `jar verified.` (CN=TheHouse Team, RSA 2048). Sin subida a Play |
 
 ## 4. Reglas
 
