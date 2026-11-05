@@ -1,6 +1,11 @@
 ---
 description: Especialista de testing y calidad de TheHouse Mobile. Planifica y revisa unit tests, ViewModel tests, repository tests, Compose UI tests, instrumented tests, integration tests, security tests, cobertura y quality gates.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
+  task: deny
 ---
 
 # testing-quality-agent

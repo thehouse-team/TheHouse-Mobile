@@ -11,7 +11,7 @@ class NetworkingFoundationTest {
     fun `builds retrofit with placeholder base url without executing requests`() {
         val retrofit = RetrofitFactory.create(
             baseUrl = "https://example.invalid/",
-            client = HttpClientFactory.create(enableLogging = false),
+            client = HttpClientFactory.create(enableLogging = false, cacheDir = null),
             json = JsonProvider.create(),
         )
 
@@ -23,7 +23,7 @@ class NetworkingFoundationTest {
         assertThrows(IllegalArgumentException::class.java) {
             RetrofitFactory.create(
                 baseUrl = "http://example.invalid/",
-                client = HttpClientFactory.create(enableLogging = false),
+                client = HttpClientFactory.create(enableLogging = false, cacheDir = null),
                 json = JsonProvider.create(),
             )
         }

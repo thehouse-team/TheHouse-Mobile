@@ -1,4 +1,4 @@
-# MEMORIA TÉCNICA — THEHOUSE MOBILE
+﻿# MEMORIA TÉCNICA — THEHOUSE MOBILE
 
 Memoria persistente de decisiones técnicas y arquitectónicas. No es un diario. Cada entrada registra una decisión vigente o una propuesta futura con estado explícito.
 
@@ -225,10 +225,10 @@ Estados permitidos: `APROBADO`, `PROPUESTO`, `PENDIENTE`, `DESCARTADO`.
 
 ## M-MOB-032 — Roadmap funcional futuro
 
-- **Decisión:** Documentar el roadmap únicamente en memoria, sin crear carpetas ni código.
-- **Estado:** PENDIENTE
-- **Justificación:** Evita specs vacías y sobrearquitectura antes de autorización.
-- **Impacto:** Secuencia prevista: NV-04 Registration, NV-05 Login, NV-06 First-Time Setup / Profile, NV-07 Home, NV-08 University Catalog, NV-09 Search and Map, NV-10 Property Detail, NV-11 Favorites, NV-12 Visit Scheduling, NV-13 Chat, NV-14 Rental Closing, NV-15 Reviews, NV-16 Notifications / FCM, NV-17 Privacy / Delete Account, NV-18 Offline Sync, NV-19 Smart Match / ML / Generative AI. No se crean esas carpetas.
+- **Decisión:** Documentar el roadmap en memoria y en specs reales cuando exista autorización. Actualizado para U2: el orden oficial de specs es `NV-01 Foundation (ejecutada)` → `NV-03 Release / Google Play` → `NV-04 Auth + Onboarding` → `NV-02 DevSecOps / CI-CD (documentar ahora, ejecutar después)`. NV-04 consolida registro, login, logout, persistencia de sesión y onboarding / first-time setup. La numeración NV Mobile es independiente de la numeración NV del backend, aunque ambos puedan tener un NV-04.
+- **Estado:** APROBADO
+- **Justificación:** Secuencia U2 acordada por el humano; evita specs vacías y definida antes de autorización.
+- **Impacto:** Secuencia completa prevista: NV-04 Auth + Onboarding (U2), luego NV-02 DevSecOps, luego specs funcionales posteriores: NV-05 Home, NV-06 University Catalog, NV-07 Search and Map, NV-08 Property Detail, NV-09 Favorites, NV-10 Visit Scheduling, NV-11 Chat, NV-12 Rental Closing, NV-13 Reviews, NV-14 Notifications / FCM, NV-15 Privacy / Delete Account, NV-16 Offline Sync, NV-17 Smart Match / ML / Generative AI.
 
 ## M-MOB-033 — Separación ML / IA generativa
 
@@ -253,10 +253,10 @@ Estados permitidos: `APROBADO`, `PROPUESTO`, `PENDIENTE`, `DESCARTADO`.
 
 ## M-MOB-036 — Git en bootstrap
 
-- **Decisión:** No ejecutar `git init`, `git add`, `git commit` ni `git push` en la tarea de bootstrap.
+- **Decisión:** Durante el bootstrap no se ejecutó `git init`, `git add`, `git commit` ni `git push`.
 - **Estado:** APROBADO
 - **Justificación:** Evita efectos laterales no solicitados y preserva el estado del repositorio.
-- **Impacto:** Las operaciones Git requerirán autorización explícita.
+- **Impacto:** El repositorio ahora **es Git con remoto GitHub existente** y el trabajo se realiza mediante ramas feature. Las operaciones Git de escritura (commit, push) siguen requiriendo autorización explícita.
 
 ## M-MOB-037 — Estado de specs NV-01, NV-02 y NV-03
 
@@ -285,3 +285,79 @@ Estados permitidos: `APROBADO`, `PROPUESTO`, `PENDIENTE`, `DESCARTADO`.
 - **Estado:** APROBADO
 - **Justificación:** Evita secretos versionados y previene filtración de headers, bodies, paths, query params, tokens, credenciales o PII.
 - **Impacto:** DataStore queda limitado a preferencias no sensibles. URLs reales y entornos futuros deberán inyectarse de forma segura sin versionar secretos ni cambiar el toolchain.
+
+## M-MOB-041 — Matriz académica U2
+
+- **Decisión:** Registrar la matriz académica por requisito, con spec responsable y estado real.
+
+| Requisito | Spec | Estado |
+|---|---|---|
+| Descargable desde Google Play | NV-03 | Pendiente (requiere NV-03 ejecutada) |
+| Fidelidad a maqueta | NV-04 | Pendiente (referencia visual) |
+| Registro | NV-04 | Pendiente (backend `POST /api/v1/auth/register` confirmado) |
+| Login | NV-04 | Pendiente (backend `POST /api/v1/auth/login` confirmado) |
+| Primer ingreso / onboarding | NV-04 | Pendiente |
+| Logout | NV-04 | Pendiente (backend `POST /api/v1/auth/logout` confirmado) |
+| Sesión persistente | NV-04 | Pendiente (diseño M-MOB-044) |
+| Permisos Android | NV-03 / NV-04 | Pendiente (`INTERNET` justificado) |
+| Aviso de privacidad | NV-03 | Pendiente (URL humana pendiente) |
+| Caché móvil | NV-04 | Pendiente (OkHttp HTTP disk cache) |
+| Pruebas unitarias | NV-02 / NV-04 | Pendiente |
+| Pruebas de integración | NV-02 / NV-04 | Pendiente (MockWebServer) |
+| Pruebas de seguridad | NV-02 | Pendiente |
+| CI/CD desde GitHub | NV-02 | Pendiente (documentar ahora, ejecutar después) |
+| Versionamiento | NV-03 | Pendiente (definido en `VERSIONING.md`) |
+| Eliminación de cuenta | Posterior | Obligatorio antes de producción |
+| Push notifications | Posterior | Pendiente |
+| Moderación | Posterior | Pendiente |
+| SQLite / sincronización | Posterior | Pendiente |
+| ML | Posterior | Pendiente |
+| IA generativa | Posterior | Pendiente |
+
+- **Estado:** PENDIENTE
+- **Justificación:** Correspondencia trazable entre requisitos académicos y specs.
+- **Impacto:** No se marca como implementado nada sin evidencia real registrada.
+
+## M-MOB-042 — Sesión y seguridad de tokens (diseño NV-04)
+
+- **Decisión:** Diseño de sesión persistente: access token solo en memoria; refresh token cifrado con AES-GCM usando Android Keystore, con implementación directa de Keystore (no `EncryptedSharedPreferences`). Renovación automática con OkHttp `Authenticator`, refresh single-flight con `Mutex` y máximo una renovación concurrente; fallo de refresh → logout local. Logout: intento backend (`POST /api/v1/auth/logout`), limpieza siempre del estado local, borrado de tokens y cancelación de trabajos asociados; sin red → logout local inmediato.
+- **Estado:** PROPUESTO
+- **Justificación:** Requisito académico de sesión persistente con mínimo riesgo de filtración; cualquier librería adicional solo se usará si demuestra compatibilidad con Kotlin `2.2.10`.
+- **Impacto:** La implementación de renovación automática depende de `POST /api/v1/auth/refresh`, **no confirmado**: tasks dependientes quedan `BLOCKED-BACKEND`. `FLAG_SECURE` queda PROPUESTO y solo será requisito si el humano lo aprueba. Nunca: tokens o contraseñas en logs, credenciales en backups.
+
+## M-MOB-043 — MCP deshabilitado (Firebase) y GitHub MCP oficial
+
+- **Decisión:** Registrar en `opencode.json` el servidor Firebase MCP (`npx -y firebase-tools@latest mcp`) **disabled** hasta la futura spec de notificaciones, y el servidor oficial GitHub MCP (`github/github-mcp-server`) referenciando variable de entorno para autenticación, sin tokens versionados y con preferencia read-only para análisis.
+- **Estado:** APROBADO
+- **Justificación:** Preparar las herramientas sin activarlas ni introducir secretos; FCM aún sin spec.
+- **Impacto:** No se instala ni ejecuta ningún MCP durante fases de documentación. Decisiones también reflejadas en `AGENTS.md` sección 18.
+
+## M-MOB-044 — Backend U2 y contrato confirmado
+
+- **Decisión:** Backend .NET 10 en Azure Container Apps con URL pública estable `https://ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io`. Contrato confirmado: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/properties`, `GET /api/v1/properties/{id}`, `GET /api/v1/universities`, `GET /api/v1/universities/{id}`, `GET /health/live`, `GET /health/ready`. **No confirmados:** `POST /api/v1/auth/refresh` y `GET /api/v1/users/me`.
+- **Estado:** APROBADO
+- **Justificación:** Fuente única de verdad del contrato móvil ↔ backend; no se inventan endpoints.
+- **Impacto:** Los flujos móvil que requieran refresh o identificación de usuario (bienvenida personalizada, renovación automática) quedan `BLOCKED-BACKEND` hasta evidencia del contrato real. `API_BASE_URL` configurable, no hardcodeada en clases Kotlin.
+
+## M-MOB-045 — Resultado de ejecución U2 (NV-03 + NV-04)
+
+- **Decisión:** Registrar los hallazgos reales de la FASE B U2: NV-04 ejecutada (auth + onboarding) con `BUILD SUCCESSFUL` en `clean assembleDebug testDebugUnitTest lintDebug`; 401 del login funcional; `POST /api/v1/auth/register` rechaza los payloads razonables ({name,email,password,acceptedTerms,acceptedPrivacy} y variantes) con 400 Problem Details "Entrada inválida". AAB release generado PERO sin firmar en la sesión del agente (variables THEHOUSE_* no visibles fuera de la sesión del autorizador).
+- **Estado:** APROBADO
+- **Justificación:** Evidencia real registrada en `specs/nv-04-auth-onboarding/evidence.md` y `specs/nv-03-release-play/evidence.md`.
+- **Impacto:** `BLOCKED-REGISTER-CONTRACT` (se necesita contrato exacto del body de register) y `BLOCKED-SIGNING-ENV` (re-firmar AAB en sesión con variables). Login/logout punta a punta quedan parcialmente validados (endpoint reactivo; flujo completo requiere register). No se sube nada a Play.
+
+## M-MOB-046 — Estado real de tokens de sesión tras U2
+
+- **Decisión:** El access token vive SOLO en el proceso (InMemorySessionStore); el refresh token se cifra con AES-GCM + Android Keystore y se persiste en DataStore excluido de backup. Sin `/auth/refresh` confirmado NO hay renovación automática ni sesión "siempre viva": ante 401 o proceso nuevo sin sesión válida, la app limpia el estado y regresa a Login.
+- **Estado:** APROBADO
+- **Justificación:** Mitigación mínima de MASVS-STORAGE/AUTH según lo exigido por NV-04 v1.0.0.
+- **Impacto:** Implementación de renovación (OkHttp Authenticator + Mutex) queda documentada y `BLOCKED-BACKEND` hasta contrato real.
+
+## M-MOB-047 — Contrato register resuelto (corrección 2026-11-05)
+
+- **Decisión:** Backend confirmó POST /api/v1/auth/register con body exacto {"email","password"} (password 12–128, campos extra NO permitidos, Content-Type: application/json, sin 
+ame). Prueba real Azure: 201 Created. BLOCKED-REGISTER-CONTRACT resuelto y eliminado de evidencia NV-04.
+- **Estado:** APROBADO
+- **Justificación:** Verificación real contra backend más cambios unitarios verdes: 40/40 tests.
+- **Impacto:** RegisterRequestDto solo email+password; AuthRepositoryImpl no envía 
+ame/consentimientos (quedan solo en la UI); AuthValidators registra mínimo 12 y máximo 128 en registro; login limitado sin cambio de contrato (validadores login intactos). No se cambiaron otros endpoints.

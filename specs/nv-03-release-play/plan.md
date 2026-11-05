@@ -7,14 +7,18 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-03 Release / Google Play |
-| Plan ID | NV03-PLAN-1.0 |
-| Versión | 1.0.0 |
+| Plan ID | NV03-PLAN-1.1 |
+| Versión | 1.1.0 |
+| Fecha | 2026-11-04 |
+| Alcance | U2 |
 | Estado | ⛔ NO EJECUTAR |
-| Dependencia | Foundation y DevSecOps aprobados; app funcional |
+| Dependencia | NV-01 ✅ ejecutada; se ejecuta antes de NV-04 en el orden U2; NV-02 documenta ahora y ejecuta después |
 
 ## 1. Estrategia
 
 Preparar el release en seis fases verificables. La publicación es siempre un acto humano explícito y no forma parte de la automatización.
+
+Detalle U2: la cuenta de Play Console ya existe y está pagada. La entrega U2 es **AAB release firmado disponible** con R8 activo, logging reducido, `API_BASE_URL` configurable (`https://ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io`) y manifest/red endurecido. La subida a pista interna requiere autorización humana.
 
 ## 2. Fases
 
@@ -125,6 +129,14 @@ P3 requiere signing aprobado. P6 requiere todas las fases y autorización humana
 - AAB firmado.
 - Países y precios cuando aplique.
 - Revisión de COST-001.
+
+Notas U2 (NV03-REQ-008, 009b, 019):
+
+- U2: pista interna.
+- Producción futura: prueba cerrada solo si la política de la cuenta lo exige (cuenta personal nueva: 12 testers / 14 días consecutivos). No afirmar que aplica hasta verificar tipo y fecha de la cuenta.
+- Público 18+; URL privacidad `<URL_AVISO_PRIVACIDAD>` (pendiente humano).
+- Eliminación de cuenta: `Posterior — obligatorio antes de producción`.
+- Play App Signing; upload key fuera del repositorio; sin contraseñas en Git.
 
 ## 6. Quality gates
 

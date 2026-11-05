@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    NV-03 U2: seguridad de red.
+    Cleartext deshabilitado globalmente; solo HTTPS hacia el backend.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io</domain>
+    </domain-config>
+</network-security-config>
