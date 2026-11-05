@@ -6,6 +6,7 @@ import com.thehouse.app.data.serialization.JsonProvider
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.SessionState
+import com.thehouse.app.domain.model.UserSession
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
@@ -89,6 +90,24 @@ class AuthRepositoryIntegrationTest {
         assertEquals(setOf("email", "password"), jsonSent.keys)
         assertEquals("v@correo.mx", jsonSent["email"]?.jsonPrimitive?.content)
         assertEquals(false, sent.contains("nombre") || sent.contains("name"))
+    }
+
+    @Test
+    fun `login real 200 solo accessToken activa sesion placeholder sin refresh`() = runTest {
+        // Contrato real de Azure (2026-11-05): {"accessToken","tokenType","expiresIn"}.
+        // Sin objeto de usuario: mapeo usa placeholder "Bienvenido" (BLOCKED-BACKEND /users/me
+        // para datos reales). Sin refreshToken: no se persiste nada.
+        server.enqueue(
+            body(
+                """{"accessToken":"access-jwt-abc","tokenType":"Bearer","expiresIn":900}""",
+            ),
+        )
+        val result = repository.login("v@correo.mx", "PasswordSegura123!")
+        val session = result.getOrNull()
+        assertTrue(result.isSuccess)
+        assertEquals(UserSession(userId = null, displayName = "Bienvenido", email = ""), session)
+        assertTrue(repository.session.value is SessionState.Active)
+        assertNull(storage.lastRaw)
     }
 
     @Test

@@ -45,6 +45,10 @@ data class AuthResponseDto(
     val token: String? = null,
     val accessToken: String? = null,
     val refreshToken: String? = null,
+    /** Contrato real confirmado 2026-11-05: "Bearer". */
+    val tokenType: String? = null,
+    /** Contrato real confirmado 2026-11-05: 900 (segundos). */
+    val expiresIn: Long? = null,
     val user: AuthUserDto? = null,
 )
 

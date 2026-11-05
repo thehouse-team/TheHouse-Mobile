@@ -50,7 +50,22 @@ POST /api/v1/auth/register       → 400 {"title":"Validation failed","detail":"
                                    para los payloads {name,email,password,acceptedTerms,acceptedPrivacy}, camelCase+confirmPassword y PascalCase.
 ```
 
-Conclusión (2026-11-05): backend confirmó el contrato real de register: `POST /api/v1/auth/register` con body EXACTO `{"email","password"}` (sin `name`, sin consentimientos; password 12–128). Prueba real Azure 2026-11-05 con `{"email":"qa.register.u2.1105@ejemplo.com","password":"PasswordSegura123!"}` → **201 Created** (usuario creado). `BLOCKED-REGISTER-CONTRACT` resuelto y eliminado; la app enviará solo `email` y `password` (`RegisterRequestDto` y `AuthRepositoryImpl` actualizados; `nombre` permanece solo en UI). Login/logout punta a punta pueden revalidarse tras register 201.
+Conclusión (2026-11-05): backend confirmó el contrato real de register: `POST /api/v1/auth/register` con body EXACTO `{"email","password"}` (sin `name`, sin consentimientos; password 12–128). Prueba real Azure 2026-11-05 con el usuario `qa.register.u2.1105@ejemplo.com` y su contraseña de prueba (no se registra en evidencia por reglas de seguridad) → **201 Created** (usuario creado). `BLOCKED-REGISTER-CONTRACT` resuelto y eliminado; la app enviará solo `email` y `password` (`RegisterRequestDto` y `AuthRepositoryImpl` actualizados; `nombre` permanece solo en UI). Login/logout punta a punta pueden revalidarse tras register 201.
+
+## 7. Prueba real contra Azure — login/logout (2026-11-05, hechos comprobados)
+
+```text
+POST /api/v1/auth/login  (usuario de prueba creado en register 201) → 200 OK
+     Body real: {"accessToken":"<JWT>","tokenType":"Bearer","expiresIn":900}
+     No devuelve refreshToken, ni objeto user, ni name/email.
+POST /api/v1/auth/logout (Authorization: Bearer <accessToken del login>) → 204 No Content (body vacío)
+POST /api/v1/auth/logout (sin sesión) → 401 Unauthorized (Problem Details)
+```
+
+- No se probó ni inventó `/auth/refresh` ni `/users/me` (siguen sin contrato confirmado).
+- Cambio único de DTO/mapeo: `AuthResponseDto` agrega `tokenType: String?` y `expiresIn: Long?` (tolerante, hechos confirmados).
+- Mapeo actual: sin objeto `user`, `AuthMappers` activa sesión con placeholder "Bienvenido" y access token en memoria; sin `refreshToken` no se persiste nada (consistente).
+- Salida de login/logout real NO muestra secretos; la contraseña de prueba no se registra en evidencia ni logs.
 
 ## 6. Pendientes humanos
 
