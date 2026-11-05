@@ -1,0 +1,21 @@
+package com.thehouse.app.domain.model
+
+/**
+ * Sesión activa de usuario en el dominio.
+ *
+ * No contiene tokens: los tokens son un detalle de infraestructura de Data.
+ * El access token vive solo en memoria (Data) y nunca cruza a Presentation.
+ */
+data class UserSession(
+    val userId: String?,
+    val displayName: String,
+    val email: String,
+)
+
+/**
+ * Estado observable de la sesión.
+ */
+sealed interface SessionState {
+    data object Anonymous : SessionState
+    data class Active(val session: UserSession) : SessionState
+}

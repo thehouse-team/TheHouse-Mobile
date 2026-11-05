@@ -1,3 +1,28 @@
 <resources>
-    <string name="app_name">TheHouse</string>
+    <string name="app_name" translatable="false">TheHouse</string>
+
+    <!-- NV-04 U2: pantallas de autenticación y onboarding -->
+    <string name="login_title">Inicia sesión en TheHouse</string>
+    <string name="login_subtitle">Encuentra tu próxima casa cerca de tu universidad.</string>
+    <string name="login_go_register">¿No tienes cuenta? Crear cuenta</string>
+    <string name="action_login">Iniciar sesión</string>
+
+    <string name="register_title">Crea tu cuenta</string>
+    <string name="register_subtitle">Unos pasos de distancia de encontrar tu nuevo hogar.</string>
+    <string name="register_go_login">¿Ya tienes cuenta? Iniciar sesión</string>
+    <string name="action_register">Crear cuenta</string>
+    <string name="register_accept_terms">Acepto los términos y condiciones</string>
+    <string name="register_accept_privacy">Acepto el aviso de privacidad</string>
+
+    <string name="field_name">Nombre</string>
+    <string name="field_email">Correo electrónico</string>
+    <string name="field_password">Contraseña</string>
+
+    <string name="onboarding_skip">Omitir</string>
+    <string name="onboarding_next">Siguiente</string>
+    <string name="onboarding_back">Anterior</string>
+    <string name="onboarding_start">Comenzar</string>
+
+    <string name="welcome_title">Bienvenido a TheHouse</string>
+    <string name="home_logout">Cerrar sesión</string>
 </resources>
