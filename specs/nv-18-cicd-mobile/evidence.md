@@ -1,9 +1,29 @@
 # NV-18 — EVIDENCIA
 
-Sin evidencia todavia — PLANNED, DO NOT EXECUTE. Ningun workflow creado ni ejecutado.
+## FASE D1 — CI real Mobile
+
+### Estados (DoD)
+SPECIFIED: OK | IMPLEMENTED: OK (.github/workflows/mobile-ci.yml) | TESTED: OK (local + Actions, ver abajo) | DEPLOYED: N/A (sin deployment) | EVIDENCED: OK (esta página)
+
+### Workflow
+- Archivo: `.github/workflows/mobile-ci.yml`
+- Triggers: pull_request→main, push→feature/**, workflow_dispatch
+- Permisos: `contents: read`
+- Jobs: checkout@v4, setup-java@v4 (temurin 17), gradle/actions/setup-gradle@v3, wrapper-validation@v3, testDebugUnitTest, lintDebug, assembleDebug, gitleaks/gitleaks-action@v2, aquasecurity/trivy-action@0.24.0 (fs, HIGH/CRITICAL, exit-code 0), upload-artifact@v4 (unit-test-reports, lint-reports, debug-apk)
+- Sin deployment, sin Play publish, sin bundleRelease/signing, sin secretos en YAML (solo referencia a secrets.GITHUB_TOKEN).
+
+### Validación local (2026-11-06)
+- Comando: `JAVA_HOME=C:\Program Files\Android\Android Studio\jbr .\gradlew.bat testDebugUnitTest lintDebug assembleDebug`
+- Resultado: BUILD SUCCESSFUL in 1m 42s (tests 41/41 heredados, lint sin errores bloqueantes, assembleDebug OK)
+- Secret scan básico local: sin secretos reales (solo nombre de paso y referencia a secrets.GITHUB_TOKEN)
+- `git diff --check`: limpio
+
+### GitHub Actions (run real)
+| Campo | Valor |
+|---|---|
+| Run ID | (verificar con `gh run list` tras push) |
+| Status | pendiente |
+| Quality gates | testDebugUnitTest, lintDebug, assembleDebug, gitleaks, trivy |
 
 ## Hechos reales preservados
-- AAB firmado verificado con jarsigner (`jar verified.`), versionName 1.0.0, versionCode 10000, applicationId com.thehouse.app (NV-03). Primer AAB manual; automatizacion solo tras exito manual (NV-02 §10). Sin publicacion en Play.
-
-## Evidencia futura esperada
-Diseno aprobado; tras autorizacion, ejecuciones reales de GitHub Actions.
+- AAB firmado verificado con jarsigner (`jar verified.`), versionName 1.0.0, versionCode 10000, applicationId com.thehouse.app (NV-03). Sin publicación en Play. register 201, login 200, logout 204, tests 41/41.

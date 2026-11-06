@@ -3,9 +3,9 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-02 DevSecOps |
-| STATUS | PLANNED |
-| AUTHORIZATION | DO NOT EXECUTE |
-| Evidencia de ejecucion | Ninguna (0/28 tasks) |
+| STATUS | INCREMENTAL D1 |
+| AUTHORIZATION | Autorización D1: controles gratuitos iniciales (unit tests, lint, secret/dependency scan, mínimo privilegio). No marcar NV-02 completa. |
+| Evidencia de ejecucion | D1: lint como gate (NV02-T011), workflow CI (T019/T020/T021); secret/dependency scans configurados (gitleaks, trivy), pendientes de confirmación en run real |
 
 Sin evidencia de ejecucion — PLANNED, DO NOT EXECUTE. No se instalaron herramientas, no se crearon workflows y no se ejecutaron builds/tests/lint para esta spec.
 

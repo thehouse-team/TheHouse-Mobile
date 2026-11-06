@@ -8,11 +8,11 @@
 |---|---|
 | Spec | NV-02 DevSecOps |
 | Plan | NV02-PLAN-1.0 |
-| Estado | ⛔ NO EJECUTAR |
+| Estado | INCREMENTAL D1 — unit tests + lint + secret/dependency scan + mínimo privilegio + build reproducible |
 | Dependencia | NV-01 Foundation — ✅ EJECUTADA / VALIDADA / CERRADA |
 | Tasks totales | 28 |
-| Tasks completadas | 0 |
-| Autorización | PENDIENTE |
+| Tasks completadas | 4 |
+| Autorización | D1: controles gratuitos iniciales NV-02 (unit tests, lint, secret/dependency scan, mínimo privilegio). No marcar NV-02 completa. |
 
 ## Reglas
 
@@ -97,7 +97,7 @@ Para `DEFERRED POR ENTORNO` o `DEFERRED POR INFRAESTRUCTURA` debe registrarse ad
 
 ## Fase P3 — Análisis estático
 
-- [ ] NV02-T011 — Configurar Android Lint como quality gate.
+- [x] NV02-T011 - Configurar Android Lint como quality gate. [D1 — lintDebug local PASS + gate en mobile-ci.yml]
 - [ ] NV02-T012 — Evaluar e integrar Detekt.
 - [ ] NV02-T013 — Evaluar e integrar ktlint.
 - [ ] NV02-T014 — Evaluar e integrar Semgrep.
@@ -110,8 +110,8 @@ Para `DEFERRED POR ENTORNO` o `DEFERRED POR INFRAESTRUCTURA` debe registrarse ad
 
 ## Fase P4 — Seguridad de dependencias
 
-- [ ] NV02-T016 — Configurar dependency scanning.
-- [ ] NV02-T017 — Configurar secret scanning.
+- [ ] NV02-T016 - Configurar dependency scanning. [D1 CONFIGURADO (trivy-action, no bloqueante) — pendiente confirmación de run real]
+- [ ] NV02-T017 - Configurar secret scanning. [D1 CONFIGURADO (gitleaks-action) — pendiente confirmación de run real]
 - [ ] NV02-T018 — Evaluar MobSF contra COST-001 y documentar alcance.
 
 > - **T016:** definir herramienta gratuita, severidad y excepciones; no bloquear automáticamente por cualquier hallazgo.
@@ -121,9 +121,9 @@ Para `DEFERRED POR ENTORNO` o `DEFERRED POR INFRAESTRUCTURA` debe registrarse ad
 
 ## Fase P5 — CI y gates DevSecOps
 
-- [ ] NV02-T019 — Crear el workflow de GitHub Actions.
-- [ ] NV02-T020 — Configurar cache, artefactos y permisos mínimos del workflow.
-- [ ] NV02-T021 — Definir y aplicar quality gates.
+- [x] NV02-T019 - Crear el workflow de GitHub Actions. [D1 — .github/workflows/mobile-ci.yml]
+- [x] NV02-T020 - Configurar cache, artefactos y permisos mínimos del workflow. [D1 — setup-gradle cache, upload-artifact, contents:read]
+- [x] NV02-T021 - Definir y aplicar quality gates. [D1 — testDebugUnitTest + lintDebug + assembleDebug bloqueantes]
 - [ ] NV02-T022 — Definir cobertura mínima y política de excepciones.
 
 > - **T019:** **Localmente:** preparación de `.github/workflows/`; validar YAML, comandos, permisos, secrets references, cache y gates. **Remotamente:** requiere repositorio Git/remote real y workflow ejecutado; si no existe, `Validación remota: DEFERRED POR INFRAESTRUCTURA`.
