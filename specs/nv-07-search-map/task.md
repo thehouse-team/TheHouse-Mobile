@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-07 Search + Map |
-| STATUS | PLANNED (+ integracion parcial D4) |
-| AUTHORIZATION | DO NOT EXECUTE (mapa completo); parcial D4 autorizada 2026-11-06 |
+| STATUS | PLANNED (+ parcial D4 fixture, parcial D5 catalogo/Explore real) |
+| AUTHORIZATION | DO NOT EXECUTE (mapa completo); parcial D4/D5 autorizada |
 
 - [ ] NV-07-T01 - Matriz filtros/coordenadas vs contrato NV-27.
 - [ ] NV-07-T02 - Evaluacion COST-001 del SDK de mapas (o BLOCKED).
@@ -14,3 +14,5 @@
 - [ ] NV-07-T06 - Tests (busqueda, cancelacion, permiso denegado).
 - [ ] NV-07-T07 - Build/tests/lint y evidence.md.
 - [x] NV-07-D4-01 - (Parcial D4) Tab Explorar sin mapa/SDK: lista fixture del prototipo, Guest/Auth.
+- [x] NV-07-D5-01 - (Parcial D5) Catalogo real: PropertyRepository + ExploreViewModel (lista real, estados, busqueda local titulo/ciudad).
+- [x] NV-07-D5-02 - (Parcial D5) Home con destacada real (primera propiedad, regla UI local) sin Match/verificacion/distancia inventados.

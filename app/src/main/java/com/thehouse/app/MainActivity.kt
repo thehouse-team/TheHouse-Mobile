@@ -207,6 +207,7 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                 }
                             }
                         },
+                        factory = factory,
                     )
                 }
                 composable(AppRoutes.smartMatch.route) {

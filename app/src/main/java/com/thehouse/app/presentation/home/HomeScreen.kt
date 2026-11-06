@@ -15,30 +15,36 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
+import com.thehouse.app.presentation.catalog.CatalogLoadState
+import com.thehouse.app.presentation.catalog.errorMessage
 import com.thehouse.app.presentation.components.PropertyCard
-import com.thehouse.app.presentation.demo.PrototypeProperties
 
 /**
- * Home visual del prototipo (D4, NV-05, 07-inicio-estudiante).
+ * Home visual (D4 diseño + D5 datos reales, NV-05/NV-06/NV-07).
  *
- * - Universidad seleccionada/buscador (fixture "UTTT"), renta destacada
- *   con precio, distancia, Match y verificado, acceso a Explorar.
- * - Guest y Auth comparten el mismo shell; la diferencia es el guard
- *   de acciones protegidas (favorito/contactar/publicar → Login).
- * - Sin backend: datos solo como fixture de prototipo etiquetado.
+ * - Universidad seleccionada REAL (lista backend + persistencia local;
+ *   sin UTTT hardcodeada productiva).
+ * - Propiedad destacada REAL = primera disponible (regla UI local,
+ *   no marcada por el backend).
+ * - Solo campos del contrato (sin Match/verificación/distancia inventados).
+ * - Estados loading/empty/error + retry para universidades y propiedades.
+ * - Guest y Auth comparten shell; acciones protegidas → Login.
  *
- * La barra inferior vive en el shell (MainActivity D4) para no duplicar
- * destinos; esta pantalla solo declara el contenido de Inicio.
+ * La barra inferior vive en el shell (MainActivity D4).
  */
 @Composable
 fun HomeScreen(
@@ -51,6 +57,7 @@ fun HomeScreen(
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
+    var showUniversityPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -70,7 +77,6 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Cabecera + universidad/buscador (prototipo: "Universidad UTTT").
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = if (state.isGuest) {
@@ -91,28 +97,76 @@ fun HomeScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+            }
+
+            // Selector de universidad real (loading/empty/error/retry).
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Universidad: UTTT",
+                    text = "Universidad",
                     style = MaterialTheme.typography.titleMedium,
                 )
-                OutlinedButton(
-                    onClick = onNavigateToExplore,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                ) {
-                    Text("Buscar tu universidad")
+                when (val universities = state.universities) {
+                    CatalogLoadState.Loading -> {
+                        CircularProgressIndicator(modifier = Modifier.height(24.dp))
+                    }
+                    CatalogLoadState.Empty -> {
+                        Text(
+                            text = "Sin universidades disponibles.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    is CatalogLoadState.Error -> {
+                        Text(
+                            text = universities.errorMessage() ?: "Algo salió mal.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        OutlinedButton(
+                            onClick = { viewModel.onEvent(HomeEvent.RetryUniversitiesClicked) },
+                            modifier = Modifier.height(48.dp),
+                        ) {
+                            Text("Reintentar")
+                        }
+                    }
+                    is CatalogLoadState.Success -> {
+                        val selectedName = universities.items.firstOrNull { it.id == state.selectedUniversityId }?.name
+                        Text(
+                            text = "Universidad: " + (selectedName ?: "Selecciona tu universidad"),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        OutlinedButton(
+                            onClick = { showUniversityPicker = !showUniversityPicker },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                        ) {
+                            Text(if (selectedName != null) "Cambiar universidad" else "Buscar tu universidad")
+                        }
+                        if (showUniversityPicker) {
+                            universities.items.forEach { university ->
+                                TextButton(
+                                    onClick = {
+                                        viewModel.onEvent(HomeEvent.UniversitySelected(university.id))
+                                        showUniversityPicker = false
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                ) {
+                                    Text(text = university.name + " · " + university.city)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            // Smart Match activo (fixture).
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Smart Match Activo",
+                    text = "Smart Match",
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "95% de compatibilidad calculada",
+                    text = "Ver compatibilidad en la pestaña Smart Match.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -121,12 +175,38 @@ fun HomeScreen(
                 text = "Recomendados para ti",
                 style = MaterialTheme.typography.titleMedium,
             )
-            PrototypeProperties.featured.forEach { property ->
-                PropertyCard(
-                    property = property,
-                    onFavoriteClick = { viewModel.onEvent(HomeEvent.FavoriteClicked) },
-                    onContactClick = { viewModel.onEvent(HomeEvent.ContactClicked) },
-                )
+            when (val properties = state.properties) {
+                CatalogLoadState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.height(24.dp))
+                }
+                CatalogLoadState.Empty -> {
+                    Text(
+                        text = "Sin propiedades disponibles.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                is CatalogLoadState.Error -> {
+                    Text(
+                        text = properties.errorMessage() ?: "Algo salió mal.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    OutlinedButton(
+                        onClick = { viewModel.onEvent(HomeEvent.RetryPropertiesClicked) },
+                        modifier = Modifier.height(48.dp),
+                    ) {
+                        Text("Reintentar")
+                    }
+                }
+                is CatalogLoadState.Success -> {
+                    val featured = state.featuredProperty
+                    if (featured != null) {
+                        PropertyCard(
+                            property = featured,
+                            onFavoriteClick = { viewModel.onEvent(HomeEvent.FavoriteClicked) },
+                            onContactClick = { viewModel.onEvent(HomeEvent.ContactClicked) },
+                        )
+                    }
+                }
             }
 
             Row(

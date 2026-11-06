@@ -18,8 +18,84 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.thehouse.app.domain.model.Property
 import com.thehouse.app.presentation.demo.PrototypeProperty
 import com.thehouse.app.presentation.demo.PrototypeProperties
+
+/**
+ * Tarjeta de renta REAL (D5, NV-06/NV-07).
+ * - Reutiliza el lenguaje visual D4 (card 16dp, botones 48dp).
+ * - Muestra SOLO campos del contrato (título, precio+moneda, ciudad,
+ *   recámaras/baños/área, universidad si aplica).
+ * - NUNCA Match, verificación, distancia ni filtros inventados.
+ * - Acciones de contacto/favorito son eventos de UI (sin backend).
+ */
+@Composable
+fun PropertyCard(
+    property: Property,
+    onFavoriteClick: () -> Unit,
+    onContactClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isFavorite: Boolean = false,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Renta ${property.title}" },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = property.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = property.city,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "$" + property.price.toString() + " " + property.currency + "/mes",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = "${property.bedrooms} recámaras · ${property.bathrooms} baños · ${property.areaM2} m²",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .weight(1f),
+                ) {
+                    Text(if (isFavorite) "Quitar favorito" else "Guardar favorito")
+                }
+                OutlinedButton(
+                    onClick = onContactClick,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .weight(1f),
+                ) {
+                    Text("Contactar")
+                }
+            }
+        }
+    }
+}
 
 /**
  * Tarjeta de renta del prototipo (D4, NV-05).

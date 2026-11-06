@@ -13,20 +13,33 @@ import com.thehouse.app.data.image.ImageLoaderFactory
 import com.thehouse.app.data.preferences.DataStorePreferencesStore
 import com.thehouse.app.data.preferences.PreferencesStore
 import com.thehouse.app.data.preferences.appPreferencesDataStore
+import com.thehouse.app.data.catalog.repository.PropertyRepositoryImpl
+import com.thehouse.app.data.catalog.repository.SelectedUniversityRepositoryImpl
+import com.thehouse.app.data.catalog.repository.UniversityRepositoryImpl
 import com.thehouse.app.data.remote.HttpClientFactory
 import com.thehouse.app.data.remote.RetrofitFactory
 import com.thehouse.app.data.remote.api.AuthApi
+import com.thehouse.app.data.remote.api.PropertyApi
+import com.thehouse.app.data.remote.api.UniversityApi
 import com.thehouse.app.data.remote.auth.BearerTokenInterceptor
 import com.thehouse.app.data.remote.auth.RefreshAuthenticator
 import com.thehouse.app.data.serialization.JsonProvider
 import com.thehouse.app.domain.common.DispatcherProvider
 import com.thehouse.app.domain.repository.AuthRepository
 import com.thehouse.app.domain.repository.OnboardingRepository
+import com.thehouse.app.domain.repository.PropertyRepository
+import com.thehouse.app.domain.repository.SelectedUniversityRepository
+import com.thehouse.app.domain.repository.UniversityRepository
+import com.thehouse.app.domain.usecase.GetPropertiesUseCase
+import com.thehouse.app.domain.usecase.GetUniversitiesUseCase
 import com.thehouse.app.domain.usecase.LoginUseCase
 import com.thehouse.app.domain.usecase.LogoutUseCase
+import com.thehouse.app.domain.usecase.ObserveSelectedUniversityUseCase
 import com.thehouse.app.domain.usecase.ObserveSessionUseCase
 import com.thehouse.app.domain.usecase.RegisterUseCase
 import com.thehouse.app.domain.usecase.RestoreSessionUseCase
+import com.thehouse.app.domain.usecase.SearchPropertiesUseCase
+import com.thehouse.app.domain.usecase.SelectUniversityUseCase
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -110,6 +123,42 @@ class AppContainer(context: Context) {
     val onboardingRepository: OnboardingRepository by lazy {
         OnboardingPreferencesRepository(preferences)
     }
+
+    // ===== D5 Catálogo real (NV-06/NV-07, reutiliza Retrofit/HttpClient D3) =====
+
+    val universityApi: UniversityApi by lazy { retrofit.create(UniversityApi::class.java) }
+
+    val propertyApi: PropertyApi by lazy { retrofit.create(PropertyApi::class.java) }
+
+    val universityRepository: UniversityRepository by lazy {
+        UniversityRepositoryImpl(api = universityApi)
+    }
+
+    val propertyRepository: PropertyRepository by lazy {
+        PropertyRepositoryImpl(api = propertyApi)
+    }
+
+    val selectedUniversityRepository: SelectedUniversityRepository by lazy {
+        SelectedUniversityRepositoryImpl(preferences = preferences)
+    }
+
+    val getUniversities: GetUniversitiesUseCase by lazy {
+        GetUniversitiesUseCase(universityRepository)
+    }
+
+    val getProperties: GetPropertiesUseCase by lazy {
+        GetPropertiesUseCase(propertyRepository)
+    }
+
+    val observeSelectedUniversity: ObserveSelectedUniversityUseCase by lazy {
+        ObserveSelectedUniversityUseCase(selectedUniversityRepository)
+    }
+
+    val selectUniversity: SelectUniversityUseCase by lazy {
+        SelectUniversityUseCase(selectedUniversityRepository)
+    }
+
+    val searchProperties: SearchPropertiesUseCase by lazy { SearchPropertiesUseCase() }
 
     val register: RegisterUseCase by lazy { RegisterUseCase(authRepository) }
     val login: LoginUseCase by lazy { LoginUseCase(authRepository) }
