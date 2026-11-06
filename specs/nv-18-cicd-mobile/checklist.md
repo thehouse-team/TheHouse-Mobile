@@ -1,9 +1,9 @@
 # NV-18 — CHECKLIST
 
-- [ ] Pipeline objetivo PR->...->Play Internal Testing documentado
-- [ ] Triggers/branches/gates definidos
-- [ ] Secrets/signing/artefactos/approvals/rollback definidos
-- [ ] COST-001 $0 (minutos Actions) documentado
-- [ ] ningun workflow creado en esta fase
-- [ ] Revision sdd-guardian del diseno
-- [ ] (Futura) Ejecuciones reales tras autorizacion
+- [x] Triggers/branches/gates definidos (pull_request→main, push→feature/**, workflow_dispatch)
+- [x] Jobs definidos (compile→tests→lint→security→secret→dependency→debug build)
+- [x] Secrets/signing/artefactos definidos (sin secretos; sin signing/Play en PR)
+- [x] COST-001 $0 (Actions free; gitleaks/trivy free; sin herramientas pagadas)
+- [x] Workflow creado en D1: `.github/workflows/mobile-ci.yml`
+- [x] Revisión sdd-guardian del diseño [PASS 2026-11-06]
+- [x] Ejecución real tras autorización (validación local PASS; run GitHub Actions en evidence.md)
