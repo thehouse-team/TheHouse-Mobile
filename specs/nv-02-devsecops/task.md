@@ -11,7 +11,7 @@
 | Estado | INCREMENTAL D1 — unit tests + lint + secret/dependency scan + mínimo privilegio + build reproducible |
 | Dependencia | NV-01 Foundation — ✅ EJECUTADA / VALIDADA / CERRADA |
 | Tasks totales | 28 |
-| Tasks completadas | 4 |
+| Tasks completadas | 6 |
 | Autorización | D1: controles gratuitos iniciales NV-02 (unit tests, lint, secret/dependency scan, mínimo privilegio). No marcar NV-02 completa. |
 
 ## Reglas
@@ -110,8 +110,8 @@ Para `DEFERRED POR ENTORNO` o `DEFERRED POR INFRAESTRUCTURA` debe registrarse ad
 
 ## Fase P4 — Seguridad de dependencias
 
-- [ ] NV02-T016 - Configurar dependency scanning. [D1 CONFIGURADO (trivy-action, no bloqueante) — pendiente confirmación de run real]
-- [ ] NV02-T017 - Configurar secret scanning. [D1 CONFIGURADO (gitleaks-action) — pendiente confirmación de run real]
+- [x] NV02-T016 - Configurar dependency scanning. [D1 — trivy fs HIGH/CRITICAL (exit 0), run 42173546971 success]
+- [x] NV02-T017 - Configurar secret scanning. [D1 — gitleaks CLI free, 0 leaks, run 42173546971 success]
 - [ ] NV02-T018 — Evaluar MobSF contra COST-001 y documentar alcance.
 
 > - **T016:** definir herramienta gratuita, severidad y excepciones; no bloquear automáticamente por cualquier hallazgo.

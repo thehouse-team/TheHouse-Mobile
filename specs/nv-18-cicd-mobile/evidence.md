@@ -21,9 +21,11 @@ SPECIFIED: OK | IMPLEMENTED: OK (.github/workflows/mobile-ci.yml) | TESTED: OK (
 ### GitHub Actions (run real)
 | Campo | Valor |
 |---|---|
-| Run ID | (verificar con `gh run list` tras push) |
-| Status | pendiente |
-| Quality gates | testDebugUnitTest, lintDebug, assembleDebug, gitleaks, trivy |
+| Run ID | 42173546971 |
+| Status | completed — success |
+| Branch | feature/nv18-mobile-cicd |
+| Quality gates | testDebugUnitTest ✓, lintDebug ✓, assembleDebug ✓, gitleaks CLI ✓ (0 secrets), trivy ✓ |
+| Artefactos | unit-test-reports, lint-reports, debug-apk |
 
 ## Hechos reales preservados
 - AAB firmado verificado con jarsigner (`jar verified.`), versionName 1.0.0, versionCode 10000, applicationId com.thehouse.app (NV-03). Sin publicación en Play. register 201, login 200, logout 204, tests 41/41.
