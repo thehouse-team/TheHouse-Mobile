@@ -2,6 +2,6 @@
 
 - [ ] register/login/logout transcritos (M-MOB-044)
 - [ ] properties/universities/health verificados o BLOCKED parcial
-- [ ] /auth/refresh NO implementado (BLOCKED)
-- [ ] /users/me NO implementado (BLOCKED)
-- [ ] Ningun endpoint inventado
+- [x] /auth/refresh implementado (D3, contrato confirmado)
+- [x] /users/me implementado (D3, contrato confirmado)
+- [x] Ningun endpoint inventado (solo contratos D3: refresh + me)

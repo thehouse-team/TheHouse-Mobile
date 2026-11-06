@@ -29,7 +29,31 @@ data class LoginRequestDto(
 )
 
 /**
- * Respuesta tolerante de register/login.
+ * Contrato real confirmado del backend (POST /api/v1/auth/refresh):
+ * body con EXACTAMENTE `refreshToken`. Respuesta 200 con el mismo shape
+ * que login: `accessToken`, `refreshToken` (rotación obligatoria),
+ * `tokenType`, `expiresIn`. El cliente SIEMPRE reemplaza el refreshToken
+ * anterior al recibir 200.
+ */
+@Serializable
+data class RefreshRequestDto(
+    val refreshToken: String,
+)
+
+/**
+ * Contrato real confirmado del backend (GET /api/v1/users/me):
+ * respuesta con EXACTAMENTE `id`, `email` y `createdAt`.
+ * No se inventan `name`, `badge`, `landlordEnabled` ni `emailVerified`.
+ */
+@Serializable
+data class CurrentUserDto(
+    val id: String,
+    val email: String,
+    val createdAt: String,
+)
+
+/**
+ * Respuesta tolerante de register/login/refresh.
  *
  * - `token`/`accessToken`: access token devuelto por el backend, si existe.
  * - `refreshToken`: si existe, se cifra (AES-GCM + Keystore) antes de persistir.

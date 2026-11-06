@@ -10,6 +10,8 @@ data class UserSession(
     val userId: String?,
     val displayName: String,
     val email: String,
+    /** Campo confirmado de `GET /api/v1/users/me`; null cuando la sesión aún no se hidrató con /me. */
+    val createdAt: String? = null,
 )
 
 /**

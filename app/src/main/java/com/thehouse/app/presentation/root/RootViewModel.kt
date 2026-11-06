@@ -15,12 +15,13 @@ import kotlinx.coroutines.launch
 /**
  * MVVM + UDF: decisión de la pantalla inicial según sesión y onboarding.
  *
- * Reglas U2:
+ * Reglas U2 + D3 (sesión persistente):
  * - Anonymous → Login.
  * - Active + onboarding pendiente → Onboarding (3 pantallas → bienvenida → inicio).
  * - Active + onboarding completado → Home (inicio provisional).
- * - NO declara sesión "siempre viva": sin `/auth/refresh` confirmado (BLOCKED-
- *   BACKEND), un token vencido limpia la sesión y regresa a Login.
+ * - D3: al iniciar, `RootViewModel` dispara UNA restauración de sesión
+ *   (refresh 200 + /me 200 → Active; refresh 401 / sin refresh → Anonymous).
+ *   No se inventa sesión offline.
  */
 data class RootUiState(
     val isResolving: Boolean = true,
@@ -33,9 +34,18 @@ class RootViewModel(
 
     private val session = container.sessionStore.state
     private val onboardingRepository = container.onboardingRepository
+    private val restoreSession = container.restoreSession
 
     private val mutableState = MutableStateFlow(RootUiState())
     val state: StateFlow<RootUiState> = mutableState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            // Restauración silenciosa al arranque; el estado resultante
+            // (Active/Anonymous) se observa vía [collect] para decidir la ruta.
+            runCatching { restoreSession() }
+        }
+    }
 
     fun collect(sessionFlow: Flow<SessionState>) {
         viewModelScope.launch {

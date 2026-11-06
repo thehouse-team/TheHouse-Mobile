@@ -1,6 +1,7 @@
 package com.thehouse.app.data.auth.mapper
 
 import com.thehouse.app.data.remote.dto.auth.AuthResponseDto
+import com.thehouse.app.data.remote.dto.auth.CurrentUserDto
 import com.thehouse.app.data.remote.dto.auth.ProblemDetailsDto
 import com.thehouse.app.domain.model.UserSession
 import kotlinx.serialization.json.Json
@@ -19,6 +20,18 @@ object AuthMappers {
         userId = user?.id ?: user?.userId ?: id ?: userId,
         displayName = user?.name ?: displayName ?: name?.ifBlank { null } ?: FALLBACK_NAME,
         email = user?.email ?: email.orEmpty(),
+    )
+
+    /**
+     * Mapeo desde `GET /api/v1/users/me` (`id`, `email`, `createdAt`).
+     * El backend no devuelve `name`: la identidad visible es el email.
+     * No se usa el placeholder "Bienvenido" cuando /me está disponible.
+     */
+    fun CurrentUserDto.toDomain(): UserSession = UserSession(
+        userId = id,
+        displayName = email,
+        email = email,
+        createdAt = createdAt,
     )
 
     fun parseProblemDetails(errorBody: String?): ProblemDetailsDto? = runCatching {

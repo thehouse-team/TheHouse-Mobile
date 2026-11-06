@@ -2,7 +2,9 @@ package com.thehouse.app.data.remote
 
 import android.content.Context
 import java.io.File
+import okhttp3.Authenticator
 import okhttp3.Cache
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 
 /**
@@ -12,6 +14,9 @@ import okhttp3.OkHttpClient
  * del servidor. Las respuestas de auth no se cachean: la API de auth envía
  * `Cache-Control: no-store, no-cache` en todas sus llamadas.
  * El logging solo se agrega cuando el build type lo habilita explícitamente.
+ *
+ * D3: acepta `bearerInterceptor` (agrega `Authorization: Bearer` en memoria)
+ * y `authenticator` (refresh single-flight ante 401, máximo 1 retry).
  */
 object HttpClientFactory {
 
@@ -21,22 +26,32 @@ object HttpClientFactory {
         context: Context,
         enableLogging: Boolean,
         timeouts: NetworkTimeouts = NetworkTimeouts(),
+        bearerInterceptor: Interceptor? = null,
+        authenticator: Authenticator? = null,
     ): OkHttpClient = create(
         enableLogging = enableLogging,
         cacheDir = File(context.cacheDir, CACHE_DIR),
         timeouts = timeouts,
+        bearerInterceptor = bearerInterceptor,
+        authenticator = authenticator,
     )
 
     fun create(
         enableLogging: Boolean,
         cacheDir: File?,
         timeouts: NetworkTimeouts = NetworkTimeouts(),
+        bearerInterceptor: Interceptor? = null,
+        authenticator: Authenticator? = null,
     ): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(timeouts.connect)
         .readTimeout(timeouts.read)
         .writeTimeout(timeouts.write)
         .callTimeout(timeouts.call)
         .apply { cacheDir?.let { cache(Cache(it, CACHE_SIZE_BYTES)) } }
+        .apply {
+            bearerInterceptor?.let { addInterceptor(it) }
+            authenticator?.let { authenticator(it) }
+        }
         .apply {
             if (enableLogging) {
                 addInterceptor(SafeHttpLoggingInterceptor())
