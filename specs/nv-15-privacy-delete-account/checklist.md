@@ -1,7 +1,7 @@
 # NV-15 — CHECKLIST
 
-- [ ] Contrato de eliminacion confirmado o BLOCKED
-- [ ] URL_AVISO_PRIVACIDAD real (o BLOCKED-PRIVACY-URL)
-- [ ] Doble confirmacion implementada
+- [ ] Contrato de eliminación confirmado o BLOCKED (sin cambios D2)
+- [x] URL_AVISO_PRIVACIDAD auditada D2: NO válida → BLOCKED-PRIVACY-URL se mantiene
+- [ ] Doble confirmación implementada (no autorizada sin URL válida)
 - [ ] Limpieza local total verificada
-- [ ] Build/tests/lint verdes con evidencia real
+- [x] Acta ACTUAL vs PLANNED documentada en evidence.md (sin inventar tratamientos)
