@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.thehouse.app.di.AppContainer
 import com.thehouse.app.presentation.auth.LoginViewModel
 import com.thehouse.app.presentation.auth.RegisterViewModel
+import com.thehouse.app.presentation.explore.ExploreViewModel
 import com.thehouse.app.presentation.home.HomeViewModel
 import com.thehouse.app.presentation.onboarding.OnboardingViewModel
 import com.thehouse.app.presentation.root.RootViewModel
@@ -12,8 +13,7 @@ import com.thehouse.app.presentation.root.RootViewModel
 /**
  * Fábrica manual de ViewModels (DI, sin frameworks).
  *
- * Solo expone los ViewModels de la fase U2; los de otras specs deben
- * agregarse aquí explícitamente.
+ * U2 + D4 + D5 (catálogo real); de forma explícita.
  */
 @Suppress("UNCHECKED_CAST")
 class U2ViewModelFactory(
@@ -35,7 +35,20 @@ class U2ViewModelFactory(
             OnboardingViewModel(container.onboardingRepository, userKey) as T
 
         modelClass.isAssignableFrom(HomeViewModel::class.java) ->
-            HomeViewModel(container.logout) as T
+            HomeViewModel(
+                logoutUseCase = container.logout,
+                sessionState = container.sessionStore.state,
+                getUniversities = container.getUniversities,
+                getProperties = container.getProperties,
+                selectedRepository = container.selectedUniversityRepository,
+                selectUniversity = container.selectUniversity,
+            ) as T
+
+        modelClass.isAssignableFrom(ExploreViewModel::class.java) ->
+            ExploreViewModel(
+                getProperties = container.getProperties,
+                searchProperties = container.searchProperties,
+            ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")
     }

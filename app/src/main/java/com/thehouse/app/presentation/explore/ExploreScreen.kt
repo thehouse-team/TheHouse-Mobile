@@ -1,0 +1,128 @@
+package com.thehouse.app.presentation.explore
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.thehouse.app.presentation.U2ViewModelFactory
+import com.thehouse.app.presentation.catalog.CatalogLoadState
+import com.thehouse.app.presentation.catalog.errorMessage
+import com.thehouse.app.presentation.components.PropertyCard
+
+/**
+ * Explorar real D5 (NV-07 parcial, sin mapa).
+ *
+ * - Listado real con scroll, tarjetas reales (PropertyCard real),
+ *   búsqueda local solo sobre título/ciudad (campos reales).
+ * - Sin filtros ni mapa (placeholder textual); Smart Match sin cambios D4.
+ * - Acciones protegidas delegan al llamador si es Guest.
+ */
+@Composable
+fun ExploreScreen(
+    onFavoriteClick: () -> Unit,
+    onContactClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    factory: U2ViewModelFactory? = null,
+) {
+    val viewModel: ExploreViewModel? = if (factory != null) {
+        viewModel(factory = factory)
+    } else {
+        null
+    }
+    val state = viewModel?.uiState?.collectAsState()?.value
+    val properties = state?.properties ?: CatalogLoadState.Empty
+    val query = state?.query ?: ""
+    val isLoading = properties is CatalogLoadState.Loading
+
+    Scaffold(modifier = modifier) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Explorar",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.semantics { contentDescription = "Título Explorar" },
+            )
+            Text(
+                text = "Mapa completo pendiente de NV-07. Búsqueda sobre título y ciudad.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedTextField(
+                value = query,
+                onValueChange = { viewModel?.onEvent(ExploreEvent.QueryChanged(it)) },
+                label = { Text("Buscar por título o ciudad") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+            when (properties) {
+                CatalogLoadState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.height(24.dp))
+                }
+                CatalogLoadState.Empty -> {
+                    Text(
+                        text = if (query.isBlank()) "Sin propiedades disponibles." else "Sin resultados para tu búsqueda.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (viewModel != null) {
+                        OutlinedButton(
+                            onClick = { viewModel.onEvent(ExploreEvent.RetryClicked) },
+                            modifier = Modifier.height(48.dp),
+                        ) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+                is CatalogLoadState.Error -> {
+                    Text(
+                        text = properties.errorMessage() ?: "Algo salió mal.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (viewModel != null) {
+                        OutlinedButton(
+                            onClick = { viewModel.onEvent(ExploreEvent.RetryClicked) },
+                            modifier = Modifier.height(48.dp),
+                        ) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+                is CatalogLoadState.Success -> {
+                    if (!isLoading) {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(properties.items, key = { it.id }) { property ->
+                                PropertyCard(
+                                    property = property,
+                                    onFavoriteClick = onFavoriteClick,
+                                    onContactClick = onContactClick,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

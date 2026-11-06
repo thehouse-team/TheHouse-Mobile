@@ -15,13 +15,18 @@ import kotlinx.coroutines.launch
 /**
  * MVVM + UDF: decisión de la pantalla inicial según sesión y onboarding.
  *
- * Reglas U2 + D3 (sesión persistente):
- * - Anonymous → Login.
+ * Reglas U2 + D3 (sesión persistente) + D4 (Guest):
  * - Active + onboarding pendiente → Onboarding (3 pantallas → bienvenida → inicio).
- * - Active + onboarding completado → Home (inicio provisional).
+ * - Active + onboarding completado → Home (shell con bottom nav).
+ * - Anonymous + onboarding completado (clave local, p. ej. tras Omitir)
+ *   → Home como Guest (inicio/explorar/smart_match; favoritos con muro).
+ * - Anonymous + onboarding pendiente → Onboarding (primer uso; Inicia sesión
+ *   sigue disponible dentro del onboarding).
  * - D3: al iniciar, `RootViewModel` dispara UNA restauración de sesión
  *   (refresh 200 + /me 200 → Active; refresh 401 / sin refresh → Anonymous).
- *   No se inventa sesión offline.
+ *   No se inventa sesión offline. Logout → caída a Guest/Onboarding
+ *   según la marca local (sin forzar Login); las acciones protegidas
+ *   llevan a Login explícitamente.
  */
 data class RootUiState(
     val isResolving: Boolean = true,
@@ -56,7 +61,17 @@ class RootViewModel(
     private suspend fun resolve(value: SessionState) {
         val userKeyDerived = onboardingRepository.keyFor(sessionUserId(value))
         when (value) {
-            SessionState.Anonymous -> updateTarget(AppRoutes.login.route)
+            SessionState.Anonymous -> {
+                // Guest: si ya se completó/omitió el onboarding local, el
+                // shell de Home abre sin exigir cuenta. Si es primer uso,
+                // el onboarding ofrece Omitir (Guest) o Inicia sesión.
+                val guestCompleted = runCatching {
+                    onboardingRepository.isCompleted(onboardingRepository.keyFor(null))
+                }.getOrDefault(false)
+                updateTarget(
+                    if (guestCompleted) AppRoutes.home.route else AppRoutes.onboarding.route,
+                )
+            }
             is SessionState.Active -> {
                 val completed = runCatching {
                     onboardingRepository.isCompleted(userKeyDerived)
