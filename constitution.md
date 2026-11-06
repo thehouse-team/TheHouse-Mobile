@@ -579,3 +579,12 @@ Ningún agente puede modificar esta Constitución por iniciativa propia ni para 
 ## Declaración de vigencia
 
 Esta Constitución entra en vigor en la fecha indicada y subordina cualquier práctica, documento, agente, skill, spec, plan o task del repositorio Mobile.
+
+## Apéndice C1 — Reglas reforzadas
+
+1. Ningún requisito académico puede eliminarse por no estar implementado.
+2. CI/CD Mobile obligatorio.
+3. Google Play es destino oficial de distribución.
+4. `BLOCKED` nunca equivale a `DONE`.
+5. Los agentes no pueden autorizar su propio trabajo.
+6. Evidencia obligatoria antes de cerrar tasks.

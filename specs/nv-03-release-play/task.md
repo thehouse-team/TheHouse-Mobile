@@ -91,3 +91,11 @@ Publicación ejecutada: NO
 ```text
 ⛔ NO EJECUTAR
 ```
+
+## Cobertura Play (C1) — aditivo (sin cambiar hechos)
+
+- [x] NV03 C1 — AAB firmado verificado (`jar verified.`), `versionName 1.0.0`, `versionCode 10000`, `applicationId com.thehouse.app` (según `evidence.md`).
+- [ ] NV03 C1 — Completar store listing final (icono/screenshots/feature graphic, content rating, App Access, tester/reviewer credentials por canal seguro, release notes).
+- [ ] NV03 C1 — Resolver `BLOCKED-PRIVACY-URL` con URL real y completar Data Safety.
+- [ ] NV03 C1 — Human release approval registrada antes de subir a Internal/Closed/Production.
+- Publicación ejecutada: NO. **NO publicar.**

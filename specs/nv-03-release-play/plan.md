@@ -175,3 +175,9 @@ autorización humana registrada
 ```text
 ⛔ NO EJECUTAR
 ```
+
+## Cobertura Play (C1) — aditivo
+
+- Fases P1–P6 ya ejecutadas según `evidence.md` (AAB firmado `jar verified.`, `versionName 1.0.0`, `versionCode 10000`, `applicationId com.thehouse.app`). Sin publicación en Play.
+- Pendiente humano: `BLOCKED-PRIVACY-URL` (URL real del aviso de privacidad), Data Safety con valores reales, store listing final (icono/screenshots/feature graphic, content rating, App Access, tester/reviewer credentials por canal seguro, release notes) y human release approval antes de cualquier subida a Internal/Closed/Production.
+- **NO publicar.** Ninguna fase de este plan autoriza subida, promoción ni publicación.
