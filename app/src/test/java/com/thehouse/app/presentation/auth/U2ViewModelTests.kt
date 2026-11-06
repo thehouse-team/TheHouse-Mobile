@@ -73,6 +73,15 @@ class FakeAuthRepository(
         state.value = SessionState.Anonymous
         return logoutBehavior()
     }
+
+    override suspend fun refreshAccessToken(): Result<String?> =
+        Result.failure(DomainException(DomainError.Unauthorized))
+
+    override suspend fun getCurrentUser(): Result<UserSession?> =
+        Result.failure(DomainException(DomainError.Unauthorized))
+
+    override suspend fun restoreSession(): Result<UserSession?> =
+        Result.success(null)
 }
 
 /** Pruebas unitarias de LoginViewModel (dispatchers controlados, sin red). */

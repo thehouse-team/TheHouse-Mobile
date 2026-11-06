@@ -16,6 +16,8 @@ import com.thehouse.app.data.preferences.appPreferencesDataStore
 import com.thehouse.app.data.remote.HttpClientFactory
 import com.thehouse.app.data.remote.RetrofitFactory
 import com.thehouse.app.data.remote.api.AuthApi
+import com.thehouse.app.data.remote.auth.BearerTokenInterceptor
+import com.thehouse.app.data.remote.auth.RefreshAuthenticator
 import com.thehouse.app.data.serialization.JsonProvider
 import com.thehouse.app.domain.common.DispatcherProvider
 import com.thehouse.app.domain.repository.AuthRepository
@@ -24,6 +26,7 @@ import com.thehouse.app.domain.usecase.LoginUseCase
 import com.thehouse.app.domain.usecase.LogoutUseCase
 import com.thehouse.app.domain.usecase.ObserveSessionUseCase
 import com.thehouse.app.domain.usecase.RegisterUseCase
+import com.thehouse.app.domain.usecase.RestoreSessionUseCase
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -33,6 +36,10 @@ import retrofit2.Retrofit
  *
  * Construye dependencias de infraestructura y las expone de forma lazy.
  * No contiene lógica de negocio ni estado mutable global.
+ *
+ * Orden de construcción D3: sesión/token-storage (sin red) primero,
+ * luego httpClient con Bearer + authenticator single-flight (usa solo
+ * sesión/storage/config, sin ciclo con el Retrofit/repositorio).
  */
 class AppContainer(context: Context) {
 
@@ -42,10 +49,36 @@ class AppContainer(context: Context) {
     val json: Json by lazy { JsonProvider.create() }
     val dispatchers: DispatcherProvider by lazy { DefaultDispatcherProvider() }
 
+    val preferences: PreferencesStore by lazy {
+        DataStorePreferencesStore(appContext.appPreferencesDataStore)
+    }
+
+    // ===== NV-04 Auth + Onboarding (D3: sesión persistente) =====
+
+    val sessionStore: InMemorySessionStore by lazy { InMemorySessionStore() }
+
+    val refreshTokenStorage: EncryptedRefreshTokenStorage by lazy {
+        EncryptedRefreshTokenStorage(preferences)
+    }
+
+    val bearerTokenInterceptor: BearerTokenInterceptor by lazy {
+        BearerTokenInterceptor(sessionStore)
+    }
+
+    val refreshAuthenticator: RefreshAuthenticator by lazy {
+        RefreshAuthenticator(
+            baseUrl = config.apiBaseUrl,
+            sessionStore = sessionStore,
+            refreshTokenStorage = refreshTokenStorage,
+        )
+    }
+
     val httpClient: OkHttpClient by lazy {
         HttpClientFactory.create(
             context = appContext,
             enableLogging = config.httpLoggingEnabled,
+            bearerInterceptor = bearerTokenInterceptor,
+            authenticator = refreshAuthenticator,
         )
     }
 
@@ -64,19 +97,7 @@ class AppContainer(context: Context) {
         )
     }
 
-    val preferences: PreferencesStore by lazy {
-        DataStorePreferencesStore(appContext.appPreferencesDataStore)
-    }
-
-    // ===== NV-04 Auth + Onboarding =====
-
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
-
-    val sessionStore: InMemorySessionStore by lazy { InMemorySessionStore() }
-
-    val refreshTokenStorage: EncryptedRefreshTokenStorage by lazy {
-        EncryptedRefreshTokenStorage(preferences)
-    }
 
     val authRepository: AuthRepository by lazy {
         AuthRepositoryImpl(
@@ -94,4 +115,5 @@ class AppContainer(context: Context) {
     val login: LoginUseCase by lazy { LoginUseCase(authRepository) }
     val logout: LogoutUseCase by lazy { LogoutUseCase(authRepository) }
     val observeSession: ObserveSessionUseCase by lazy { ObserveSessionUseCase(authRepository) }
+    val restoreSession: RestoreSessionUseCase by lazy { RestoreSessionUseCase(authRepository) }
 }

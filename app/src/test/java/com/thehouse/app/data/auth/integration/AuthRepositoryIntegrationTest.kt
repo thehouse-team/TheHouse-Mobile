@@ -93,21 +93,27 @@ class AuthRepositoryIntegrationTest {
     }
 
     @Test
-    fun `login real 200 solo accessToken activa sesion placeholder sin refresh`() = runTest {
-        // Contrato real de Azure (2026-11-05): {"accessToken","tokenType","expiresIn"}.
-        // Sin objeto de usuario: mapeo usa placeholder "Bienvenido" (BLOCKED-BACKEND /users/me
-        // para datos reales). Sin refreshToken: no se persiste nada.
+    fun `login real 200 solo tokens sin user hidrata con users-me`() = runTest {
+        // Contrato real D3: login 200 {"accessToken","refreshToken","tokenType","expiresIn"}
+        // (sin user). La identidad real viene de GET /users/me (id/email/createdAt);
+        // ya NO se usa "Bienvenido" como identidad autenticada cuando /me está disponible.
         server.enqueue(
             body(
-                """{"accessToken":"access-jwt-abc","tokenType":"Bearer","expiresIn":900}""",
+                """{"accessToken":"access-jwt-abc","refreshToken":"refresh-jwt-abc","tokenType":"Bearer","expiresIn":900}""",
             ),
+        )
+        server.enqueue(
+            body("""{"id":"u-real","email":"v@correo.mx","createdAt":"2026-11-05T00:00:00Z"}"""),
         )
         val result = repository.login("v@correo.mx", "PasswordSegura123!")
         val session = result.getOrNull()
         assertTrue(result.isSuccess)
-        assertEquals(UserSession(userId = null, displayName = "Bienvenido", email = ""), session)
+        assertEquals("u-real", session?.userId)
+        assertEquals("v@correo.mx", session?.email)
+        assertEquals("v@correo.mx", session?.displayName)
+        assertEquals("2026-11-05T00:00:00Z", session?.createdAt)
         assertTrue(repository.session.value is SessionState.Active)
-        assertNull(storage.lastRaw)
+        assertEquals("refresh-jwt-abc", storage.lastRaw)
     }
 
     @Test

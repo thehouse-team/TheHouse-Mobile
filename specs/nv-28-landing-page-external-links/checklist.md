@@ -1,7 +1,8 @@
 # NV-28 — CHECKLIST
 
-- [ ] Inventario de enlaces con URLs reales
-- [ ] BLOCKED-PRIVACY-URL resuelto con URL real (o sigue BLOCKED)
-- [ ] Apertura segura + fallback
-- [ ] URLs verificadas HTTP 200
-- [ ] Data Safety conciliada
+- [x] Inventario de enlaces + URLs reales (o BLOCKED-PRIVACY-URL)
+- [x] Verificación HTTP 200 por URL (landing 200)
+- [ ] Apertura segura + fallback (sin URL válida, no implementada)
+- [ ] Resolver de enlaces en Data (sin URL válida, no implementada)
+- [ ] Conciliación Data Safety (BLOCKED-PRIVACY-URL)
+- [x] Evidence.md con inventario D2
