@@ -269,3 +269,55 @@ Decisiones vigentes (registradas también en `memoria.md`):
 - **GitHub MCP:** se referencia el servidor oficial `github/github-mcp-server`. No se inventan tokens; si requiere autenticación, se referencia una variable de entorno. Se prefiere modo read-only para agentes de análisis.
 - Durante fases de documentación no se instalan ni ejecutan servidores MCP.
 - La configuración corresponde a `opencode.json` en la raíz del repositorio; no incluye secretos.
+
+## Apéndice C1 — Catálogo NV-01..NV-29
+
+| Spec | Estado |
+|---|---|
+| NV-01 Foundation | EXECUTED |
+| NV-02 DevSecOps | PLANNED |
+| NV-03 Release / Google Play | PARTIAL / BLOCKED-PRIVACY-URL |
+| NV-04 Auth / Onboarding | EXECUTED |
+| NV-05 Home | PLANNED |
+| NV-06 University Catalog | PLANNED |
+| NV-07 Search / Map | PLANNED |
+| NV-08 Property Detail | PLANNED |
+| NV-09 Favorites | PLANNED |
+| NV-10 Visits | PLANNED |
+| NV-11 Chat | PLANNED |
+| NV-12 Rental Closing | PLANNED |
+| NV-13 Reviews | PLANNED |
+| NV-14 Notifications / FCM | PLANNED |
+| NV-15 Privacy / Delete Account | PLANNED |
+| NV-16 Offline Sync | PLANNED |
+| NV-17 Smart Match / ML / IA | PLANNED |
+| NV-18 CI/CD Mobile | PLANNED |
+| NV-19 Testing Integral | PLANNED |
+| NV-20 Security / OWASP MASVS | PLANNED |
+| NV-21 Android Permissions / Platform Security | PLANNED |
+| NV-22 Multimedia / CDN / Content Moderation | PLANNED |
+| NV-23 Observability / Analytics | PLANNED |
+| NV-24 Performance | PLANNED |
+| NV-25 Accessibility / UX Quality | PLANNED |
+| NV-26 Versioning / Environments | PLANNED |
+| NV-27 Backend Contract Integration | BLOCKED |
+| NV-28 Landing Page / External Links | PLANNED |
+| NV-29 Evaluation / Evidence | PLANNED |
+
+Prohibiciones: no ejecutar specs PLANNED/BLOCKED sin autorización; no cerrar BLOCKED sin evidencia; no inventar endpoints; no tocar Backend desde Mobile; no saltarse CI; no publicar en Play sin aprobación; no guardar secretos; no afirmar pruebas no ejecutadas.
+
+## Apéndice C2 — Roadmap por Bloques y Definition of Done
+
+Definition of Done: ver `constitution.md` Apéndice C2 (no duplicada aquí).
+
+Roadmap ejecutable por bloques (respetando dependencias; no ejecutar ninguna spec sin autorización): ver `docs/sdd/ROADMAP_BLOQUES.md`.
+
+- **BLOQUE 1:** NV-18 CI/CD, NV-02 DevSecOps incremental
+- **BLOQUE 2:** NV-27 Backend Contracts, NV-06 Persistent Session
+- **BLOQUE 3:** NV-05..NV-13 Core funcional
+- **BLOQUE 4:** NV-14 Push, NV-15 Privacy/Delete, NV-16 Offline Sync, NV-21 Permissions, NV-22 Multimedia/Moderation
+- **BLOQUE 5:** NV-17 ML/IA
+- **BLOQUE 6:** NV-19 Testing, NV-20 Security, NV-23 Observability, NV-24 Performance, NV-25 Accessibility, NV-26 Versioning
+- **BLOQUE 7:** NV-03 Google Play, NV-28 Landing integration, NV-29 Final Evidence
+
+> **Nota NV-06:** en este roadmap, «NV-06 Persistent Session» filtra a NV-04 (sesión): NV-06 en este roadmap = sesión persistente de NV-04 (sin crear spec nueva).

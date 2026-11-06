@@ -254,3 +254,29 @@ Definir validaciones previas y estrategia de rollback/versionado.
 ```text
 ⛔ NO EJECUTAR
 ```
+
+## Apéndice — Cobertura Play (C1)
+
+Hechos reales preservados (de `evidence.md` NV-03, sin cambios):
+- `applicationId`/`namespace` = `com.thehouse.app` (permanente tras el primer AAB).
+- `versionName = 1.0.0`, `versionCode = 10000` (fórmula `VERSIONING.md`).
+- AAB firmado verificado: `jarsigner -verify` → `jar verified.` (CN=TheHouse Team, RSA 2048). Sin publicación en Play.
+- `BLOCKED-PRIVACY-URL` vigente: `URL_AVISO_PRIVACIDAD` pendiente humano; store listing con placeholder. **NO publicar** hasta resolverlo y con aprobación humana explícita.
+
+Cobertura de preparación Play (documental, sin ejecutar subida):
+- Play Console: cuenta existente ya pagada; entrega U2 en pista interna.
+- Play App Signing: activado; upload key fuera del repositorio (keystore fuera del repo, secretos vía variables `THEHOUSE_*` en sesión del autorizador).
+- AAB: `bundleRelease` → `app-release.aab` (BUILD SUCCESSFUL).
+- Tracks: Internal (U2) / Closed / Production — promociones solo manuales y con aprobación humana; no se afirma prueba cerrada (12 testers/14 días) sin verificar tipo/fecha de cuenta.
+- Store listing: título/descripción, icono, screenshots, feature graphic, clasificación de contenido y público 18+ pendientes de revisión final con la URL de privacidad real.
+- Data Safety: pendiente de valores reales (URL de privacidad); debe coincidir con permisos/datos reales (NV-21).
+- Privacy Policy: URL real pendiente (`BLOCKED-PRIVACY-URL`); no inventar URL.
+- App Access: credenciales de tester/reviewer solo vía canal seguro si Play las requiere; nunca en el repo ni en evidencias.
+- Release notes: redactar por versión junto con `versionCode`.
+- Human release approval: todo AAB/subida/promoción requiere autorización humana explícita registrada.
+
+## 10. Estado (reafirmado)
+
+```text
+⛔ NO EJECUTAR — NO publicar
+```
