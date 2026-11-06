@@ -1,9 +1,12 @@
 package com.thehouse.app.presentation.navigation
 
 /**
- * Destinos tipados de la fase U2 (spec NV-04).
+ * Destinos tipados (U2 + D4 Home/Guest).
  *
- * Un único AppRoute por destino; la navegación no contiene lógica de negocio.
+ * - Un único AppRoute por destino; la navegación no contiene lógica de negocio.
+ * - D4: shell con bottom nav (inicio/explorar/smart_match/favoritos).
+ *   Guest y Auth comparten destinos; el contenido de Favoritos y las
+ *   acciones protegidas aplican el guard de acceso.
  */
 object AppRoutes {
 
@@ -27,7 +30,24 @@ object AppRoutes {
         override val route: String = "welcome"
     }
 
+    /** Inicio del shell (tab Inicio). */
     val home: AppRoute = object : AppRoute {
-        override val route: String = "home"
+        override val route: String = "inicio"
     }
+
+    val explore: AppRoute = object : AppRoute {
+        override val route: String = "explorar"
+    }
+
+    val smartMatch: AppRoute = object : AppRoute {
+        override val route: String = "smart_match"
+    }
+
+    val favorites: AppRoute = object : AppRoute {
+        override val route: String = "favoritos"
+    }
+
+    val bottomTabs: List<AppRoute> = listOf(home, explore, smartMatch, favorites)
+
+    fun isBottomTab(route: String?): Boolean = bottomTabs.any { it.route == route }
 }

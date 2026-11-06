@@ -6,13 +6,13 @@ import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiEvent
 
 /**
- * MVVM + UDF para el onboarding de primer ingreso.
+ * MVVM + UDF para el onboarding de primer ingreso (U2 + D4 Guest).
  *
- * 3 pantallas de introducción con botón `Omitir`. La marca
+ * 3 pantallas del prototipo con botón `Omitir`. La marca
  * `onboardingCompleted` se guarda por usuario con DataStore (dato no sensible).
- * La personalización por usuario remota (GET /api/v1/users/me) NO está
- * confirmada y permanece BLOCKED-BACKEND: la bienvenida se llena con el nombre
- * que el backend entregó en login/register.
+ * D4: Omitir/Terminar como Guest marca completado local y navega a Home
+ * (Inicio del shell) sin exigir cuenta. D3 ya confirma `GET /users/me`:
+ * la bienvenida personalizada puede usar la identidad real cuando hay sesión.
  */
 data class OnboardingUiState(
     val page: Int = 0,

@@ -5,4 +5,5 @@
 - [ ] Busqueda con estados UDF
 - [ ] Mapa con fallback sin ubicacion
 - [ ] Tests de busqueda/cancelacion
-- [ ] Build/tests/lint verdes con evidencia real
+- [ ] Build/tests/lint verdes con evidencia real (parcial D4: build verde; busqueda/mapa completo pendientes)
+- [x] (D4 parcial) Tab Explorar fixture sin mapa (ExploreScreen)

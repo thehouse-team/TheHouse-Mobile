@@ -35,7 +35,10 @@ class U2ViewModelFactory(
             OnboardingViewModel(container.onboardingRepository, userKey) as T
 
         modelClass.isAssignableFrom(HomeViewModel::class.java) ->
-            HomeViewModel(container.logout) as T
+            HomeViewModel(
+                logoutUseCase = container.logout,
+                sessionState = container.sessionStore.state,
+            ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")
     }
