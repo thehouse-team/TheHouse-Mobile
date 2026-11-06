@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-18 CI/CD Mobile |
-| STATUS | IN PROGRESS — Fase D1 (CI real) |
+| STATUS | PARTIAL — CI real validado; T05/T06 pendientes para release/Play |
 | AUTHORIZATION | Autorización D1: crear/configurar CI/CD Mobile y ejecutar controles gratuitos NV-02 |
 
 - [x] NV-18-T01 - Triggers y ramas: pull_request→main, push→feature/**, workflow_dispatch.
