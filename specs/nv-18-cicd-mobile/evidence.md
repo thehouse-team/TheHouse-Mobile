@@ -29,3 +29,10 @@ SPECIFIED: OK | IMPLEMENTED: OK (.github/workflows/mobile-ci.yml) | TESTED: OK (
 
 ## Hechos reales preservados
 - AAB firmado verificado con jarsigner (`jar verified.`), versionName 1.0.0, versionCode 10000, applicationId com.thehouse.app (NV-03). Sin publicación en Play. register 201, login 200, logout 204, tests 41/41.
+
+### Revisión sdd-guardian T07 (2026-11-06): PASS
+- Alcance respetado: solo CI (workflow), sin funcionalidades Mobile, Backend/Azure, Play, /auth/refresh, /users/me, signing/bundleRelease en PR.
+- DoD: SPECIFIED→IMPLEMENTED→TESTED→EVIDENCED con run real 42173546971; BLOCKED no cerrado.
+- NV-18 REQ-001..004/006 cumplidos en D1; REQ-005/007/008 quedan en T05/T06 (no cerradas).
+- Observaciones no bloqueantes: trivy exit-code 0 (REQ-004 incremental); gitleaks CLI free sin licencia.
+- NV-02 incremental consistente (6/28, no completa).

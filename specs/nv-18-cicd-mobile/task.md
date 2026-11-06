@@ -12,5 +12,5 @@
 - [x] NV-18-T04 - Secrets/signing/artefactos: sin secretos en YAML; sin keystore/signing/bundleRelease/Play en PR CI; artefactos reports/test-results/lint/APK debug.
 - [ ] NV-18-T05 - Approvals (release) y promoción controlada a Play Internal Testing. [Fuera de alcance D1]
 - [ ] NV-18-T06 - Rollback y versionado (NV-03/VERSIONING.md). [Fuera de alcance D1]
-- [ ] NV-18-T07 - Revisión sdd-guardian del diseño. [Pendiente]
+- [x] NV-18-T07 - Revisión sdd-guardian del diseño. [PASS 2026-11-06 — sin incumplimientos críticos; observaciones no bloqueantes: trivy exit 0 no bloqueante (REQ-004 incremental), triggers D1 según misión autorizada]
 - [x] NV-18-T08 - Implementar workflows y ejecutar (D1); registrar evidencia real en evidence.md.
