@@ -52,6 +52,7 @@ fun HomeScreen(
     onLoggedOut: () -> Unit,
     onRequireLogin: () -> Unit,
     onNavigateToExplore: () -> Unit,
+    onPropertyClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     factory: U2ViewModelFactory,
 ) {
@@ -204,6 +205,7 @@ fun HomeScreen(
                             property = featured,
                             onFavoriteClick = { viewModel.onEvent(HomeEvent.FavoriteClicked) },
                             onContactClick = { viewModel.onEvent(HomeEvent.ContactClicked) },
+                            onPropertyClick = { onPropertyClick(featured.id) },
                         )
                     }
                 }

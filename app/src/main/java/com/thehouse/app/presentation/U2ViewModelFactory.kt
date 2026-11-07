@@ -2,13 +2,17 @@ package com.thehouse.app.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.thehouse.app.di.AppContainer
+import com.thehouse.app.domain.usecase.GetPropertyByIdUseCase
 import com.thehouse.app.presentation.auth.LoginViewModel
 import com.thehouse.app.presentation.auth.RegisterViewModel
 import com.thehouse.app.presentation.explore.ExploreViewModel
 import com.thehouse.app.presentation.home.HomeViewModel
 import com.thehouse.app.presentation.onboarding.OnboardingViewModel
 import com.thehouse.app.presentation.root.RootViewModel
+import com.thehouse.app.presentation.propertydetail.PropertyDetailViewModel
 
 /**
  * Fábrica manual de ViewModels (DI, sin frameworks).
@@ -20,6 +24,16 @@ class U2ViewModelFactory(
     private val container: AppContainer,
     private val userKey: String? = null,
 ) : ViewModelProvider.Factory {
+
+    fun propertyDetail(propertyId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            PropertyDetailViewModel(
+                propertyId = propertyId,
+                getPropertyById = GetPropertyByIdUseCase(container.propertyRepository),
+                sessionState = container.sessionStore.state,
+            )
+        }
+    }
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(RootViewModel::class.java) ->

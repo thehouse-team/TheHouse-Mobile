@@ -37,8 +37,10 @@ fun PropertyCard(
     onContactClick: () -> Unit,
     modifier: Modifier = Modifier,
     isFavorite: Boolean = false,
+    onPropertyClick: () -> Unit,
 ) {
     Card(
+        onClick = onPropertyClick,
         modifier = modifier
             .fillMaxWidth()
             .semantics { contentDescription = "Renta ${property.title}" },

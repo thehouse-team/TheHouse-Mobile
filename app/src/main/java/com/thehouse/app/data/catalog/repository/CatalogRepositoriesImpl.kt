@@ -16,6 +16,7 @@ import com.thehouse.app.domain.repository.UniversityRepository
 import com.thehouse.app.data.preferences.PreferencesStore
 import java.io.IOException
 import java.net.SocketTimeoutException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +53,8 @@ class UniversityRepositoryImpl(
                     DomainException(DataError.Http(response.code()).toDomainError()),
                 )
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (timeout: SocketTimeoutException) {
             Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
@@ -72,6 +75,8 @@ class UniversityRepositoryImpl(
                     DomainException(DataError.Http(response.code()).toDomainError()),
                 )
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (timeout: SocketTimeoutException) {
             Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
@@ -111,6 +116,8 @@ class PropertyRepositoryImpl(
                     DomainException(DataError.Http(response.code()).toDomainError()),
                 )
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (timeout: SocketTimeoutException) {
             Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
@@ -131,6 +138,8 @@ class PropertyRepositoryImpl(
                     DomainException(DataError.Http(response.code()).toDomainError()),
                 )
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (timeout: SocketTimeoutException) {
             Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
