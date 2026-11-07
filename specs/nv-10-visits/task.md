@@ -6,10 +6,10 @@
 | STATUS | PLANNED |
 | AUTHORIZATION | DO NOT EXECUTE |
 
-- [ ] NV-10-T01 - Confirmar contrato de visitas (NV-27) o BLOCKED.
-- [ ] NV-10-T02 - Validadores de fecha/hora (Domain).
-- [ ] NV-10-T03 - VisitRepository + mapeo.
-- [ ] NV-10-T04 - UI agendar visita.
-- [ ] NV-10-T05 - UI listar/cancelar visitas.
-- [ ] NV-10-T06 - Tests (validacion, 409, cancelacion).
-- [ ] NV-10-T07 - Build/tests/lint y evidence.md.
+- [x] NV-10-T01 - Confirmar contrato de visitas: VISITS-BACKEND-BLOCKED (sin endpoints).
+- [ ] NV-10-T02 - Validadores de fecha/hora (Domain) (bloqueado).
+- [ ] NV-10-T03 - VisitRepository + mapeo (bloqueado).
+- [x] NV-10-T04 - UI agendar visita preparada: botón + guard Guest/Auth + mensaje bloqueado.
+- [ ] NV-10-T05 - UI listar/cancelar visitas (bloqueado).
+- [ ] NV-10-T06 - Tests de persistencia (bloqueado).
+- [x] NV-10-T07 - Build/tests/lint y evidence.md.
