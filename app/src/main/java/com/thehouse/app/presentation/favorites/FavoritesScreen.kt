@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 fun FavoritesScreen(
     isAuthenticated: Boolean,
     onLoginClick: () -> Unit,
+    onExploreClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { padding ->
@@ -59,8 +60,26 @@ fun FavoritesScreen(
                 }
             } else {
                 Text(
-                    text = "Sin favoritos aún. (Backend de favoritos pendiente de NV-09.)",
+                    text = "Aún no tienes favoritos guardados.",
                     style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = "Explora propiedades y guarda las que te interesen.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = onExploreClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Text("Explorar propiedades")
+                }
+                Text(
+                    text = "La sincronización con backend de favoritos está pendiente (NV-09 BLOCKED).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

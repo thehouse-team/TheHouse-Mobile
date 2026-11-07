@@ -1,9 +1,21 @@
 # NV-09 — EVIDENCIA
 
-Sin evidencia todavia — PLANNED, DO NOT EXECUTE.
+Estado: FAVORITES-BACKEND-BLOCKED.
 
-## Hechos reales preservados
-- NV-01: Room runtime instalado pero sin entidades/DAO (KSP no configurado). No se asume persistencia existente en esta spec.
+## Backend read-only
+- Revisado C:\THEHOUSE\TheHouse-Backend.
+- No existen endpoints de favoritos (list/add/remove/check).
+- PropertyEndpoint solo expone list/detail públicos.
 
-## Evidencia futura esperada
-Esquema Room, tests y resultados reales tras autorizacion.
+## Mobile
+- FavoritesScreen mantiene Guest -> Login.
+- Auth -> Empty state con CTA Explorar y nota de backend pendiente.
+- No se implementa persistencia fake ni Room.
+- Home/Explore/Detail siguen usando eventos de favorito sin persistencia real.
+
+## Validación
+- compileDebugKotlin: BUILD SUCCESSFUL
+- testDebugUnitTest: BUILD SUCCESSFUL
+- lintDebug: BUILD SUCCESSFUL
+- assembleDebug: BUILD SUCCESSFUL
+- git diff --check: sin errores
