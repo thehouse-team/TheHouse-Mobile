@@ -39,6 +39,7 @@ import com.thehouse.app.presentation.components.PropertyCard
 fun ExploreScreen(
     onFavoriteClick: () -> Unit,
     onContactClick: () -> Unit,
+    onPropertyClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     factory: U2ViewModelFactory? = null,
 ) {
@@ -116,6 +117,7 @@ fun ExploreScreen(
                                     property = property,
                                     onFavoriteClick = onFavoriteClick,
                                     onContactClick = onContactClick,
+                                    onPropertyClick = { onPropertyClick(property.id) },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             }

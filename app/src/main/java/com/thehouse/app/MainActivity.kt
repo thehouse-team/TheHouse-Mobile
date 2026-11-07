@@ -12,12 +12,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,10 +35,12 @@ import com.thehouse.app.presentation.explore.ExploreScreen
 import com.thehouse.app.presentation.favorites.FavoritesScreen
 import com.thehouse.app.presentation.home.HomeScreen
 import com.thehouse.app.presentation.navigation.AppRoutes
+import com.thehouse.app.presentation.navigation.PropertyDetailRoute
 import com.thehouse.app.presentation.navigation.BottomTab
 import com.thehouse.app.presentation.navigation.TabNavigationState
 import com.thehouse.app.presentation.onboarding.OnboardingScreen
 import com.thehouse.app.presentation.root.RootViewModel
+import com.thehouse.app.presentation.propertydetail.PropertyDetailDestination
 import com.thehouse.app.presentation.smartmatch.SmartMatchScreen
 import com.thehouse.app.presentation.welcome.WelcomeScreen
 import com.thehouse.app.ui.theme.TheHouseTheme
@@ -188,6 +193,11 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onNavigateToExplore = {
                             navController.navigateToTab(BottomTab.Explorar)
                         },
+                        onPropertyClick = { id ->
+                            navController.navigate(PropertyDetailRoute(id).route) {
+                                launchSingleTop = true
+                            }
+                        },
                         factory = factory,
                     )
                 }
@@ -207,7 +217,29 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                 }
                             }
                         },
+                        onPropertyClick = { id ->
+                            navController.navigate(PropertyDetailRoute(id).route) {
+                                launchSingleTop = true
+                            }
+                        },
                         factory = factory,
+                    )
+                }
+                composable(
+                    route = PropertyDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(PropertyDetailRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val id = entry.arguments?.getString(PropertyDetailRoute.ID_ARGUMENT).orEmpty()
+                    val detailFactory = remember(factory, id) { factory.propertyDetail(id) }
+                    PropertyDetailDestination(
+                        propertyId = id,
+                        factory = detailFactory,
+                        onBack = { navController.popBackStack() },
+                        onRequireLogin = {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        },
                     )
                 }
                 composable(AppRoutes.smartMatch.route) {
