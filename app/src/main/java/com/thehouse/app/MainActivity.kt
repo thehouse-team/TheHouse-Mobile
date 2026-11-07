@@ -268,6 +268,9 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                 launchSingleTop = true
                             }
                         },
+                        onExploreClick = {
+                            navController.navigateToTab(BottomTab.Explorar)
+                        },
                     )
                 }
             }
