@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-09 Favorites |
-| STATUS | PLANNED |
-| AUTHORIZATION | DO NOT EXECUTE |
+| STATUS | READY |
+| AUTHORIZATION | EXECUTED (D7.1) |
 
 ## Fases (solo dentro de NV-09)
 - F1 — Contrato: confirmar endpoints/ids de favoritos en NV-27. Verificable: tabla o alcance solo-local documentado.

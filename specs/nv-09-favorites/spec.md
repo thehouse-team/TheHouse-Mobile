@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | Spec ID | NV-09 |
-| STATUS | PLANNED |
-| AUTHORIZATION | DO NOT EXECUTE |
+| STATUS | READY |
+| AUTHORIZATION | EXECUTED (D7.1) |
 | Dependencias | NV-01, NV-04, NV-08, NV-27, NV-16 (offline) |
 
 ## Problema
