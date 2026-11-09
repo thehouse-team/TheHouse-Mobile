@@ -24,6 +24,8 @@ import com.thehouse.app.data.favorites.state.FavoriteIdsStore
 import com.thehouse.app.data.remote.api.FavoritesApi
 import com.thehouse.app.data.remote.api.PropertyApi
 import com.thehouse.app.data.remote.api.UniversityApi
+import com.thehouse.app.data.remote.api.VisitsApi
+import com.thehouse.app.data.visits.repository.VisitsRepositoryImpl
 import com.thehouse.app.data.remote.auth.BearerTokenInterceptor
 import com.thehouse.app.data.remote.auth.RefreshAuthenticator
 import com.thehouse.app.data.serialization.JsonProvider
@@ -34,10 +36,15 @@ import com.thehouse.app.domain.repository.OnboardingRepository
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
+import com.thehouse.app.domain.repository.VisitsRepository
 import com.thehouse.app.domain.usecase.AddFavoriteUseCase
+import com.thehouse.app.domain.usecase.CancelVisitUseCase
+import com.thehouse.app.domain.usecase.CreateVisitUseCase
 import com.thehouse.app.domain.usecase.GetFavoritesUseCase
 import com.thehouse.app.domain.usecase.GetFavoriteIdsUseCase
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
+import com.thehouse.app.domain.usecase.GetVisitUseCase
+import com.thehouse.app.domain.usecase.GetVisitsUseCase
 import com.thehouse.app.domain.usecase.GetUniversitiesUseCase
 import com.thehouse.app.domain.usecase.RemoveFavoriteUseCase
 import com.thehouse.app.domain.usecase.LoginUseCase
@@ -158,6 +165,19 @@ class AppContainer(context: Context) {
     val getFavoriteIds: GetFavoriteIdsUseCase by lazy { GetFavoriteIdsUseCase(favoritesRepository) }
     val addFavorite: AddFavoriteUseCase by lazy { AddFavoriteUseCase(favoritesRepository) }
     val removeFavorite: RemoveFavoriteUseCase by lazy { RemoveFavoriteUseCase(favoritesRepository) }
+
+    // ===== D8.1 Visitas reales (NV-10) =====
+
+    val visitsApi: VisitsApi by lazy { retrofit.create(VisitsApi::class.java) }
+
+    val visitsRepository: VisitsRepository by lazy {
+        VisitsRepositoryImpl(api = visitsApi, json = json)
+    }
+
+    val createVisit: CreateVisitUseCase by lazy { CreateVisitUseCase(visitsRepository) }
+    val getVisits: GetVisitsUseCase by lazy { GetVisitsUseCase(visitsRepository) }
+    val getVisit: GetVisitUseCase by lazy { GetVisitUseCase(visitsRepository) }
+    val cancelVisit: CancelVisitUseCase by lazy { CancelVisitUseCase(visitsRepository) }
 
     val selectedUniversityRepository: SelectedUniversityRepository by lazy {
         SelectedUniversityRepositoryImpl(preferences = preferences)
