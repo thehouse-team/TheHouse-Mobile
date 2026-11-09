@@ -1,9 +1,21 @@
 # NV-10 — EVIDENCIA
 
-Sin evidencia todavia — PLANNED, DO NOT EXECUTE.
+Estado: VISITS-BACKEND-BLOCKED.
 
-## Hechos reales preservados
-- Contrato confirmado M-MOB-044 no incluye endpoints de visitas. No inventar endpoints.
+## Backend read-only
+- Revisado C:\THEHOUSE\TheHouse-Backend.
+- No existen endpoints de visitas/appointments/booking.
+- PropertyEndpoint solo expone list/detail públicos.
 
-## Evidencia futura esperada
-Contrato, tests y resultados reales tras autorizacion.
+## Mobile
+- PropertyDetail incluye acción "Agendar visita".
+- Guest → Login.
+- Auth → mensaje de indisponibilidad (sin simular agendado).
+- No se crean visitas fake ni éxito optimista.
+
+## Validación
+- compileDebugKotlin: BUILD SUCCESSFUL
+- testDebugUnitTest: BUILD SUCCESSFUL
+- lintDebug: BUILD SUCCESSFUL
+- assembleDebug: BUILD SUCCESSFUL
+- git diff --check: sin errores

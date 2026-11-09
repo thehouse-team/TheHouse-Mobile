@@ -1,9 +1,19 @@
 # NV-11 — EVIDENCIA
 
-Sin evidencia todavia — PLANNED, DO NOT EXECUTE.
+Estado: CHAT-BACKEND-BLOCKED.
 
-## Hechos reales preservados
-- Contrato confirmado M-MOB-044 no incluye endpoints de chat. No inventar endpoints ni transporte.
+## Backend read-only
+- Revisado C:\THEHOUSE\TheHouse-Backend.
+- No existen endpoints de chat/conversations/messages.
 
-## Evidencia futura esperada
-Contrato, estrategia de transporte y resultados reales tras autorizacion.
+## Mobile
+- Property Detail "Contactar" mantiene guard Guest -> Login.
+- Auth -> aviso de indisponibilidad (sin simular envío).
+- No se crean mensajes fake.
+
+## Validación
+- compileDebugKotlin: BUILD SUCCESSFUL
+- testDebugUnitTest: BUILD SUCCESSFUL
+- lintDebug: BUILD SUCCESSFUL
+- assembleDebug: BUILD SUCCESSFUL
+- git diff --check: sin errores

@@ -25,6 +25,7 @@ sealed interface PropertyDetailEvent : UiEvent {
     data object Retry : PropertyDetailEvent
     data object FavoriteClicked : PropertyDetailEvent
     data object ContactClicked : PropertyDetailEvent
+    data object VisitClicked : PropertyDetailEvent
 }
 
 sealed interface PropertyDetailEffect : UiEffect {
@@ -56,6 +57,7 @@ class PropertyDetailViewModel(
             }
             PropertyDetailEvent.FavoriteClicked -> guard(ProtectedAction.SaveFavorite)
             PropertyDetailEvent.ContactClicked -> guard(ProtectedAction.Contact)
+            PropertyDetailEvent.VisitClicked -> guard(ProtectedAction.ScheduleVisit)
         }
     }
 

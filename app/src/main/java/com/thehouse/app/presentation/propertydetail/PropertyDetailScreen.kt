@@ -63,6 +63,7 @@ fun PropertyDetailDestination(
                 is PropertyDetailEffect.ActionUnavailable -> snackbarState.showSnackbar(
                     when (effect.action) {
                         ProtectedAction.SaveFavorite -> "Favoritos aún no disponible. No se ha guardado la propiedad."
+                        ProtectedAction.ScheduleVisit -> "Visitas aún no disponible. No se ha agendado la visita."
                         else -> "Contacto aún no disponible. No se ha enviado ningún mensaje."
                     },
                 )
@@ -76,6 +77,7 @@ fun PropertyDetailDestination(
         onRetry = { viewModel.onEvent(PropertyDetailEvent.Retry) },
         onFavoriteClick = { viewModel.onEvent(PropertyDetailEvent.FavoriteClicked) },
         onContactClick = { viewModel.onEvent(PropertyDetailEvent.ContactClicked) },
+        onVisitClick = { viewModel.onEvent(PropertyDetailEvent.VisitClicked) },
         snackbarHost = { SnackbarHost(snackbarState) },
     )
 }
@@ -88,6 +90,7 @@ fun PropertyDetailScreen(
     onRetry: () -> Unit,
     onFavoriteClick: () -> Unit,
     onContactClick: () -> Unit,
+    onVisitClick: () -> Unit,
     modifier: Modifier = Modifier,
     snackbarHost: @Composable () -> Unit = {},
 ) {
@@ -148,6 +151,12 @@ fun PropertyDetailScreen(
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             ) {
                                 Text("Contactar")
+                            }
+                            OutlinedButton(
+                                onClick = onVisitClick,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            ) {
+                                Text("Agendar visita")
                             }
                         }
                     }
@@ -225,7 +234,7 @@ private fun PropertyInformation(property: Property) {
 @Composable
 private fun DetailLoadingPreview() {
     MaterialTheme {
-        PropertyDetailScreen(PropertyDetailUiState.Loading, {}, {}, {}, {})
+        PropertyDetailScreen(PropertyDetailUiState.Loading, {}, {}, {}, {}, {})
     }
 }
 
@@ -233,7 +242,7 @@ private fun DetailLoadingPreview() {
 @Composable
 private fun DetailNotFoundPreview() {
     MaterialTheme {
-        PropertyDetailScreen(PropertyDetailUiState.NotFound, {}, {}, {}, {})
+        PropertyDetailScreen(PropertyDetailUiState.NotFound, {}, {}, {}, {}, {})
     }
 }
 
@@ -241,6 +250,6 @@ private fun DetailNotFoundPreview() {
 @Composable
 private fun DetailErrorPreview() {
     MaterialTheme {
-        PropertyDetailScreen(PropertyDetailUiState.Error(UiError.Network), {}, {}, {}, {})
+        PropertyDetailScreen(PropertyDetailUiState.Error(UiError.Network), {}, {}, {}, {}, {})
     }
 }

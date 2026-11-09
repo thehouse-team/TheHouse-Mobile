@@ -10,6 +10,7 @@ enum class ProtectedAction {
     SaveFavorite,
     Contact,
     Publish,
+    ScheduleVisit,
 }
 
 /**
