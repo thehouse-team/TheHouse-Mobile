@@ -32,7 +32,9 @@ import com.thehouse.app.presentation.auth.LoginScreen
 import com.thehouse.app.presentation.auth.RegisterScreen
 import com.thehouse.app.presentation.components.BottomNavigation
 import com.thehouse.app.presentation.explore.ExploreScreen
+import com.thehouse.app.presentation.favorites.FavoritesEvent
 import com.thehouse.app.presentation.favorites.FavoritesScreen
+import com.thehouse.app.presentation.favorites.FavoritesViewModel
 import com.thehouse.app.presentation.home.HomeScreen
 import com.thehouse.app.presentation.navigation.AppRoutes
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
@@ -261,8 +263,17 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                     )
                 }
                 composable(AppRoutes.favorites.route) {
+                    val favVm: FavoritesViewModel = viewModel(factory = factory)
+                    val favState by favVm.uiState.collectAsStateWithLifecycle()
+                    LaunchedEffect(isAuthenticated) {
+                        if (isAuthenticated) favVm.onEvent(FavoritesEvent.Load)
+                    }
                     FavoritesScreen(
                         isAuthenticated = isAuthenticated,
+                        isLoading = favState.isLoading,
+                        items = favState.items,
+                        error = favState.error,
+                        removingId = favState.removingId,
                         onLoginClick = {
                             navController.navigate(AppRoutes.login.route) {
                                 launchSingleTop = true
@@ -271,6 +282,8 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onExploreClick = {
                             navController.navigateToTab(BottomTab.Explorar)
                         },
+                        onRemove = { id -> favVm.onEvent(FavoritesEvent.Remove(id)) },
+                        onRetry = { favVm.onEvent(FavoritesEvent.Load) },
                     )
                 }
             }

@@ -9,6 +9,7 @@ import com.thehouse.app.domain.usecase.GetPropertyByIdUseCase
 import com.thehouse.app.presentation.auth.LoginViewModel
 import com.thehouse.app.presentation.auth.RegisterViewModel
 import com.thehouse.app.presentation.explore.ExploreViewModel
+import com.thehouse.app.presentation.favorites.FavoritesViewModel
 import com.thehouse.app.presentation.home.HomeViewModel
 import com.thehouse.app.presentation.onboarding.OnboardingViewModel
 import com.thehouse.app.presentation.root.RootViewModel
@@ -62,6 +63,14 @@ class U2ViewModelFactory(
             ExploreViewModel(
                 getProperties = container.getProperties,
                 searchProperties = container.searchProperties,
+            ) as T
+
+        modelClass.isAssignableFrom(FavoritesViewModel::class.java) ->
+            FavoritesViewModel(
+                getFavorites = container.getFavorites,
+                removeFavorite = container.removeFavorite,
+                favoriteIdsStore = container.favoriteIdsStore,
+                sessionState = container.sessionStore.state,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")

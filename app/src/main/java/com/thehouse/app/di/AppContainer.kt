@@ -19,6 +19,9 @@ import com.thehouse.app.data.catalog.repository.UniversityRepositoryImpl
 import com.thehouse.app.data.remote.HttpClientFactory
 import com.thehouse.app.data.remote.RetrofitFactory
 import com.thehouse.app.data.remote.api.AuthApi
+import com.thehouse.app.data.favorites.repository.FavoritesRepositoryImpl
+import com.thehouse.app.data.favorites.state.FavoriteIdsStore
+import com.thehouse.app.data.remote.api.FavoritesApi
 import com.thehouse.app.data.remote.api.PropertyApi
 import com.thehouse.app.data.remote.api.UniversityApi
 import com.thehouse.app.data.remote.auth.BearerTokenInterceptor
@@ -26,12 +29,17 @@ import com.thehouse.app.data.remote.auth.RefreshAuthenticator
 import com.thehouse.app.data.serialization.JsonProvider
 import com.thehouse.app.domain.common.DispatcherProvider
 import com.thehouse.app.domain.repository.AuthRepository
+import com.thehouse.app.domain.repository.FavoritesRepository
 import com.thehouse.app.domain.repository.OnboardingRepository
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
+import com.thehouse.app.domain.usecase.AddFavoriteUseCase
+import com.thehouse.app.domain.usecase.GetFavoritesUseCase
+import com.thehouse.app.domain.usecase.GetFavoriteIdsUseCase
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
 import com.thehouse.app.domain.usecase.GetUniversitiesUseCase
+import com.thehouse.app.domain.usecase.RemoveFavoriteUseCase
 import com.thehouse.app.domain.usecase.LoginUseCase
 import com.thehouse.app.domain.usecase.LogoutUseCase
 import com.thehouse.app.domain.usecase.ObserveSelectedUniversityUseCase
@@ -137,6 +145,19 @@ class AppContainer(context: Context) {
     val propertyRepository: PropertyRepository by lazy {
         PropertyRepositoryImpl(api = propertyApi)
     }
+
+    val favoritesApi: FavoritesApi by lazy { retrofit.create(FavoritesApi::class.java) }
+
+    val favoritesRepository: FavoritesRepository by lazy {
+        FavoritesRepositoryImpl(api = favoritesApi)
+    }
+
+    val favoriteIdsStore: FavoriteIdsStore by lazy { FavoriteIdsStore() }
+
+    val getFavorites: GetFavoritesUseCase by lazy { GetFavoritesUseCase(favoritesRepository) }
+    val getFavoriteIds: GetFavoriteIdsUseCase by lazy { GetFavoriteIdsUseCase(favoritesRepository) }
+    val addFavorite: AddFavoriteUseCase by lazy { AddFavoriteUseCase(favoritesRepository) }
+    val removeFavorite: RemoveFavoriteUseCase by lazy { RemoveFavoriteUseCase(favoritesRepository) }
 
     val selectedUniversityRepository: SelectedUniversityRepository by lazy {
         SelectedUniversityRepositoryImpl(preferences = preferences)
