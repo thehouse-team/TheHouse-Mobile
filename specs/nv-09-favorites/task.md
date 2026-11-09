@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-09 Favorites |
-| STATUS | PLANNED |
-| AUTHORIZATION | DO NOT EXECUTE |
+| STATUS | READY |
+| AUTHORIZATION | EXECUTED (D7.1) |
 
 - [x] NV-09-T01 - Confirmar contrato de favoritos (NV-27): FAVORITES-BACKEND-BLOCKED (sin endpoints).
 - [ ] NV-09-T02 - Entidad/DAO Room de favorito (bloqueado por backend).

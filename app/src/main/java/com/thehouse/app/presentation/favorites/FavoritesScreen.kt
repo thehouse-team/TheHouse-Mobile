@@ -2,11 +2,13 @@ package com.thehouse.app.presentation.favorites
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -16,19 +18,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.thehouse.app.domain.model.Favorite
+import com.thehouse.app.presentation.common.UiError
+import com.thehouse.app.presentation.common.UiErrorMessages
 
-/**
- * Favoritos D4 (sin backend NV-09).
- *
- * - Guest abre la tab pero ve el muro de acceso requerido con botón
- *   Iniciar sesión (no hay favoritos de invitado ni identidad fake).
- * - Autenticado ve estado vacío con nota de backend pendiente.
- */
 @Composable
 fun FavoritesScreen(
     isAuthenticated: Boolean,
+    isLoading: Boolean,
+    items: List<Favorite>,
+    error: UiError?,
+    removingId: String?,
     onLoginClick: () -> Unit,
     onExploreClick: () -> Unit,
+    onRemove: (String) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { padding ->
@@ -58,11 +62,15 @@ fun FavoritesScreen(
                 ) {
                     Text("Iniciar sesión")
                 }
-            } else {
-                Text(
-                    text = "Aún no tienes favoritos guardados.",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+            } else if (isLoading) {
+                CircularProgressIndicator()
+            } else if (error != null) {
+                Text(text = error?.let { UiErrorMessages.map(it) } ?: "", style = MaterialTheme.typography.bodyLarge)
+                Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    Text("Reintentar")
+                }
+            } else if (items.isEmpty()) {
+                Text(text = "Aún no tienes favoritos guardados.", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     text = "Explora propiedades y guarda las que te interesen.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -76,11 +84,25 @@ fun FavoritesScreen(
                 ) {
                     Text("Explorar propiedades")
                 }
-                Text(
-                    text = "La sincronización con backend de favoritos está pendiente (NV-09 BLOCKED).",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            } else {
+                items.forEach { fav ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = fav.title, style = MaterialTheme.typography.titleMedium)
+                            Text(text = fav.city ?: "", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Button(
+                            onClick = { onRemove(fav.propertyId) },
+                            enabled = removingId != fav.propertyId,
+                        ) {
+                            Text(if (removingId == fav.propertyId) "..." else "Quitar")
+                        }
+                    }
+                }
             }
         }
     }
