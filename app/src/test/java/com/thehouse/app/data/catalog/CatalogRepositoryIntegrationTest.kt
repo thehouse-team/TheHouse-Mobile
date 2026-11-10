@@ -78,6 +78,7 @@ class CatalogRepositoryIntegrationTest {
         )
         properties = PropertyRepositoryImpl(
             api = retrofit.create(com.thehouse.app.data.remote.api.PropertyApi::class.java),
+            searchApi = retrofit.create(com.thehouse.app.data.remote.api.SearchApi::class.java),
         )
     }
 

@@ -10,6 +10,7 @@ import com.thehouse.app.domain.error.DomainError
 fun DomainError.toUiError(): UiError = when (this) {
     DomainError.Network -> UiError.Network
     DomainError.Timeout -> UiError.Timeout
+    DomainError.BadRequest -> UiError.BadRequest
     DomainError.Unauthorized -> UiError.Unauthorized
     DomainError.NotFound -> UiError.NotFound
     DomainError.Conflict -> UiError.Conflict

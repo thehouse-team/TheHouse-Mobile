@@ -14,6 +14,7 @@ fun DataError.toDomainError(): DomainError = when (this) {
     DataError.Local -> DomainError.Unknown
     is DataError.Unknown -> DomainError.Unknown
     is DataError.Http -> when (statusCode) {
+        400 -> DomainError.BadRequest
         401, 403 -> DomainError.Unauthorized
         404 -> DomainError.NotFound
         408 -> DomainError.Timeout

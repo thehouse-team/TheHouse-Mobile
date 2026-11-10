@@ -2,8 +2,14 @@ package com.thehouse.app.presentation.propertydetail
 
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.DomainException
+import com.thehouse.app.domain.model.MapBounds
 import com.thehouse.app.domain.model.PagedResult
+import com.thehouse.app.domain.model.PlaceSuggestion
 import com.thehouse.app.domain.model.Property
+import com.thehouse.app.domain.model.RoomDetail
+import com.thehouse.app.domain.model.RoomMarker
+import com.thehouse.app.domain.model.RoomSearchFilters
+import com.thehouse.app.domain.model.RoomSummary
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.usecase.GetPropertyByIdUseCase
 import com.thehouse.app.testutil.TestMainDispatcherRule
@@ -40,6 +46,28 @@ private class FakeDetailRepository(
         Result.success(PagedResult<Property>(emptyList(), 1, 20, 0, 0))
 
     override suspend fun getPropertyById(id: String): Result<Property> = result
+
+    override suspend fun searchRooms(
+        universityId: String,
+        filters: RoomSearchFilters,
+        page: Int,
+        pageSize: Int,
+    ): Result<PagedResult<RoomSummary>> =
+        Result.success(PagedResult(emptyList<RoomSummary>(), page, pageSize, 0, 0))
+
+    override suspend fun getRoomMapMarkers(
+        universityId: String,
+        filters: RoomSearchFilters,
+        bounds: MapBounds,
+    ): Result<List<RoomMarker>> = Result.success(emptyList())
+
+    override suspend fun searchPlaces(
+        query: String,
+        universityId: String,
+    ): Result<List<PlaceSuggestion>> = Result.success(emptyList())
+
+    override suspend fun getRoomById(id: String): Result<RoomDetail> =
+        Result.failure(IllegalStateException("No usado en PropertyDetail"))
 }
 
 class PropertyDetailViewModelTest {
@@ -87,6 +115,28 @@ class PropertyDetailViewModelTest {
                     Result.success(detailProperty)
                 }
             }
+
+            override suspend fun searchRooms(
+                universityId: String,
+                filters: RoomSearchFilters,
+                page: Int,
+                pageSize: Int,
+            ): Result<PagedResult<RoomSummary>> =
+                Result.success(PagedResult(emptyList<RoomSummary>(), page, pageSize, 0, 0))
+
+            override suspend fun getRoomMapMarkers(
+                universityId: String,
+                filters: RoomSearchFilters,
+                bounds: MapBounds,
+            ): Result<List<RoomMarker>> = Result.success(emptyList())
+
+            override suspend fun searchPlaces(
+                query: String,
+                universityId: String,
+            ): Result<List<PlaceSuggestion>> = Result.success(emptyList())
+
+            override suspend fun getRoomById(id: String): Result<RoomDetail> =
+                Result.failure(IllegalStateException("No usado en PropertyDetail"))
         }
         val vm = PropertyDetailViewModel(
             propertyId = "prop-1",

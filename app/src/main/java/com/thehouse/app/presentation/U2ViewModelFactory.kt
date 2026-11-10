@@ -14,6 +14,7 @@ import com.thehouse.app.presentation.home.HomeViewModel
 import com.thehouse.app.presentation.onboarding.OnboardingViewModel
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailViewModel
+import com.thehouse.app.presentation.roomdetail.RoomDetailViewModel
 import com.thehouse.app.presentation.visits.ScheduleVisitViewModel
 import com.thehouse.app.presentation.visits.VisitDetailViewModel
 import com.thehouse.app.presentation.visits.VisitsViewModel
@@ -58,6 +59,15 @@ class U2ViewModelFactory(
         }
     }
 
+    fun roomDetail(roomId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            RoomDetailViewModel(
+                roomId = roomId,
+                getRoomById = container.getRoomById,
+            )
+        }
+    }
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(RootViewModel::class.java) ->
             RootViewModel(container) as T
@@ -83,8 +93,13 @@ class U2ViewModelFactory(
 
         modelClass.isAssignableFrom(ExploreViewModel::class.java) ->
             ExploreViewModel(
-                getProperties = container.getProperties,
-                searchProperties = container.searchProperties,
+                getUniversities = container.getUniversities,
+                searchRooms = container.searchRooms,
+                searchPlacesUseCase = container.searchPlaces,
+                getRoomMap = container.getRoomMap,
+                selectedRepository = container.selectedUniversityRepository,
+                selectUniversity = container.selectUniversity,
+                sessionState = container.sessionStore.state,
             ) as T
 
         modelClass.isAssignableFrom(FavoritesViewModel::class.java) ->

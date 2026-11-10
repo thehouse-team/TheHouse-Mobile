@@ -1,7 +1,13 @@
 package com.thehouse.app.domain.repository
 
+import com.thehouse.app.domain.model.MapBounds
 import com.thehouse.app.domain.model.PagedResult
+import com.thehouse.app.domain.model.PlaceSuggestion
 import com.thehouse.app.domain.model.Property
+import com.thehouse.app.domain.model.RoomDetail
+import com.thehouse.app.domain.model.RoomMarker
+import com.thehouse.app.domain.model.RoomSearchFilters
+import com.thehouse.app.domain.model.RoomSummary
 import com.thehouse.app.domain.model.University
 import kotlinx.coroutines.flow.StateFlow
 
@@ -19,8 +25,11 @@ interface UniversityRepository {
 }
 
 /**
- * Catálogo de propiedades (NV-07 Explore, contrato real AllowAnonymous).
- * Solo page/pageSize confirmados; sin filtros/search del backend.
+ * Catálogo de propiedades y búsqueda real de cuartos (NV-07 D10).
+ *
+ * Extiende el repositorio existente en lugar de crear un segundo cliente:
+ * las operaciones de búsqueda usan el mismo Retrofit/OkHttp de D3.
+ * Contrato: /rooms/search, /rooms/map, /rooms/{id}, /places/search.
  */
 interface PropertyRepository {
     suspend fun getProperties(
@@ -29,6 +38,26 @@ interface PropertyRepository {
     ): Result<PagedResult<Property>>
 
     suspend fun getPropertyById(id: String): Result<Property>
+
+    suspend fun searchRooms(
+        universityId: String,
+        filters: RoomSearchFilters,
+        page: Int = 1,
+        pageSize: Int = 20,
+    ): Result<PagedResult<RoomSummary>>
+
+    suspend fun getRoomMapMarkers(
+        universityId: String,
+        filters: RoomSearchFilters,
+        bounds: MapBounds,
+    ): Result<List<RoomMarker>>
+
+    suspend fun searchPlaces(
+        query: String,
+        universityId: String,
+    ): Result<List<PlaceSuggestion>>
+
+    suspend fun getRoomById(id: String): Result<RoomDetail>
 }
 
 /**

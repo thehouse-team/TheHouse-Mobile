@@ -11,6 +11,7 @@ enum class ProtectedAction {
     Contact,
     Publish,
     ScheduleVisit,
+    ViewRoomDetails,
 }
 
 /**

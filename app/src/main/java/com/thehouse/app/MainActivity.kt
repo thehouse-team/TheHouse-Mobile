@@ -31,13 +31,14 @@ import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.auth.LoginScreen
 import com.thehouse.app.presentation.auth.RegisterScreen
 import com.thehouse.app.presentation.components.BottomNavigation
-import com.thehouse.app.presentation.explore.ExploreScreen
+import com.thehouse.app.presentation.explore.ExploreDestination
 import com.thehouse.app.presentation.favorites.FavoritesEvent
 import com.thehouse.app.presentation.favorites.FavoritesScreen
 import com.thehouse.app.presentation.favorites.FavoritesViewModel
 import com.thehouse.app.presentation.home.HomeScreen
 import com.thehouse.app.presentation.navigation.AppRoutes
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
+import com.thehouse.app.presentation.navigation.RoomDetailRoute
 import com.thehouse.app.presentation.navigation.ScheduleVisitRoute
 import com.thehouse.app.presentation.navigation.VisitDetailRoute
 import com.thehouse.app.presentation.navigation.BottomTab
@@ -45,6 +46,7 @@ import com.thehouse.app.presentation.navigation.TabNavigationState
 import com.thehouse.app.presentation.onboarding.OnboardingScreen
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailDestination
+import com.thehouse.app.presentation.roomdetail.RoomDetailDestination
 import com.thehouse.app.presentation.smartmatch.SmartMatchScreen
 import com.thehouse.app.presentation.visits.ScheduleVisitDestination
 import com.thehouse.app.presentation.visits.VisitDetailEvent
@@ -213,28 +215,44 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                     )
                 }
                 composable(AppRoutes.explore.route) {
-                    ExploreScreen(
-                        onFavoriteClick = {
-                            if (!isAuthenticated) {
-                                navController.navigate(AppRoutes.login.route) {
-                                    launchSingleTop = true
-                                }
-                            }
-                        },
-                        onContactClick = {
-                            if (!isAuthenticated) {
-                                navController.navigate(AppRoutes.login.route) {
-                                    launchSingleTop = true
-                                }
-                            }
-                        },
-                        onPropertyClick = { id ->
-                            navController.navigate(PropertyDetailRoute(id).route) {
+                    ExploreDestination(
+                        factory = factory,
+                        onOpenRoomDetail = { roomId ->
+                            navController.navigate(RoomDetailRoute(roomId).route) {
                                 launchSingleTop = true
                             }
                         },
-                        factory = factory,
+                        onRequireLogin = {
+                            navController.navigate(AppRoutes.login.route) {
+                                launchSingleTop = true
+                            }
+                        },
                     )
+                }
+                composable(
+                    route = RoomDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(RoomDetailRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val roomId = entry.arguments?.getString(RoomDetailRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val detailFactory = remember(factory, roomId) { factory.roomDetail(roomId) }
+                        RoomDetailDestination(
+                            roomId = roomId,
+                            factory = detailFactory,
+                            onBack = { navController.popBackStack() },
+                            onRequireLogin = {
+                                navController.navigate(AppRoutes.login.route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
                 }
                 composable(
                     route = PropertyDetailRoute.PATTERN,

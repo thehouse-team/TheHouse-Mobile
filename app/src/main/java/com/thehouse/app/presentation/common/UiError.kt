@@ -8,6 +8,7 @@ package com.thehouse.app.presentation.common
 sealed interface UiError {
     data object Network : UiError
     data object Timeout : UiError
+    data object BadRequest : UiError
     data object Unauthorized : UiError
     data object NotFound : UiError
     data object Conflict : UiError

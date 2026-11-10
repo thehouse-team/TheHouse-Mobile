@@ -8,6 +8,7 @@ package com.thehouse.app.domain.error
 sealed interface DomainError {
     data object Network : DomainError
     data object Timeout : DomainError
+    data object BadRequest : DomainError
     data object Unauthorized : DomainError
     data object NotFound : DomainError
     data object Conflict : DomainError

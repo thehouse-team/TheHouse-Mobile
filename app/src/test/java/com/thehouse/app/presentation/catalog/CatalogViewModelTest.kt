@@ -2,6 +2,12 @@ package com.thehouse.app.presentation.catalog
 
 import com.thehouse.app.domain.model.PagedResult
 import com.thehouse.app.domain.model.Property
+import com.thehouse.app.domain.model.RoomDetail
+import com.thehouse.app.domain.model.RoomMarker
+import com.thehouse.app.domain.model.RoomSearchFilters
+import com.thehouse.app.domain.model.RoomSummary
+import com.thehouse.app.domain.model.PlaceSuggestion
+import com.thehouse.app.domain.model.MapBounds
 import com.thehouse.app.domain.model.University
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
@@ -9,11 +15,8 @@ import com.thehouse.app.domain.repository.UniversityRepository
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
 import com.thehouse.app.domain.usecase.GetUniversitiesUseCase
 import com.thehouse.app.domain.usecase.LogoutUseCase
-import com.thehouse.app.domain.usecase.SearchPropertiesUseCase
 import com.thehouse.app.domain.usecase.SelectUniversityUseCase
 import com.thehouse.app.domain.model.SessionState
-import com.thehouse.app.presentation.explore.ExploreEvent
-import com.thehouse.app.presentation.explore.ExploreViewModel
 import com.thehouse.app.presentation.home.HomeEvent
 import com.thehouse.app.presentation.home.HomeViewModel
 import com.thehouse.app.testutil.TestMainDispatcherRule
@@ -74,6 +77,29 @@ private class FakePropertyRepository(
 
     override suspend fun getPropertyById(id: String): Result<Property> =
         Result.success(property)
+
+    override suspend fun searchRooms(
+        universityId: String,
+        filters: RoomSearchFilters,
+        page: Int,
+        pageSize: Int,
+    ): Result<PagedResult<RoomSummary>> = Result.success(
+        PagedResult(emptyList<RoomSummary>(), page, pageSize, 0, 0),
+    )
+
+    override suspend fun getRoomMapMarkers(
+        universityId: String,
+        filters: RoomSearchFilters,
+        bounds: MapBounds,
+    ): Result<List<RoomMarker>> = Result.success(emptyList())
+
+    override suspend fun searchPlaces(
+        query: String,
+        universityId: String,
+    ): Result<List<PlaceSuggestion>> = Result.success(emptyList())
+
+    override suspend fun getRoomById(id: String): Result<RoomDetail> =
+        Result.failure(IllegalStateException("No usado en Home"))
 }
 
 private class FakeSelectedRepository : SelectedUniversityRepository {
@@ -128,35 +154,6 @@ class CatalogViewModelTest {
         advanceUntilIdle()
         assertEquals("uni-1", vm.uiState.value.selectedUniversityId)
         assertEquals("uni-1", selected.selectedUniversityId.value)
-    }
-
-    @Test
-    fun `explore real y busqueda local sobre titulo ciudad`() = runTest {
-        val vm = ExploreViewModel(
-            getProperties = GetPropertiesUseCase(FakePropertyRepository()),
-            searchProperties = SearchPropertiesUseCase(),
-        )
-        runCurrent()
-        assertTrue(vm.uiState.value.properties is CatalogLoadState.Success)
-        vm.onEvent(ExploreEvent.QueryChanged("tulancingo"))
-        runCurrent()
-        assertTrue(vm.uiState.value.properties is CatalogLoadState.Success)
-        vm.onEvent(ExploreEvent.QueryChanged("sin-resultados"))
-        runCurrent()
-        assertTrue(vm.uiState.value.properties is CatalogLoadState.Empty)
-    }
-
-    @Test
-    fun `explore empty sin datos`() = runTest {
-        val emptyRepo = FakePropertyRepository(
-            Result.success(PagedResult(emptyList(), 1, 20, 0, 0)),
-        )
-        val vm = ExploreViewModel(
-            getProperties = GetPropertiesUseCase(emptyRepo),
-            searchProperties = SearchPropertiesUseCase(),
-        )
-        runCurrent()
-        assertTrue(vm.uiState.value.properties is CatalogLoadState.Empty)
     }
 }
 

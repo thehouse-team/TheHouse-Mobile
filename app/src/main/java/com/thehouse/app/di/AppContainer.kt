@@ -23,6 +23,7 @@ import com.thehouse.app.data.favorites.repository.FavoritesRepositoryImpl
 import com.thehouse.app.data.favorites.state.FavoriteIdsStore
 import com.thehouse.app.data.remote.api.FavoritesApi
 import com.thehouse.app.data.remote.api.PropertyApi
+import com.thehouse.app.data.remote.api.SearchApi
 import com.thehouse.app.data.remote.api.UniversityApi
 import com.thehouse.app.data.remote.api.VisitsApi
 import com.thehouse.app.data.visits.repository.VisitsRepositoryImpl
@@ -43,6 +44,8 @@ import com.thehouse.app.domain.usecase.CreateVisitUseCase
 import com.thehouse.app.domain.usecase.GetFavoritesUseCase
 import com.thehouse.app.domain.usecase.GetFavoriteIdsUseCase
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
+import com.thehouse.app.domain.usecase.GetRoomByIdUseCase
+import com.thehouse.app.domain.usecase.GetRoomMapUseCase
 import com.thehouse.app.domain.usecase.GetVisitUseCase
 import com.thehouse.app.domain.usecase.GetVisitsUseCase
 import com.thehouse.app.domain.usecase.GetUniversitiesUseCase
@@ -53,7 +56,9 @@ import com.thehouse.app.domain.usecase.ObserveSelectedUniversityUseCase
 import com.thehouse.app.domain.usecase.ObserveSessionUseCase
 import com.thehouse.app.domain.usecase.RegisterUseCase
 import com.thehouse.app.domain.usecase.RestoreSessionUseCase
+import com.thehouse.app.domain.usecase.SearchPlacesUseCase
 import com.thehouse.app.domain.usecase.SearchPropertiesUseCase
+import com.thehouse.app.domain.usecase.SearchRoomsUseCase
 import com.thehouse.app.domain.usecase.SelectUniversityUseCase
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -145,12 +150,14 @@ class AppContainer(context: Context) {
 
     val propertyApi: PropertyApi by lazy { retrofit.create(PropertyApi::class.java) }
 
+    val searchApi: SearchApi by lazy { retrofit.create(SearchApi::class.java) }
+
     val universityRepository: UniversityRepository by lazy {
         UniversityRepositoryImpl(api = universityApi)
     }
 
     val propertyRepository: PropertyRepository by lazy {
-        PropertyRepositoryImpl(api = propertyApi)
+        PropertyRepositoryImpl(api = propertyApi, searchApi = searchApi)
     }
 
     val favoritesApi: FavoritesApi by lazy { retrofit.create(FavoritesApi::class.java) }
@@ -200,6 +207,13 @@ class AppContainer(context: Context) {
     }
 
     val searchProperties: SearchPropertiesUseCase by lazy { SearchPropertiesUseCase() }
+
+    // ===== D10 Search / Map real (NV-07) =====
+
+    val searchRooms: SearchRoomsUseCase by lazy { SearchRoomsUseCase(propertyRepository) }
+    val getRoomMap: GetRoomMapUseCase by lazy { GetRoomMapUseCase(propertyRepository) }
+    val searchPlaces: SearchPlacesUseCase by lazy { SearchPlacesUseCase(propertyRepository) }
+    val getRoomById: GetRoomByIdUseCase by lazy { GetRoomByIdUseCase(propertyRepository) }
 
     val register: RegisterUseCase by lazy { RegisterUseCase(authRepository) }
     val login: LoginUseCase by lazy { LoginUseCase(authRepository) }

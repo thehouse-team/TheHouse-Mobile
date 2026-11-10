@@ -1,22 +1,48 @@
 # NV-07 — EVIDENCIA
 
-Sin evidencia todavia — PLANNED, DO NOT EXECUTE.
+## D10 — Busqueda y mapa reales (2026-11-09, branch `feature/real-search-map`)
 
-## Hechos reales preservados
-- Contrato confirmado M-MOB-044: register/login/logout/properties/universities/health. Sin coordenadas/filtros confirmados en esta conversacion: no inventar endpoints ni campos.
+Base: `4eabb4c` (incluye D3, D4, D5, D6, D7.1, D8.1). Sin merge, sin PR, sin cambios en Backend.
 
-## Evidencia D4 parcial (2026-11-06, branch feature/home-guest-navigation)
-- ExploreScreen (tab Explorar) con fixture del prototipo (PrototypeProperties), etiquetas Match/Verificado y nota "Mapa completo pendiente de NV-07". Sin SDK de mapas, sin permisos, sin endpoint inventado, sin busqueda con filtros confirmados.
-- Verificado con `.\gradlew.bat testDebugUnitTest lintDebug assembleDebug` BUILD SUCCESSFUL 62/62 (suite compartida NV-05).
-- NO se marca Explore/Map completo, ni Smart Match ML, ni Favorites backend.
+### Contrato verificado (solo lectura)
+Fuente: refs remotas de `C:\THEHOUSE\TheHouse-backend` (`origin/main`, `origin/feat/nv-14-search`). URL desplegada probada desde emulador.
 
-## Evidencia D5 parcial - catalogo/Explore (2026-11-06, branch feature/universities-properties-explore)
-Contrato real AllowAnonymous (solo lectura Backend):
-- GET /api/v1/properties?page&pageSize -> 200 {items[{id,title,price,currency,city,universityId,bedrooms,bathrooms,areaM2,createdAt}],page,pageSize,totalItems,totalPages}; 400/429/503/500.
-- GET /api/v1/properties/{id} -> 200 {id,title,description,price,currency,city,universityId,bedrooms,bathrooms,areaM2,amenities,createdAt}; 400/404/429/503/500.
-Implementacion: PropertyApi/DTOs/mapper/PropertyRepositoryImpl + ExploreViewModel (lista real, estados, busqueda local titulo/ciudad) + Home destacada real (primera propiedad, regla UI local), PropertyCard real sin Match/verificacion/distancia/filtros inventados, mapa placeholder, Smart Match/Favoritos sin cambios.
-Tests: CatalogRepositoryIntegrationTest 9/9 + CatalogViewModelTest 4/4; suite 75/75 verde, BUILD SUCCESSFUL.
-NO se marca mapa/Maps SDK, ML, Favorites backend (siguen BLOCKED/pendientes).
+- `GET /api/v1/rooms/search` (publico): `universityId` obligatorio (ObjectId), `minPrice`, `maxPrice`, `roomType`, `bathroom`, `buildingType`, `allowedTenants`, `services` CSV, `maxDistanceKm`, `sort=distance|price|newest`, `page`, `pageSize<=50`. No existe `q` de texto para cuartos.
+- `GET /api/v1/rooms/map` (publico): mismos filtros + `bbox=minLng,minLat,maxLng,maxLat`; maximo 0.3° por lado y 300 marcadores.
+- `GET /api/v1/places/search` (publico): `q` 2–60, `universityId`; insensible a acentos; maximo 10.
+- `GET /api/v1/rooms/{id}` (Bearer): incluye edificio, universidad cercana, mobiliario, tamano, disponibilidad y contrato minimo. Nunca direccion exacta, dueno, telefono ni coordenadas reales.
 
-## Evidencia futura esperada
-Matriz de contrato, evaluacion de costo de mapas y resultados reales tras autorizacion.
+### Implementacion
+- `domain/model/Search.kt`, `domain/usecase/SearchUseCases.kt`: modelos del contrato y validacion previa (ObjectId, precios 500–50,000, distancia 0.5–30, catalogos, pagina/pageSize, bbox <= 0.3°).
+- `data/remote/api/SearchApi.kt`, `data/remote/dto/search/SearchDtos.kt`, `data/search/mapper/SearchMappers.kt`: solo campos y parametros confirmados.
+- `PropertyRepository` extendido (sin segundo Retrofit): `searchRooms`, `getRoomMapMarkers`, `searchPlaces`, `getRoomById`, con mapeo seguro de 400/401/404/429/5xx, Network, Timeout y rethrow de cancelacion.
+- `ExploreViewModel` + `ExploreScreen`: universidad obligatoria, filtros reales, sort, paginacion, lista/mapa, autocompletado de colonias con debounce, viewport con debounce, estados Loading/Empty/Content/Error, preview de marcador y guard Guest.
+- `RoomDetailViewModel` + `RoomDetailScreen`: detalle real `/rooms/{id}`, 404, 401 → Login, reintento. Sin datos inventados.
+- Mapa de referencia propio (Compose Canvas) con marcadores reales, pan/zoom y bbox; sin Google Maps/osmdroid, sin tiles, sin API key, sin permiso de ubicacion. `M-MOB-017`/COST-001 del SDK siguen pendientes.
+
+### Tests
+- Nuevos: `SearchRepositoryIntegrationTest` (contrato/filtros/bbox/400/401/429/503/Network/Timeout/cancelacion), `SearchUseCasesTest` (validacion), `ExploreViewModelTest` (busqueda, filtros, paginacion, empty, error, invalid filter, mapa, viewport, colonias, guest/auth, timeout) y `RoomDetailViewModelTest`.
+- Regresion D3–D8 incluida en la suite.
+- Resultado: **140 tests, 0 failures, 0 errors, 27 clases**.
+
+### Validacion ejecutada
+Comando: `.\gradlew.bat testDebugUnitTest lintDebug assembleDebug`
+
+- Resultado final: **BUILD SUCCESSFUL**.
+- `lintDebug`: 0 errores; 19 warnings no bloqueantes (UnusedResources, versiones, etc.).
+- APK: `app/build/outputs/apk/debug/app-debug.apk` (22,267,639 bytes).
+- Durante la primera corrida se detectaron 2 errores de sintaxis (`emptyList`) y 1 asercion de test; se corrigieron y la corrida final quedo verde.
+
+### Runtime (emulador `emulator-5554`)
+- APK instalado y app abierta sin crash.
+- Universidad real `UTTT` (`6aeecc11f3c9f3f76294628f`) seleccionada desde Backend desplegado.
+- `/rooms/search`: **5 rentas encontradas**, tarjetas con precio, distancia, tipo, servicios y demo.
+- `/rooms/map`: marcadores reales visibles; tap abre preview (`$2200 MXN/mes`, `0.7 km`) con “Ver detalle” y “Cerrar”.
+- Guest: “Ver detalle” redirige a Login (sin sesion falsa).
+- `/places/search`: “Tula” devuelve “Tula · Ciudad · 4.7 km” y “Atotonilco de Tula · 13.1 km”; al seleccionar, el mapa se recentra con nuevos marcadores.
+- Detalle autenticado de cuarto no se ejecuto en runtime por no disponer de credenciales autorizadas; esta cubierto por tests 200/401 y por el guard Guest verificado.
+
+### Riesgos / deuda
+- SDK de mapas real y permiso de ubicacion siguen pendientes (`NV-21`/`M-MOB-017`); la visualizacion actual es de referencia y usa coordenadas aproximadas.
+- El listado de universidades consume la primera pagina del contrato existente; no se agrego busqueda de universidades porque no esta en D10.
+- No se modifico Backend, no se agregaron secretos y no se publico nada.
