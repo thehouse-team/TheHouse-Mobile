@@ -36,10 +36,14 @@ import com.thehouse.app.domain.repository.OnboardingRepository
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
+
 import com.thehouse.app.domain.repository.VisitsRepository
 import com.thehouse.app.domain.usecase.AddFavoriteUseCase
 import com.thehouse.app.domain.usecase.CancelVisitUseCase
 import com.thehouse.app.domain.usecase.CreateVisitUseCase
+
+import com.thehouse.app.domain.usecase.AddFavoriteUseCase
+
 import com.thehouse.app.domain.usecase.GetFavoritesUseCase
 import com.thehouse.app.domain.usecase.GetFavoriteIdsUseCase
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
@@ -165,6 +169,7 @@ class AppContainer(context: Context) {
     val getFavoriteIds: GetFavoriteIdsUseCase by lazy { GetFavoriteIdsUseCase(favoritesRepository) }
     val addFavorite: AddFavoriteUseCase by lazy { AddFavoriteUseCase(favoritesRepository) }
     val removeFavorite: RemoveFavoriteUseCase by lazy { RemoveFavoriteUseCase(favoritesRepository) }
+
 
     // ===== D8.1 Visitas reales (NV-10) =====
 
