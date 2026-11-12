@@ -37,7 +37,11 @@ import com.thehouse.app.presentation.favorites.FavoritesScreen
 import com.thehouse.app.presentation.favorites.FavoritesViewModel
 import com.thehouse.app.presentation.home.HomeScreen
 import com.thehouse.app.presentation.navigation.AppRoutes
+import com.thehouse.app.presentation.navigation.ConversationRoute
+import com.thehouse.app.presentation.navigation.CreateRequestRoute
+import com.thehouse.app.presentation.navigation.LandlordRequestDetailRoute
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
+import com.thehouse.app.presentation.navigation.RequestDetailRoute
 import com.thehouse.app.presentation.navigation.ScheduleVisitRoute
 import com.thehouse.app.presentation.navigation.VisitDetailRoute
 import com.thehouse.app.presentation.navigation.BottomTab
@@ -210,6 +214,15 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             }
                         },
                         factory = factory,
+                        onOpenRequests = {
+                            navController.navigate(AppRoutes.requests.route) { launchSingleTop = true }
+                        },
+                        onOpenConversations = {
+                            navController.navigate(AppRoutes.conversations.route) { launchSingleTop = true }
+                        },
+                        onOpenLandlordRequests = {
+                            navController.navigate(AppRoutes.landlordRequests.route) { launchSingleTop = true }
+                        },
                     )
                 }
                 composable(AppRoutes.explore.route) {
@@ -258,6 +271,16 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         },
                         onOpenVisits = {
                             navController.navigate(AppRoutes.visits.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onOpenRequests = {
+                            navController.navigate(AppRoutes.requests.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onMakeRequest = { roomId ->
+                            navController.navigate(CreateRequestRoute(roomId).route) {
                                 launchSingleTop = true
                             }
                         },
@@ -375,6 +398,160 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             onBack = { navController.popBackStack() },
                             onRetry = { visitVm.onEvent(VisitDetailEvent.Load) },
                             onCancel = { visitVm.onEvent(VisitDetailEvent.Cancel) },
+                        )
+                    }
+                }
+                composable(AppRoutes.requests.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.requests.RequestsDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onRequestClick = { requestId ->
+                                navController.navigate(RequestDetailRoute(requestId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = RequestDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(RequestDetailRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val requestId = entry.arguments?.getString(RequestDetailRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val requestFactory = remember(factory, requestId) { factory.requestDetail(requestId) }
+                        com.thehouse.app.presentation.requests.RequestDetailDestination(
+                            requestId = requestId,
+                            factory = requestFactory,
+                            onBack = { navController.popBackStack() },
+                            onOpenConversation = { conversationId ->
+                                navController.navigate(ConversationRoute(conversationId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(AppRoutes.landlordRequests.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.landlord.LandlordRequestsDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onRequestClick = { requestId ->
+                                navController.navigate(LandlordRequestDetailRoute(requestId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = LandlordRequestDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(LandlordRequestDetailRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val requestId = entry.arguments?.getString(LandlordRequestDetailRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val requestFactory = remember(factory, requestId) { factory.landlordRequestDetail(requestId) }
+                        com.thehouse.app.presentation.landlord.LandlordRequestDetailDestination(
+                            requestId = requestId,
+                            factory = requestFactory,
+                            onBack = { navController.popBackStack() },
+                            onOpenConversation = { conversationId ->
+                                navController.navigate(ConversationRoute(conversationId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(AppRoutes.conversations.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.chat.ConversationsDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onConversationClick = { conversationId ->
+                                navController.navigate(ConversationRoute(conversationId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = CreateRequestRoute.PATTERN,
+                    arguments = listOf(navArgument(CreateRequestRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val roomId = entry.arguments?.getString(CreateRequestRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val createFactory = remember(factory, roomId) { factory.createRequest(roomId) }
+                        com.thehouse.app.presentation.requests.CreateRequestDestination(
+                            roomId = roomId,
+                            factory = createFactory,
+                            onBack = { navController.popBackStack() },
+                            onCreated = { request ->
+                                navController.navigate(RequestDetailRoute(request.id).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = ConversationRoute.PATTERN,
+                    arguments = listOf(
+                        navArgument(ConversationRoute.ID_ARGUMENT) { type = NavType.StringType },
+                        navArgument("closed") {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        },
+                    ),
+                ) { entry ->
+                    val conversationId =
+                        entry.arguments?.getString(ConversationRoute.ID_ARGUMENT).orEmpty()
+                    val initialClosed = entry.arguments?.getBoolean("closed") ?: false
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val conversationFactory =
+                            remember(factory, conversationId) { factory.conversation(conversationId, initialClosed) }
+                        com.thehouse.app.presentation.chat.ConversationDestination(
+                            conversationId = conversationId,
+                            initialClosed = initialClosed,
+                            factory = conversationFactory,
+                            onBack = { navController.popBackStack() },
                         )
                     }
                 }

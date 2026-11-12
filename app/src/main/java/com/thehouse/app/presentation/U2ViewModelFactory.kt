@@ -58,6 +58,48 @@ class U2ViewModelFactory(
         }
     }
 
+    fun createRequest(roomId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.requests.CreateRequestViewModel(
+                roomId = roomId,
+                createRequest = container.createRequest,
+            )
+        }
+    }
+
+    fun requestDetail(requestId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.requests.RequestDetailViewModel(
+                requestId = requestId,
+                getRequest = container.getRequest,
+                cancelRequest = container.cancelRequest,
+            )
+        }
+    }
+
+    fun landlordRequestDetail(requestId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.landlord.LandlordRequestDetailViewModel(
+                requestId = requestId,
+                getRequest = container.getRequest,
+                acceptRequest = container.acceptRequest,
+                rejectRequest = container.rejectRequest,
+            )
+        }
+    }
+
+    fun conversation(conversationId: String, initialClosed: Boolean): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                com.thehouse.app.presentation.chat.ConversationViewModel(
+                    conversationId = conversationId,
+                    getMessages = container.getMessages,
+                    sendMessage = container.sendMessage,
+                    markRead = container.markConversationRead,
+                )
+            }
+        }
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(RootViewModel::class.java) ->
             RootViewModel(container) as T
@@ -99,6 +141,24 @@ class U2ViewModelFactory(
             VisitsViewModel(
                 getVisits = container.getVisits,
                 cancelVisit = container.cancelVisit,
+            ) as T
+
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.requests.RequestsViewModel::class.java) ->
+            com.thehouse.app.presentation.requests.RequestsViewModel(
+                getRequests = container.getUserRequests,
+                cancelRequest = container.cancelRequest,
+            ) as T
+
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.landlord.LandlordRequestsViewModel::class.java) ->
+            com.thehouse.app.presentation.landlord.LandlordRequestsViewModel(
+                getLandlordRequests = container.getLandlordRequests,
+                acceptRequest = container.acceptRequest,
+                rejectRequest = container.rejectRequest,
+            ) as T
+
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.chat.ConversationsViewModel::class.java) ->
+            com.thehouse.app.presentation.chat.ConversationsViewModel(
+                getConversations = container.getConversations,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")

@@ -31,6 +31,8 @@ sealed interface PropertyDetailEvent : UiEvent {
 sealed interface PropertyDetailEffect : UiEffect {
     data object RequireLogin : PropertyDetailEffect
     data object ScheduleVisit : PropertyDetailEffect
+    /** D9: contacto real → composer de solicitud (contrato confirmado). */
+    data object MakeRequest : PropertyDetailEffect
     data class ActionUnavailable(val action: ProtectedAction) : PropertyDetailEffect
 }
 
@@ -103,8 +105,11 @@ class PropertyDetailViewModel(
         val isAuthenticated = sessionState.value is SessionState.Active
         if (AccessPolicy.shouldRedirectToLogin(action, isAuthenticated)) {
             sendEffect(PropertyDetailEffect.RequireLogin)
+        } else if (action == ProtectedAction.Contact) {
+            // D9: solicitud real (POST /rooms/{id}/requests) confirmada por contrato.
+            sendEffect(PropertyDetailEffect.MakeRequest)
         } else {
-            // Contacto sigue sin contrato confirmado; nunca se simula envío.
+            // Favorite aún sin contrato; nunca se simula envío.
             sendEffect(PropertyDetailEffect.ActionUnavailable(action))
         }
     }
