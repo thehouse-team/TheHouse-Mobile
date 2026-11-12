@@ -235,4 +235,72 @@ class AppContainer(context: Context) {
     val logout: LogoutUseCase by lazy { LogoutUseCase(authRepository) }
     val observeSession: ObserveSessionUseCase by lazy { ObserveSessionUseCase(authRepository) }
     val restoreSession: RestoreSessionUseCase by lazy { RestoreSessionUseCase(authRepository) }
+
+    // ===== D9 Requests + Real Chat (reutiliza Retrofit/HttpClient D3) =====
+
+    val requestsApi: com.thehouse.app.data.remote.api.RequestsApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.RequestsApi::class.java)
+    }
+
+    val chatApi: com.thehouse.app.data.remote.api.ChatApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.ChatApi::class.java)
+    }
+
+    val requestsRepository: com.thehouse.app.domain.repository.RequestsRepository by lazy {
+        com.thehouse.app.data.requests.repository.RequestsRepositoryImpl(
+            api = requestsApi,
+            json = json,
+        )
+    }
+
+    val conversationRepository: com.thehouse.app.domain.repository.ConversationRepository by lazy {
+        com.thehouse.app.data.chat.repository.ConversationsRepositoryImpl(
+            api = chatApi,
+            json = json,
+        )
+    }
+
+    val createRequest: com.thehouse.app.domain.usecase.CreateRequestUseCase by lazy {
+        com.thehouse.app.domain.usecase.CreateRequestUseCase(requestsRepository)
+    }
+
+    val getUserRequests: com.thehouse.app.domain.usecase.GetUserRequestsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetUserRequestsUseCase(requestsRepository)
+    }
+
+    val getRequest: com.thehouse.app.domain.usecase.GetRequestUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetRequestUseCase(requestsRepository)
+    }
+
+    val cancelRequest: com.thehouse.app.domain.usecase.CancelRequestUseCase by lazy {
+        com.thehouse.app.domain.usecase.CancelRequestUseCase(requestsRepository)
+    }
+
+    val getLandlordRequests: com.thehouse.app.domain.usecase.GetLandlordRequestsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordRequestsUseCase(requestsRepository)
+    }
+
+    val acceptRequest: com.thehouse.app.domain.usecase.AcceptRequestUseCase by lazy {
+        com.thehouse.app.domain.usecase.AcceptRequestUseCase(requestsRepository)
+    }
+
+    val rejectRequest: com.thehouse.app.domain.usecase.RejectRequestUseCase by lazy {
+        com.thehouse.app.domain.usecase.RejectRequestUseCase(requestsRepository)
+    }
+
+    val getConversations: com.thehouse.app.domain.usecase.GetConversationsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetConversationsUseCase(conversationRepository)
+    }
+
+    val getMessages: com.thehouse.app.domain.usecase.GetMessagesUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetMessagesUseCase(conversationRepository)
+    }
+
+    val sendMessage: com.thehouse.app.domain.usecase.SendMessageUseCase by lazy {
+        com.thehouse.app.domain.usecase.SendMessageUseCase(conversationRepository)
+    }
+
+    val markConversationRead: com.thehouse.app.domain.usecase.MarkConversationReadUseCase by lazy {
+        com.thehouse.app.domain.usecase.MarkConversationReadUseCase(conversationRepository)
+    }
 }

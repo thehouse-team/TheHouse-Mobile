@@ -51,6 +51,8 @@ fun PropertyDetailDestination(
     onRequireLogin: () -> Unit,
     onScheduleVisit: (String) -> Unit,
     onOpenVisits: () -> Unit,
+    onOpenRequests: () -> Unit = {},
+    onMakeRequest: (String) -> Unit = {},
 ) {
     // onOpenVisits se usa en la barra superior de la pantalla stateless.
     val viewModel: PropertyDetailViewModel = viewModel(
@@ -65,10 +67,10 @@ fun PropertyDetailDestination(
             when (effect) {
                 PropertyDetailEffect.RequireLogin -> onRequireLogin()
                 PropertyDetailEffect.ScheduleVisit -> onScheduleVisit(propertyId)
+                PropertyDetailEffect.MakeRequest -> onMakeRequest(propertyId)
                 is PropertyDetailEffect.ActionUnavailable -> snackbarState.showSnackbar(
                     when (effect.action) {
                         ProtectedAction.SaveFavorite -> "Favoritos aún no disponible. No se ha guardado la propiedad."
-                        ProtectedAction.ScheduleVisit -> "Visitas aún no disponible. No se ha agendado la visita."
                         else -> "Contacto aún no disponible. No se ha enviado ningún mensaje."
                     },
                 )
@@ -84,6 +86,7 @@ fun PropertyDetailDestination(
         onContactClick = { viewModel.onEvent(PropertyDetailEvent.ContactClicked) },
         onVisitClick = { viewModel.onEvent(PropertyDetailEvent.VisitClicked) },
         onOpenVisits = onOpenVisits,
+        onOpenRequests = onOpenRequests,
         snackbarHost = { SnackbarHost(snackbarState) },
     )
 }
@@ -98,6 +101,7 @@ fun PropertyDetailScreen(
     onContactClick: () -> Unit,
     onVisitClick: () -> Unit,
     onOpenVisits: () -> Unit = {},
+    onOpenRequests: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHost: @Composable () -> Unit = {},
 ) {
@@ -117,6 +121,12 @@ fun PropertyDetailScreen(
                     modifier = Modifier.heightIn(min = 48.dp),
                 ) {
                     Text("Mis visitas")
+                }
+                TextButton(
+                    onClick = onOpenRequests,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text("Mis solicitudes")
                 }
             }
         },
@@ -165,7 +175,7 @@ fun PropertyDetailScreen(
                                 onClick = onContactClick,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             ) {
-                                Text("Contactar")
+                                Text("Solicitar este cuarto")
                             }
                             OutlinedButton(
                                 onClick = onVisitClick,

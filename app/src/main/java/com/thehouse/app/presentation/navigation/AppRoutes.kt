@@ -51,6 +51,21 @@ object AppRoutes {
         override val route: String = "visitas"
     }
 
+    /** D9: solicitudes del estudiante. */
+    val requests: AppRoute = object : AppRoute {
+        override val route: String = "solicitudes"
+    }
+
+    /** D9: solicitudes del arrendador. */
+    val landlordRequests: AppRoute = object : AppRoute {
+        override val route: String = "solicitudes_arrendador"
+    }
+
+    /** D9: lista de conversaciones. */
+    val conversations: AppRoute = object : AppRoute {
+        override val route: String = "conversaciones"
+    }
+
     val bottomTabs: List<AppRoute> = listOf(home, explore, smartMatch, favorites)
 
     fun isBottomTab(route: String?): Boolean = bottomTabs.any { it.route == route }

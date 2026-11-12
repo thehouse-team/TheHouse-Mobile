@@ -55,6 +55,9 @@ fun HomeScreen(
     onPropertyClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     factory: U2ViewModelFactory,
+    onOpenRequests: () -> Unit = {},
+    onOpenConversations: () -> Unit = {},
+    onOpenLandlordRequests: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
@@ -234,6 +237,35 @@ fun HomeScreen(
             }
 
             if (!state.isGuest) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onOpenRequests,
+                        modifier = Modifier
+                            .height(48.dp)
+                            .weight(1f),
+                    ) {
+                        Text("Mis solicitudes")
+                    }
+                    OutlinedButton(
+                        onClick = onOpenConversations,
+                        modifier = Modifier
+                            .height(48.dp)
+                            .weight(1f),
+                    ) {
+                        Text("Conversaciones")
+                    }
+                }
+                OutlinedButton(
+                    onClick = onOpenLandlordRequests,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Text("Solicitudes recibidas (arrendador)")
+                }
                 if (state.isLoggingOut) {
                     CircularProgressIndicator(modifier = Modifier.height(44.dp))
                 }

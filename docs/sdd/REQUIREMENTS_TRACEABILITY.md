@@ -40,7 +40,7 @@
 | Detalle de inmueble | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-08 | NV-08-T03 | PLANNED | Backend confirma `GET /api/v1/properties/{id}` (M-MOB-044) | NV-08 PLANNED dentro de NV-05..NV-17 |
 | Favoritos | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-09 | NV-09-T03 | PLANNED | Sin evidencia de ejecución registrada | NV-09 PLANNED dentro de NV-05..NV-17 |
 | Visitas (programación) | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-10 | NV-10-T03 | PLANNED | Sin evidencia de ejecución registrada | NV-10 PLANNED dentro de NV-05..NV-17 |
-| Chat | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-11 | NV-11-T03 | PLANNED | Sin evidencia de ejecución registrada | NV-11 PLANNED dentro de NV-05..NV-17 |
+| Chat | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-11 | NV-11-T03 | PARCIAL (D9) | Integración real de chat + solicitudes ejecutada en spec D9 (`specs/d9-requests-real-chat/`): requests estudiante/arrendador, conversaciones, mensajes, read, polling ETag; tests 149 verdes; runtime E2E pendiente (sin emulador/credenciales) | D9 ejecutada bajo autorización humana; NV-11 remains PLANNED |
 | Cierre (rental closing) | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-12 | NV-12-T03 | PLANNED | Sin evidencia de ejecución registrada | NV-12 PLANNED dentro de NV-05..NV-17 |
 | Reviews | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-13 | NV-13-T03 | PLANNED | Sin evidencia de ejecución registrada | NV-13 PLANNED dentro de NV-05..NV-17 |
 | Gestión / publicación de inmuebles | Requerimientos para el desarrollo del proyecto Móvil v3 | NV-08 | NV-08-T01 | PLANNED | Sin evidencia de ejecución registrada | NV-08 PLANNED dentro de NV-05..NV-17 |

@@ -362,6 +362,13 @@ ame). Prueba real Azure: 201 Created. BLOCKED-REGISTER-CONTRACT resuelto y elimi
 - **Impacto:** RegisterRequestDto solo email+password; AuthRepositoryImpl no envía 
 ame/consentimientos (quedan solo en la UI); AuthValidators registra mínimo 12 y máximo 128 en registro; login limitado sin cambio de contrato (validadores login intactos). No se cambiaron otros endpoints.
 
+## M-MOB-049 — D9 Requests + Real Chat (2026-11-12)
+
+- **Decisión:** Ejecutar D9.1 (autorización humana explícita): integración real de solicitudes (estudiante/arrendador), conversaciones, mensajes, unread/read y polling con ETag en `feature/requests-real-chat` (base = main + merge D11). Reemplaza el estado CHAT-BACKEND-BLOCKED. Contratos implementados exactamente según el orden; sin userId (Bearer por interceptor existente), un solo Retrofit. Polling respeta `pollAfterSeconds` (default 10 s), `after` + `If-None-Match`, 304 no modifica lista, se cancela al salir (StopPolling/onCleared, CancellationException rethrow). Envío idempotente con clientMessageId UUID estable en retry. Entradas de UI: Home ("Mis solicitudes", "Conversaciones", "Solicitudes recibidas (arrendador)") y Room Detail ("Solicitar este cuarto" → composer; "Mis solicitudes" en top bar).
+- **Estado:** APROBADO por instrucción humana explícita ("EJECUTA D9.1").
+- **Justificación:** Eliminar el bloqueo CHAT-BACKEND-BLOCKED con contratos reales del backend desplegado.
+- **Impacto:** Validación real: `compileDebugKotlin` verde, `testDebugUnitTest` 149 tests verdes, `lintDebug assembleDebug` verde (0 errores lint). Backend desplegado (universities 200). Runtime punta a punta pendiente (sin emulador/adb ni credenciales autorizadas en la sesión) → RUNTIME-BACKEND-PENDING parcial. Spec en `specs/d9-requests-real-chat/`.
+
 ## M-MOB-048 - Gobernanza D11 Profile/Preferences/Visual Polish (2026-11-12)
 
 - **Decisi�n:** Se registra la spec D11 en `specs/d11-profile-preferences-visual-polish/` (spec/plan/task/checklist/evidence), separada de nv-11-chat y de toda otra spec. FASE A (functional stabilization) activa; FASE B (Visual Polish) PLANNED, NO EJECUTADA. Branch `feature/profile-preferences-ui-polish` creada desde el estado real de main con working tree preservado (sin reset/restore/clean/stash/force push).
