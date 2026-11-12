@@ -58,6 +58,7 @@ fun HomeScreen(
     onOpenRequests: () -> Unit = {},
     onOpenConversations: () -> Unit = {},
     onOpenLandlordRequests: () -> Unit = {},
+    onOpenLandlord: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
@@ -265,6 +266,14 @@ fun HomeScreen(
                         .height(48.dp),
                 ) {
                     Text("Solicitudes recibidas (arrendador)")
+                }
+                OutlinedButton(
+                    onClick = onOpenLandlord,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Text("Mis alojamientos (arrendador)")
                 }
                 if (state.isLoggingOut) {
                     CircularProgressIndicator(modifier = Modifier.height(44.dp))

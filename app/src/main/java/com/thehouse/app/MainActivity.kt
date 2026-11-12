@@ -42,6 +42,9 @@ import com.thehouse.app.presentation.navigation.CreateRequestRoute
 import com.thehouse.app.presentation.navigation.LandlordRequestDetailRoute
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
 import com.thehouse.app.presentation.navigation.RequestDetailRoute
+import com.thehouse.app.presentation.navigation.BuildingDetailRoute
+import com.thehouse.app.presentation.navigation.BuildingFormRoute
+import com.thehouse.app.presentation.navigation.RoomFormRoute
 import com.thehouse.app.presentation.navigation.ScheduleVisitRoute
 import com.thehouse.app.presentation.navigation.VisitDetailRoute
 import com.thehouse.app.presentation.navigation.BottomTab
@@ -222,6 +225,9 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         },
                         onOpenLandlordRequests = {
                             navController.navigate(AppRoutes.landlordRequests.route) { launchSingleTop = true }
+                        },
+                        onOpenLandlord = {
+                            navController.navigate(AppRoutes.landlordDashboard.route) { launchSingleTop = true }
                         },
                     )
                 }
@@ -482,6 +488,146 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                     launchSingleTop = true
                                 }
                             },
+                        )
+                    }
+                }
+                composable(AppRoutes.landlordDashboard.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.landlord.LandlordDashboardDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onCreateBuilding = {
+                                navController.navigate(
+                                    com.thehouse.app.presentation.navigation.BuildingFormRoute(null).route,
+                                ) { launchSingleTop = true }
+                            },
+                            onBuildingClick = { buildingId ->
+                                navController.navigate(
+                                    com.thehouse.app.presentation.navigation.BuildingDetailRoute(buildingId).route,
+                                ) { launchSingleTop = true }
+                            },
+                            onOpenLandlordRequests = {
+                                navController.navigate(AppRoutes.landlordRequests.route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onActivated = {
+                                navController.navigate(AppRoutes.landlordDashboard.route) {
+                                    popUpTo(AppRoutes.home.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable("arrendador/edificio/nuevo") {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.landlord.BuildingFormDestination(
+                            buildingId = null,
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onSaved = { buildingId ->
+                                navController.navigate(
+                                    com.thehouse.app.presentation.navigation.BuildingDetailRoute(buildingId).route,
+                                ) {
+                                    popUpTo(AppRoutes.landlordDashboard.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = com.thehouse.app.presentation.navigation.BuildingFormRoute.PATTERN,
+                    arguments = listOf(navArgument(BuildingFormRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val buildingId = entry.arguments?.getString(BuildingFormRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.landlord.BuildingFormDestination(
+                            buildingId = buildingId,
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onSaved = {
+                                navController.popBackStack()
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = com.thehouse.app.presentation.navigation.BuildingDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(BuildingDetailRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val buildingId = entry.arguments?.getString(BuildingDetailRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.landlord.BuildingDetailDestination(
+                            buildingId = buildingId,
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onEditBuilding = { id ->
+                                navController.navigate(BuildingFormRoute(id).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onAddRooms = { id ->
+                                navController.navigate(
+                                    com.thehouse.app.presentation.navigation.RoomFormRoute(id, null).route,
+                                ) { launchSingleTop = true }
+                            },
+                            onEditRoom = { id, roomId ->
+                                navController.navigate(
+                                    com.thehouse.app.presentation.navigation.RoomFormRoute(id, roomId).route,
+                                ) { launchSingleTop = true }
+                            },
+                            onDeleted = { navController.popBackStack() },
+                            onOpenLandlordRequests = {
+                                navController.navigate(AppRoutes.landlordRequests.route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = com.thehouse.app.presentation.navigation.RoomFormRoute.PATTERN,
+                    arguments = listOf(
+                        navArgument(RoomFormRoute.BUILDING_ARGUMENT) { type = NavType.StringType },
+                        navArgument(RoomFormRoute.ROOM_ARGUMENT) { type = NavType.StringType },
+                    ),
+                ) { entry ->
+                    val buildingId = entry.arguments?.getString(RoomFormRoute.BUILDING_ARGUMENT).orEmpty()
+                    val roomId = entry.arguments?.getString(RoomFormRoute.ROOM_ARGUMENT)
+                        ?.takeIf { it != "nuevo" }
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.landlord.RoomFormDestination(
+                            buildingId = buildingId,
+                            roomId = roomId,
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onSaved = { navController.popBackStack() },
                         )
                     }
                 }
