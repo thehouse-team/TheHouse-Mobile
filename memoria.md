@@ -361,3 +361,10 @@ ame). Prueba real Azure: 201 Created. BLOCKED-REGISTER-CONTRACT resuelto y elimi
 - **Justificación:** Verificación real contra backend más cambios unitarios verdes: 40/40 tests.
 - **Impacto:** RegisterRequestDto solo email+password; AuthRepositoryImpl no envía 
 ame/consentimientos (quedan solo en la UI); AuthValidators registra mínimo 12 y máximo 128 en registro; login limitado sin cambio de contrato (validadores login intactos). No se cambiaron otros endpoints.
+
+## M-MOB-048 - Gobernanza D11 Profile/Preferences/Visual Polish (2026-11-12)
+
+- **Decisi�n:** Se registra la spec D11 en `specs/d11-profile-preferences-visual-polish/` (spec/plan/task/checklist/evidence), separada de nv-11-chat y de toda otra spec. FASE A (functional stabilization) activa; FASE B (Visual Polish) PLANNED, NO EJECUTADA. Branch `feature/profile-preferences-ui-polish` creada desde el estado real de main con working tree preservado (sin reset/restore/clean/stash/force push).
+- **Estado:** APROBADO por instrucci�n humana expl�cita.
+- **Justificaci�n:** Trabajo funcional Profile/Preferences/Quick Setup existente sin spec; la trazabilidad mapea "Perfil / cuenta" a NV-27 (BLOCKED). `compileDebugKotlin` real: BUILD FAILED (23 archivos borrados en working tree requeridos por ~30 archivos sobrevivientes; adem�s errores en c�digo D11 nuevo: `profile interface`, `SelectUniversityUseCase2`, `selectUniversity` duplicado). Eliminaciones clasificadas cambio ajeno/dudoso, pendientes de decisi�n humana. D11-FUNCTIONAL-READY NO declarado.
+- **Impacto:** Ning�n commit de c�digo funcional hasta validaci�n verde; Visual Polish bloqueado hasta FASE A lista.

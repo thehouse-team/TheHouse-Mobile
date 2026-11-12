@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -21,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import com.thehouse.app.domain.model.Favorite
 import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiErrorMessages
+import com.thehouse.app.presentation.components.EmptyStateView
+import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.LoadingView
 
 @Composable
 fun FavoritesScreen(
@@ -50,40 +52,34 @@ fun FavoritesScreen(
                 modifier = Modifier.semantics { contentDescription = "Título Favoritos" },
             )
             if (!isAuthenticated) {
-                Text(
-                    text = "Necesitas iniciar sesión para ver tus favoritos.",
-                    style = MaterialTheme.typography.bodyLarge,
+                EmptyStateView(
+                    title = "Inicia sesión",
+                    message = "Necesitas iniciar sesión para ver tus favoritos.",
+                    modifier = Modifier.weight(1f),
+                    ctaLabel = "Iniciar sesión",
+                    onCtaClick = onLoginClick,
                 )
-                Button(
-                    onClick = onLoginClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                ) {
-                    Text("Iniciar sesión")
-                }
             } else if (isLoading) {
-                CircularProgressIndicator()
-            } else if (error != null) {
-                Text(text = error?.let { UiErrorMessages.map(it) } ?: "", style = MaterialTheme.typography.bodyLarge)
-                Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                    Text("Reintentar")
-                }
-            } else if (items.isEmpty()) {
-                Text(text = "Aún no tienes favoritos guardados.", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = "Explora propiedades y guarda las que te interesen.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                LoadingView(
+                    message = "Cargando tus favoritos…",
+                    modifier = Modifier.weight(1f),
                 )
-                Button(
-                    onClick = onExploreClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                ) {
-                    Text("Explorar propiedades")
-                }
+            } else if (error != null) {
+                ErrorStateView(
+                    title = "Algo salió mal",
+                    message = error?.let { UiErrorMessages.map(it) }
+                        ?: "No pudimos cargar tus favoritos. Inténtalo de nuevo.",
+                    modifier = Modifier.weight(1f),
+                    onRetry = onRetry,
+                )
+            } else if (items.isEmpty()) {
+                EmptyStateView(
+                    title = "Aún no tienes favoritos",
+                    message = "Explora propiedades y guarda las que te interesen.",
+                    modifier = Modifier.weight(1f),
+                    ctaLabel = "Explorar propiedades",
+                    onCtaClick = onExploreClick,
+                )
             } else {
                 items.forEach { fav ->
                     Row(

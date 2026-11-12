@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,6 +23,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.catalog.CatalogLoadState
 import com.thehouse.app.presentation.catalog.errorMessage
+import com.thehouse.app.presentation.components.EmptyStateView
+import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.PropertyCard
 
 /**
@@ -62,13 +63,14 @@ fun ExploreScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Explorar",
+                text = "Explora rentas cerca de ti",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.semantics { contentDescription = "Título Explorar" },
             )
             Text(
-                text = "Mapa completo pendiente de NV-07. Búsqueda sobre título y ciudad.",
+                text = "Búsqueda por título o ciudad.",
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedTextField(
                 value = query,
@@ -79,35 +81,31 @@ fun ExploreScreen(
             )
             when (properties) {
                 CatalogLoadState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.height(24.dp))
+                    LoadingView(
+                        message = "Buscando rentas…",
+                        modifier = Modifier.weight(1f),
+                    )
                 }
                 CatalogLoadState.Empty -> {
-                    Text(
-                        text = if (query.isBlank()) "Sin propiedades disponibles." else "Sin resultados para tu búsqueda.",
-                        style = MaterialTheme.typography.bodyMedium,
+                    EmptyStateView(
+                        title = if (query.isBlank()) "Aún no hay rentas" else "Sin resultados",
+                        message = if (query.isBlank()) {
+                            "No hay propiedades disponibles por ahora. Vuelve a intentarlo más tarde."
+                        } else {
+                            "No encontramos rentas para tu búsqueda. Prueba con otro término."
+                        },
+                        modifier = Modifier.weight(1f),
+                        ctaLabel = "Reintentar",
+                        onCtaClick = viewModel?.let { vm -> { vm.onEvent(ExploreEvent.RetryClicked) } },
                     )
-                    if (viewModel != null) {
-                        OutlinedButton(
-                            onClick = { viewModel.onEvent(ExploreEvent.RetryClicked) },
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Text("Reintentar")
-                        }
-                    }
                 }
                 is CatalogLoadState.Error -> {
-                    Text(
-                        text = properties.errorMessage() ?: "Algo salió mal.",
-                        style = MaterialTheme.typography.bodyMedium,
+                    ErrorStateView(
+                        title = "Algo salió mal",
+                        message = properties.errorMessage() ?: "No pudimos cargar las rentas. Revisa tu conexión e inténtalo de nuevo.",
+                        modifier = Modifier.weight(1f),
+                        onRetry = { viewModel?.onEvent(ExploreEvent.RetryClicked) },
                     )
-                    if (viewModel != null) {
-                        OutlinedButton(
-                            onClick = { viewModel.onEvent(ExploreEvent.RetryClicked) },
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Text("Reintentar")
-                        }
-                    }
                 }
                 is CatalogLoadState.Success -> {
                     if (!isLoading) {
