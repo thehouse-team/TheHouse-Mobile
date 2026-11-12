@@ -61,6 +61,11 @@ object AppRoutes {
         override val route: String = "solicitudes_arrendador"
     }
 
+    /** D12: dashboard del arrendador (edificios y cuartos). */
+    val landlordDashboard: AppRoute = object : AppRoute {
+        override val route: String = "arrendador"
+    }
+
     /** D9: lista de conversaciones. */
     val conversations: AppRoute = object : AppRoute {
         override val route: String = "conversaciones"

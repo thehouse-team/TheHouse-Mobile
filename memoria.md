@@ -375,3 +375,10 @@ ame/consentimientos (quedan solo en la UI); AuthValidators registra mínimo 12 y
 - **Estado:** APROBADO por instrucci�n humana expl�cita.
 - **Justificaci�n:** Trabajo funcional Profile/Preferences/Quick Setup existente sin spec; la trazabilidad mapea "Perfil / cuenta" a NV-27 (BLOCKED). `compileDebugKotlin` real: BUILD FAILED (23 archivos borrados en working tree requeridos por ~30 archivos sobrevivientes; adem�s errores en c�digo D11 nuevo: `profile interface`, `SelectUniversityUseCase2`, `selectUniversity` duplicado). Eliminaciones clasificadas cambio ajeno/dudoso, pendientes de decisi�n humana. D11-FUNCTIONAL-READY NO declarado.
 - **Impacto:** Ning�n commit de c�digo funcional hasta validaci�n verde; Visual Polish bloqueado hasta FASE A lista.
+
+## M-MOB-050 - D12 Landlord Buildings/Rooms (2026-11-12)
+
+- **Decisión:** Ejecutar D12 (autorización humana explícita «EJECUTA D12»): flujo real de arrendador contra el contrato NV-12 Backend §6.1 — alta de perfil (POST /landlord/profile, acceptedTermsVersion 2026-11), edificios (list+summary/detail/crear/editar/eliminar), cuartos (list/generate/editar/eliminar, pause/resume), publicación (publication pasos + publish 202 → in_review) y concurrencia optimista con ersion (PATCH cuerpo, DELETE query; 409 version_conflict → mensaje + recarga, sin retry). Branch eature/landlord-buildings-rooms baseada en eature/requests-real-chat (main aún sin merge D9.1/D11). Sin endpoints/campos/estatos inventados; sin upload multimedia (NV-13). Reutiliza Retrofit/auth/DomainError/Design System D11; un solo Retrofit.
+- **Estado:** APROBADO por instrucción humana explícita.
+- **Justificación:** Contrato real extraído de TheHouse-Backend origin/main (specs/nv-12-landlord-buildings-rooms/spec.md v1.1.0); sin desviaciones.
+- **Impacto:** compileDebugKotlin, 	estDebugUnitTest lintDebug assembleDebug verdes; 25/25 tests D12; regresión D3–D11 verde; lint 0 errores. Runtime punta a punta BLOCKED (sin emulador/adb ni credenciales de prueba). Spec en specs/d12-landlord-buildings-rooms/. Deuda: UI duplicate/copy-from.

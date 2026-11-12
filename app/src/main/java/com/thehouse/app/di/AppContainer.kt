@@ -303,4 +303,77 @@ class AppContainer(context: Context) {
     val markConversationRead: com.thehouse.app.domain.usecase.MarkConversationReadUseCase by lazy {
         com.thehouse.app.domain.usecase.MarkConversationReadUseCase(conversationRepository)
     }
+
+    // ===== D12 Landlord real (NV-12, reutiliza Retrofit/HttpClient D3) =====
+
+    val landlordApi: com.thehouse.app.data.remote.api.LandlordApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.LandlordApi::class.java)
+    }
+
+    val landlordRepository: com.thehouse.app.domain.repository.LandlordRepository by lazy {
+        com.thehouse.app.data.landlord.repository.LandlordRepositoryImpl(
+            api = landlordApi,
+            json = json,
+        )
+    }
+
+    val activateLandlord: com.thehouse.app.domain.usecase.ActivateLandlordUseCase by lazy {
+        com.thehouse.app.domain.usecase.ActivateLandlordUseCase(landlordRepository)
+    }
+
+    val getLandlordProfile: com.thehouse.app.domain.usecase.GetLandlordProfileUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordProfileUseCase(landlordRepository)
+    }
+
+    val getLandlordBuildings: com.thehouse.app.domain.usecase.GetLandlordBuildingsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordBuildingsUseCase(landlordRepository)
+    }
+
+    val getLandlordBuilding: com.thehouse.app.domain.usecase.GetLandlordBuildingUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordBuildingUseCase(landlordRepository)
+    }
+
+    val createBuilding: com.thehouse.app.domain.usecase.CreateBuildingUseCase by lazy {
+        com.thehouse.app.domain.usecase.CreateBuildingUseCase(landlordRepository)
+    }
+
+    val updateBuilding: com.thehouse.app.domain.usecase.UpdateBuildingUseCase by lazy {
+        com.thehouse.app.domain.usecase.UpdateBuildingUseCase(landlordRepository)
+    }
+
+    val deleteBuilding: com.thehouse.app.domain.usecase.DeleteBuildingUseCase by lazy {
+        com.thehouse.app.domain.usecase.DeleteBuildingUseCase(landlordRepository)
+    }
+
+    val generateRooms: com.thehouse.app.domain.usecase.GenerateRoomsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GenerateRoomsUseCase(landlordRepository)
+    }
+
+    val getLandlordRooms: com.thehouse.app.domain.usecase.GetLandlordRoomsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordRoomsUseCase(landlordRepository)
+    }
+
+    val updateRoom: com.thehouse.app.domain.usecase.UpdateRoomUseCase by lazy {
+        com.thehouse.app.domain.usecase.UpdateRoomUseCase(landlordRepository)
+    }
+
+    val deleteRoom: com.thehouse.app.domain.usecase.DeleteRoomUseCase by lazy {
+        com.thehouse.app.domain.usecase.DeleteRoomUseCase(landlordRepository)
+    }
+
+    val pauseRoom: com.thehouse.app.domain.usecase.PauseRoomUseCase by lazy {
+        com.thehouse.app.domain.usecase.PauseRoomUseCase(landlordRepository)
+    }
+
+    val resumeRoom: com.thehouse.app.domain.usecase.ResumeRoomUseCase by lazy {
+        com.thehouse.app.domain.usecase.ResumeRoomUseCase(landlordRepository)
+    }
+
+    val getPublicationStatus: com.thehouse.app.domain.usecase.GetPublicationStatusUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetPublicationStatusUseCase(landlordRepository)
+    }
+
+    val publishBuilding: com.thehouse.app.domain.usecase.PublishBuildingUseCase by lazy {
+        com.thehouse.app.domain.usecase.PublishBuildingUseCase(landlordRepository)
+    }
 }

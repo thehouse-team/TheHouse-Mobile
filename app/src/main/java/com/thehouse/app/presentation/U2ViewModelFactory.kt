@@ -100,6 +100,54 @@ class U2ViewModelFactory(
             }
         }
 
+    fun landlordProfile(): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.landlord.LandlordProfileViewModel(
+                activateLandlord = container.activateLandlord,
+            )
+        }
+    }
+
+    fun buildingForm(buildingId: String?): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.landlord.BuildingFormViewModel(
+                buildingId = buildingId,
+                createBuilding = container.createBuilding,
+                updateBuilding = container.updateBuilding,
+                getBuilding = container.getLandlordBuilding,
+                getUniversities = container.getUniversities,
+            )
+        }
+    }
+
+    fun buildingDetail(buildingId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.landlord.BuildingDetailViewModel(
+                buildingId = buildingId,
+                getBuilding = container.getLandlordBuilding,
+                getRooms = container.getLandlordRooms,
+                getPublication = container.getPublicationStatus,
+                publishBuilding = container.publishBuilding,
+                deleteBuilding = container.deleteBuilding,
+                pauseRoom = container.pauseRoom,
+                resumeRoom = container.resumeRoom,
+            )
+        }
+    }
+
+    fun roomForm(buildingId: String, roomId: String?): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.landlord.RoomFormViewModel(
+                buildingId = buildingId,
+                roomId = roomId,
+                generateRooms = container.generateRooms,
+                updateRoom = container.updateRoom,
+                deleteRoom = container.deleteRoom,
+                getRooms = container.getLandlordRooms,
+            )
+        }
+    }
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(RootViewModel::class.java) ->
             RootViewModel(container) as T
@@ -159,6 +207,12 @@ class U2ViewModelFactory(
         modelClass.isAssignableFrom(com.thehouse.app.presentation.chat.ConversationsViewModel::class.java) ->
             com.thehouse.app.presentation.chat.ConversationsViewModel(
                 getConversations = container.getConversations,
+            ) as T
+
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.landlord.LandlordDashboardViewModel::class.java) ->
+            com.thehouse.app.presentation.landlord.LandlordDashboardViewModel(
+                getProfile = container.getLandlordProfile,
+                getBuildings = container.getLandlordBuildings,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")
