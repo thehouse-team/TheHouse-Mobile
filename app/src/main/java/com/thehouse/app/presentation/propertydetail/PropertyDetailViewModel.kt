@@ -30,6 +30,7 @@ sealed interface PropertyDetailEvent : UiEvent {
 
 sealed interface PropertyDetailEffect : UiEffect {
     data object RequireLogin : PropertyDetailEffect
+    data object ScheduleVisit : PropertyDetailEffect
     data class ActionUnavailable(val action: ProtectedAction) : PropertyDetailEffect
 }
 
@@ -57,7 +58,7 @@ class PropertyDetailViewModel(
             }
             PropertyDetailEvent.FavoriteClicked -> guard(ProtectedAction.SaveFavorite)
             PropertyDetailEvent.ContactClicked -> guard(ProtectedAction.Contact)
-            PropertyDetailEvent.VisitClicked -> guard(ProtectedAction.ScheduleVisit)
+            PropertyDetailEvent.VisitClicked -> guardVisit()
         }
     }
 
@@ -87,14 +88,23 @@ class PropertyDetailViewModel(
         }
     }
 
+    private fun guardVisit() {
+        if (uiState.value !is PropertyDetailUiState.Content) return
+        val isAuthenticated = sessionState.value is SessionState.Active
+        if (AccessPolicy.shouldRedirectToLogin(ProtectedAction.ScheduleVisit, isAuthenticated)) {
+            sendEffect(PropertyDetailEffect.RequireLogin)
+        } else {
+            sendEffect(PropertyDetailEffect.ScheduleVisit)
+        }
+    }
+
     private fun guard(action: ProtectedAction) {
         if (uiState.value !is PropertyDetailUiState.Content) return
         val isAuthenticated = sessionState.value is SessionState.Active
         if (AccessPolicy.shouldRedirectToLogin(action, isAuthenticated)) {
             sendEffect(PropertyDetailEffect.RequireLogin)
         } else {
-            // Como D4/D5: sin persistencia de favoritos ni llamadas de contacto.
-            // Se explica la indisponibilidad; nunca se simula un guardado/envío.
+            // Contacto sigue sin contrato confirmado; nunca se simula envío.
             sendEffect(PropertyDetailEffect.ActionUnavailable(action))
         }
     }

@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-10 Visits |
-| STATUS | PLANNED |
-| AUTHORIZATION | DO NOT EXECUTE |
+| STATUS | READY |
+| AUTHORIZATION | EXECUTED (D8.1) |
 
 ## Fases (solo dentro de NV-10)
 - F1 — Contrato de visitas en NV-27 (endpoints, estados, zonas horarias). Verificable: tabla o BLOCKED.

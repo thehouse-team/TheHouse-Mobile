@@ -24,6 +24,8 @@ import com.thehouse.app.data.favorites.state.FavoriteIdsStore
 import com.thehouse.app.data.remote.api.FavoritesApi
 import com.thehouse.app.data.remote.api.PropertyApi
 import com.thehouse.app.data.remote.api.UniversityApi
+import com.thehouse.app.data.remote.api.VisitsApi
+import com.thehouse.app.data.visits.repository.VisitsRepositoryImpl
 import com.thehouse.app.data.remote.auth.BearerTokenInterceptor
 import com.thehouse.app.data.remote.auth.RefreshAuthenticator
 import com.thehouse.app.data.serialization.JsonProvider
@@ -34,10 +36,16 @@ import com.thehouse.app.domain.repository.OnboardingRepository
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
-import com.thehouse.app.domain.usecase.AddFavoriteUseCase
+
+import com.thehouse.app.domain.repository.VisitsRepository
+import com.thehouse.app.domain.usecase.CancelVisitUseCase
+import com.thehouse.app.domain.usecase.CreateVisitUseCase
+
 import com.thehouse.app.domain.usecase.GetFavoritesUseCase
 import com.thehouse.app.domain.usecase.GetFavoriteIdsUseCase
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
+import com.thehouse.app.domain.usecase.GetVisitUseCase
+import com.thehouse.app.domain.usecase.GetVisitsUseCase
 import com.thehouse.app.domain.usecase.GetUniversitiesUseCase
 import com.thehouse.app.domain.usecase.RemoveFavoriteUseCase
 import com.thehouse.app.domain.usecase.LoginUseCase
@@ -52,9 +60,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 
-/**
- * Composition root de Dependency Injection manual.
- *
+/** Composition root de Dependency Injection manual.
  * Construye dependencias de infraestructura y las expone de forma lazy.
  * No contiene lógica de negocio ni estado mutable global.
  *
@@ -156,8 +162,22 @@ class AppContainer(context: Context) {
 
     val getFavorites: GetFavoritesUseCase by lazy { GetFavoritesUseCase(favoritesRepository) }
     val getFavoriteIds: GetFavoriteIdsUseCase by lazy { GetFavoriteIdsUseCase(favoritesRepository) }
-    val addFavorite: AddFavoriteUseCase by lazy { AddFavoriteUseCase(favoritesRepository) }
+    val addFavorite: com.thehouse.app.domain.usecase.AddFavoriteUseCase by lazy { com.thehouse.app.domain.usecase.AddFavoriteUseCase(favoritesRepository) }
     val removeFavorite: RemoveFavoriteUseCase by lazy { RemoveFavoriteUseCase(favoritesRepository) }
+
+
+    // ===== D8.1 Visitas reales (NV-10) =====
+
+    val visitsApi: VisitsApi by lazy { retrofit.create(VisitsApi::class.java) }
+
+    val visitsRepository: VisitsRepository by lazy {
+        VisitsRepositoryImpl(api = visitsApi, json = json)
+    }
+
+    val createVisit: CreateVisitUseCase by lazy { CreateVisitUseCase(visitsRepository) }
+    val getVisits: GetVisitsUseCase by lazy { GetVisitsUseCase(visitsRepository) }
+    val getVisit: GetVisitUseCase by lazy { GetVisitUseCase(visitsRepository) }
+    val cancelVisit: CancelVisitUseCase by lazy { CancelVisitUseCase(visitsRepository) }
 
     val selectedUniversityRepository: SelectedUniversityRepository by lazy {
         SelectedUniversityRepositoryImpl(preferences = preferences)
@@ -167,17 +187,13 @@ class AppContainer(context: Context) {
         GetUniversitiesUseCase(universityRepository)
     }
 
-    val getProperties: GetPropertiesUseCase by lazy {
-        GetPropertiesUseCase(propertyRepository)
-    }
+    val getProperties: GetPropertiesUseCase by lazy { GetPropertiesUseCase(propertyRepository) }
 
     val observeSelectedUniversity: ObserveSelectedUniversityUseCase by lazy {
         ObserveSelectedUniversityUseCase(selectedUniversityRepository)
     }
 
-    val selectUniversity: SelectUniversityUseCase by lazy {
-        SelectUniversityUseCase(selectedUniversityRepository)
-    }
+    val selectUniversity: SelectUniversityUseCase by lazy { SelectUniversityUseCase(selectedUniversityRepository) }
 
     val searchProperties: SearchPropertiesUseCase by lazy { SearchPropertiesUseCase() }
 

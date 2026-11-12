@@ -14,6 +14,9 @@ import com.thehouse.app.presentation.home.HomeViewModel
 import com.thehouse.app.presentation.onboarding.OnboardingViewModel
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailViewModel
+import com.thehouse.app.presentation.visits.ScheduleVisitViewModel
+import com.thehouse.app.presentation.visits.VisitDetailViewModel
+import com.thehouse.app.presentation.visits.VisitsViewModel
 
 /**
  * Fábrica manual de ViewModels (DI, sin frameworks).
@@ -32,6 +35,25 @@ class U2ViewModelFactory(
                 propertyId = propertyId,
                 getPropertyById = GetPropertyByIdUseCase(container.propertyRepository),
                 sessionState = container.sessionStore.state,
+            )
+        }
+    }
+
+    fun scheduleVisit(propertyId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            ScheduleVisitViewModel(
+                propertyId = propertyId,
+                createVisit = container.createVisit,
+            )
+        }
+    }
+
+    fun visitDetail(visitId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            VisitDetailViewModel(
+                visitId = visitId,
+                getVisit = container.getVisit,
+                cancelVisit = container.cancelVisit,
             )
         }
     }
@@ -71,6 +93,12 @@ class U2ViewModelFactory(
                 removeFavorite = container.removeFavorite,
                 favoriteIdsStore = container.favoriteIdsStore,
                 sessionState = container.sessionStore.state,
+            ) as T
+
+        modelClass.isAssignableFrom(VisitsViewModel::class.java) ->
+            VisitsViewModel(
+                getVisits = container.getVisits,
+                cancelVisit = container.cancelVisit,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")

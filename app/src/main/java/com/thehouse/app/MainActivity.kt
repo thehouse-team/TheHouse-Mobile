@@ -38,12 +38,21 @@ import com.thehouse.app.presentation.favorites.FavoritesViewModel
 import com.thehouse.app.presentation.home.HomeScreen
 import com.thehouse.app.presentation.navigation.AppRoutes
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
+import com.thehouse.app.presentation.navigation.ScheduleVisitRoute
+import com.thehouse.app.presentation.navigation.VisitDetailRoute
 import com.thehouse.app.presentation.navigation.BottomTab
 import com.thehouse.app.presentation.navigation.TabNavigationState
 import com.thehouse.app.presentation.onboarding.OnboardingScreen
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailDestination
 import com.thehouse.app.presentation.smartmatch.SmartMatchScreen
+import com.thehouse.app.presentation.visits.ScheduleVisitDestination
+import com.thehouse.app.presentation.visits.VisitDetailEvent
+import com.thehouse.app.presentation.visits.VisitDetailScreen
+import com.thehouse.app.presentation.visits.VisitDetailViewModel
+import com.thehouse.app.presentation.visits.VisitsEvent
+import com.thehouse.app.presentation.visits.VisitsScreen
+import com.thehouse.app.presentation.visits.VisitsViewModel
 import com.thehouse.app.presentation.welcome.WelcomeScreen
 import com.thehouse.app.ui.theme.TheHouseTheme
 
@@ -242,6 +251,16 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onRequireLogin = {
                             navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                         },
+                        onScheduleVisit = { propertyId ->
+                            navController.navigate(ScheduleVisitRoute(propertyId).route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onOpenVisits = {
+                            navController.navigate(AppRoutes.visits.route) {
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
                 composable(AppRoutes.smartMatch.route) {
@@ -285,6 +304,79 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onRemove = { id -> favVm.onEvent(FavoritesEvent.Remove(id)) },
                         onRetry = { favVm.onEvent(FavoritesEvent.Load) },
                     )
+                }
+                composable(AppRoutes.visits.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val visitsVm: VisitsViewModel = viewModel(factory = factory)
+                        val visitsState by visitsVm.uiState.collectAsStateWithLifecycle()
+                        VisitsScreen(
+                            state = visitsState,
+                            onFilterChanged = { visitsVm.onEvent(VisitsEvent.FilterChanged(it)) },
+                            onCancel = { visitsVm.onEvent(VisitsEvent.Cancel(it)) },
+                            onVisitClick = { visitId ->
+                                navController.navigate(VisitDetailRoute(visitId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onRetry = { visitsVm.onEvent(VisitsEvent.Load) },
+                        )
+                    }
+                }
+                composable(
+                    route = ScheduleVisitRoute.PATTERN,
+                    arguments = listOf(navArgument(ScheduleVisitRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val propertyId = entry.arguments?.getString(ScheduleVisitRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val scheduleFactory = remember(factory, propertyId) { factory.scheduleVisit(propertyId) }
+                        ScheduleVisitDestination(
+                            propertyId = propertyId,
+                            factory = scheduleFactory,
+                            onBack = { navController.popBackStack() },
+                            onCreated = { visit ->
+                                navController.navigate(VisitDetailRoute(visit.id).route) {
+                                    popUpTo(AppRoutes.visits.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = VisitDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(VisitDetailRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val visitId = entry.arguments?.getString(VisitDetailRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val detailFactory = remember(factory, visitId) { factory.visitDetail(visitId) }
+                        val visitVm: VisitDetailViewModel = viewModel(
+                            key = "visit-detail:$visitId",
+                            factory = detailFactory,
+                        )
+                        val visitState by visitVm.uiState.collectAsStateWithLifecycle()
+                        VisitDetailScreen(
+                            state = visitState,
+                            onBack = { navController.popBackStack() },
+                            onRetry = { visitVm.onEvent(VisitDetailEvent.Load) },
+                            onCancel = { visitVm.onEvent(VisitDetailEvent.Cancel) },
+                        )
+                    }
                 }
             }
 

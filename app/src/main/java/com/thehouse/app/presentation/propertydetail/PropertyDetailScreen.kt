@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,7 +49,10 @@ fun PropertyDetailDestination(
     factory: ViewModelProvider.Factory,
     onBack: () -> Unit,
     onRequireLogin: () -> Unit,
+    onScheduleVisit: (String) -> Unit,
+    onOpenVisits: () -> Unit,
 ) {
+    // onOpenVisits se usa en la barra superior de la pantalla stateless.
     val viewModel: PropertyDetailViewModel = viewModel(
         key = "property-detail:$propertyId",
         factory = factory,
@@ -60,6 +64,7 @@ fun PropertyDetailDestination(
         viewModel.effects.collect { effect ->
             when (effect) {
                 PropertyDetailEffect.RequireLogin -> onRequireLogin()
+                PropertyDetailEffect.ScheduleVisit -> onScheduleVisit(propertyId)
                 is PropertyDetailEffect.ActionUnavailable -> snackbarState.showSnackbar(
                     when (effect.action) {
                         ProtectedAction.SaveFavorite -> "Favoritos aún no disponible. No se ha guardado la propiedad."
@@ -78,6 +83,7 @@ fun PropertyDetailDestination(
         onFavoriteClick = { viewModel.onEvent(PropertyDetailEvent.FavoriteClicked) },
         onContactClick = { viewModel.onEvent(PropertyDetailEvent.ContactClicked) },
         onVisitClick = { viewModel.onEvent(PropertyDetailEvent.VisitClicked) },
+        onOpenVisits = onOpenVisits,
         snackbarHost = { SnackbarHost(snackbarState) },
     )
 }
@@ -91,6 +97,7 @@ fun PropertyDetailScreen(
     onFavoriteClick: () -> Unit,
     onContactClick: () -> Unit,
     onVisitClick: () -> Unit,
+    onOpenVisits: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHost: @Composable () -> Unit = {},
 ) {
@@ -98,11 +105,19 @@ fun PropertyDetailScreen(
         modifier = modifier,
         snackbarHost = snackbarHost,
         topBar = {
-            TextButton(
-                onClick = onBack,
-                modifier = Modifier.padding(horizontal = 16.dp).heightIn(min = 48.dp),
-            ) {
-                Text("Volver")
+            Row {
+                TextButton(
+                    onClick = onBack,
+                    modifier = Modifier.padding(horizontal = 16.dp).heightIn(min = 48.dp),
+                ) {
+                    Text("Volver")
+                }
+                TextButton(
+                    onClick = onOpenVisits,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text("Mis visitas")
+                }
             }
         },
     ) { padding ->
