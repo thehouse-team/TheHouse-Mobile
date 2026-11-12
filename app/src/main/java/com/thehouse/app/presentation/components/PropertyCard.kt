@@ -66,7 +66,7 @@ fun PropertyCard(
             )
             Text(
                 text = "$" + property.price.toString() + " " + property.currency + "/mes",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
@@ -147,7 +147,7 @@ fun PropertyCard(
             )
             Text(
                 text = "$" + property.priceMxn.toString() + " MXN/mes",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(

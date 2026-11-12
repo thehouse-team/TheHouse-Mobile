@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.R
 import com.thehouse.app.presentation.U2ViewModelFactory
+import com.thehouse.app.ui.theme.Heights
 
 /**
  * Pantalla de Login (RF-02), MVVM + UDF: recibe estado y emite eventos.
@@ -117,12 +118,10 @@ fun LoginScreen(
                     text = message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Error: $message" },
                 )
-            }
-
-            if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.height(44.dp))
             }
 
             Button(
@@ -130,18 +129,27 @@ fun LoginScreen(
                 enabled = !state.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(Heights.buttonLarge),
+                shape = MaterialTheme.shapes.medium,
             ) {
-                Text(stringResource(R.string.action_login))
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(Heights.button),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(stringResource(R.string.action_login), style = MaterialTheme.typography.labelLarge)
+                }
             }
 
             TextButton(
                 onClick = onNavigateToRegister,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(Heights.button),
             ) {
-                Text(stringResource(R.string.login_go_register))
+                Text(stringResource(R.string.login_go_register), style = MaterialTheme.typography.labelLarge)
             }
         }
     }

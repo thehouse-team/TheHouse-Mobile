@@ -26,6 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -34,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.R
 import com.thehouse.app.presentation.U2ViewModelFactory
+import com.thehouse.app.ui.theme.Heights
 
 /**
  * Pantalla de Crear cuenta (RF-01), MVVM + UDF.
@@ -141,12 +144,10 @@ fun RegisterScreen(
                     text = message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Error: $message" },
                 )
-            }
-
-            if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.height(44.dp))
             }
 
             Button(
@@ -154,18 +155,27 @@ fun RegisterScreen(
                 enabled = !state.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(Heights.buttonLarge),
+                shape = MaterialTheme.shapes.medium,
             ) {
-                Text(stringResource(R.string.action_register))
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(Heights.button),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(stringResource(R.string.action_register), style = MaterialTheme.typography.labelLarge)
+                }
             }
 
             TextButton(
                 onClick = onNavigateToLogin,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(Heights.button),
             ) {
-                Text(stringResource(R.string.register_go_login))
+                Text(stringResource(R.string.register_go_login), style = MaterialTheme.typography.labelLarge)
             }
         }
     }

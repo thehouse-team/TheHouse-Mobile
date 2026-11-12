@@ -1,14 +1,19 @@
 package com.thehouse.app.presentation.onboarding
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -28,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.R
 import com.thehouse.app.presentation.U2ViewModelFactory
+import com.thehouse.app.ui.theme.Heights
 import kotlinx.coroutines.launch
 
 /** Texto del prototipo 00-onboarding (título, cuerpo; sin rediseñar). */
@@ -93,14 +99,18 @@ fun OnboardingScreen(
             ) {
                 Text(
                     text = "TheHouse",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.semantics { contentDescription = "Marca TheHouse" },
                 )
                 TextButton(
                     onClick = { viewModel.onEvent(OnboardingEvent.SkipClicked) },
-                    modifier = Modifier.height(48.dp),
+                    modifier = Modifier.height(Heights.button),
                 ) {
-                    Text(stringResource(R.string.onboarding_skip))
+                    Text(
+                        stringResource(R.string.onboarding_skip),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
@@ -120,11 +130,12 @@ fun OnboardingScreen(
                 ) {
                     Text(
                         text = page.title,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineLarge,
                     )
                     Text(
                         text = page.body,
                         style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -133,11 +144,44 @@ fun OnboardingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // Indicador de progreso del prototipo: punto activo alargado.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Página ${state.page + 1} de ${state.totalPages}" },
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                ) {
+                    repeat(state.totalPages) { index ->
+                        val selected = index == state.page
+                        Box(
+                            modifier = Modifier
+                                .then(
+                                    if (selected) {
+                                        Modifier
+                                            .width(24.dp)
+                                            .height(8.dp)
+                                    } else {
+                                        Modifier
+                                            .width(8.dp)
+                                            .height(8.dp)
+                                    }
+                                )
+                                .clip(CircleShape)
+                                .background(
+                                    if (selected) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant
+                                    }
+                                ),
+                        )
+                    }
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (state.page > 0) {
                         TextButton(
@@ -145,7 +189,7 @@ fun OnboardingScreen(
                                 scope.launch { pagerState.animateScrollToPage(state.page - 1) }
                                 viewModel.onEvent(OnboardingEvent.PageChanged(state.page - 1))
                             },
-                            modifier = Modifier.height(48.dp),
+                            modifier = Modifier.height(Heights.button),
                         ) {
                             Text(stringResource(R.string.onboarding_back))
                         }
@@ -160,7 +204,10 @@ fun OnboardingScreen(
                                 viewModel.onEvent(OnboardingEvent.PageChanged(next))
                             }
                         },
-                        modifier = Modifier.height(48.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(Heights.buttonLarge),
+                        shape = MaterialTheme.shapes.medium,
                     ) {
                         Text(
                             if (state.page == state.totalPages - 1) {
@@ -168,6 +215,7 @@ fun OnboardingScreen(
                             } else {
                                 stringResource(R.string.onboarding_next)
                             },
+                            style = MaterialTheme.typography.labelLarge,
                         )
                     }
                 }
@@ -175,7 +223,7 @@ fun OnboardingScreen(
                     onClick = onLoginClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(Heights.button),
                 ) {
                     Text("¿Ya tienes cuenta? Inicia sesión")
                 }
