@@ -19,6 +19,8 @@ import com.thehouse.app.data.catalog.repository.UniversityRepositoryImpl
 import com.thehouse.app.data.remote.HttpClientFactory
 import com.thehouse.app.data.remote.RetrofitFactory
 import com.thehouse.app.data.remote.api.AuthApi
+import com.thehouse.app.data.remote.api.ProfileApi
+import com.thehouse.app.data.remote.api.PreferencesApi
 import com.thehouse.app.data.favorites.repository.FavoritesRepositoryImpl
 import com.thehouse.app.data.favorites.state.FavoriteIdsStore
 import com.thehouse.app.data.remote.api.FavoritesApi
@@ -38,6 +40,7 @@ import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
 
 import com.thehouse.app.domain.repository.VisitsRepository
+import com.thehouse.app.domain.usecase.AddFavoriteUseCase
 import com.thehouse.app.domain.usecase.CancelVisitUseCase
 import com.thehouse.app.domain.usecase.CreateVisitUseCase
 
@@ -56,6 +59,14 @@ import com.thehouse.app.domain.usecase.RegisterUseCase
 import com.thehouse.app.domain.usecase.RestoreSessionUseCase
 import com.thehouse.app.domain.usecase.SearchPropertiesUseCase
 import com.thehouse.app.domain.usecase.SelectUniversityUseCase
+
+import com.thehouse.app.domain.usecase.GetProfileUseCase
+import com.thehouse.app.domain.usecase.UpdateProfileUseCase
+import com.thehouse.app.domain.usecase.SelectUserUniversityUseCase
+import com.thehouse.app.domain.usecase.GetPreferencesUseCase
+import com.thehouse.app.domain.usecase.SavePreferencesUseCase
+import com.thehouse.app.domain.usecase.GetQuickSetupUseCase
+
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -164,6 +175,28 @@ class AppContainer(context: Context) {
     val getFavoriteIds: GetFavoriteIdsUseCase by lazy { GetFavoriteIdsUseCase(favoritesRepository) }
     val addFavorite: com.thehouse.app.domain.usecase.AddFavoriteUseCase by lazy { com.thehouse.app.domain.usecase.AddFavoriteUseCase(favoritesRepository) }
     val removeFavorite: RemoveFavoriteUseCase by lazy { RemoveFavoriteUseCase(favoritesRepository) }
+
+
+    // ===== D11 Profile + Preferences + Quick Setup =====
+
+    val profileApi: ProfileApi by lazy { retrofit.create(ProfileApi::class.java) }
+
+    val preferencesApi: PreferencesApi by lazy { retrofit.create(PreferencesApi::class.java) }
+
+    val profileRepository: com.thehouse.app.domain.repository.ProfileRepository by lazy {
+        com.thehouse.app.data.repository.ProfileRepositoryImpl(profileApi)
+    }
+
+    val preferencesRepository: com.thehouse.app.domain.repository.PreferenceRepository by lazy {
+        com.thehouse.app.data.repository.PreferenceRepositoryImpl(preferencesApi)
+    }
+
+    val getProfile: GetProfileUseCase by lazy { GetProfileUseCase(profileRepository) }
+    val updateProfile: UpdateProfileUseCase by lazy { UpdateProfileUseCase(profileRepository) }
+    val selectUserUniversity: SelectUserUniversityUseCase by lazy { SelectUserUniversityUseCase(profileRepository) }
+    val getPreferences: GetPreferencesUseCase by lazy { GetPreferencesUseCase(preferencesRepository) }
+    val savePreferences: SavePreferencesUseCase by lazy { SavePreferencesUseCase(preferencesRepository) }
+    val getQuickSetup: GetQuickSetupUseCase by lazy { GetQuickSetupUseCase(profileRepository) }
 
 
     // ===== D8.1 Visitas reales (NV-10) =====
