@@ -49,3 +49,31 @@
 ## D11-VISUAL-POLISH
 
 - Estado: PLANNED / NO EJECUTADO. Sin commits de estilo. No se declara IMPLEMENTED.
+
+## FASE B — Visual Polish (2026-11-12)
+
+### Design system (fidelidad al prototipo)
+- `ui/theme/Color.kt`: ColorScheme M3 completo extraído del prototipo autoritativo (light + dark derivado del mismo esquema; tokens: primary #00288E, primaryContainer #1E40AF, background/surface #F7F9FB, surfaceVariant #E0E3E5, outline #757684, etc.). Sin hex dispersos en pantallas (verificado: 0 coincidencias `Color(0x` en `presentation/`).
+- `ui/theme/Type.kt`: escala del prototipo (headline 32/40 w800, 24/32 w700, 20/28 w600; body 16/24 w500, 14/20, 13/18; labels 14/20 w600, 12/16 w600, 11/14 w700). Fuente del sistema (sin assets externos).
+- `ui/theme/Theme.kt`: light/dark schemes, `Shapes` (8/12/16/20/28dp), `dynamicColor` desactivado por fidelidad.
+- `ui/theme/Dimens.kt` (nuevo): `Spacing` (4/8/16/24/32, gutter 16), `Heights` (button 48, buttonLarge 56, input 56), `Elevations` (card 2, raised 4).
+
+### Componentes unificados
+- `presentation/components/StateViews.kt` (nuevo): `LoadingView`, `EmptyStateView` (título/mensaje/CTA), `ErrorStateView` (título/mensaje/retry), stateless, con semantics y mensajes humanos (sin códigos HTTP/DomainError/stack traces).
+
+### Pantallas pulidas (presentación, sin tocar lógica/contratos)
+- `OnboardingScreen`: dots tipo prototipo (activo alargado 24x8dp, primario), CTA full-width 56dp shape medium, jerarquía headlineLarge/bodyLarge + onSurfaceVariant, Omitir con labelLarge, alturas 48/56 tokens.
+- `LoginScreen` / `RegisterScreen`: CTA 56dp con loading integrado (CircularProgress en onPrimary), error con `semantics contentDescription`, TextButtons 48dp con labelLarge.
+- `ExploreScreen`: estados reemplazados por StateViews (Loading "Buscando rentas…", Empty con CTA Reintentar, Error con retry); texto interno "Mapa completo pendiente de NV-07" sustituido por mensaje de usuario neutral; sin cambios de eventos/VM.
+- `FavoritesScreen`: Loading/Empty (con CTA "Explorar propiedades")/Error/Login-wall via StateViews; sin cambios de callbacks.
+- `PropertyCard`: precio con jerarquía `headlineSmall` + primary (ambas overloads real/prototipo); resto intacto.
+- Map/PropertyDetail/Visits/Navigation: se mantienen sobre tokens M3 (BottomNav ya usa NavigationBar accesible); sin SDK de pago ni API keys (COST-001/M-MOB-017 intactos).
+
+### Accesibilidad / responsive / performance
+- Targets ≥48dp en botones/estados; `contentDescription` en estados, errores y CTA de onboarding; contraste vía tokens M3; layouts con `fillMaxWidth`/`weight` (sin tamaños rígidos); listas con `key` (Explore ya usaba `key = { it.id }`); sin requests desde Composables; sin dependencias nuevas.
+
+### Validación real
+- `.\gradlew.bat compileDebugKotlin` → **BUILD SUCCESSFUL** (19s; tras 1 ciclo correctivo: imports faltantes `semantics` en RegisterScreen y `Button` en FavoritesScreen).
+- `.\gradlew.bat testDebugUnitTest lintDebug assembleDebug` → **BUILD SUCCESSFUL (1m 46s)**, 99 tests 0 fallos.
+- QA runtime: **NO EJECUTADO** — sin emulador/adb disponible en el entorno (requisito condicional "si hay emulador").
+- Commit: `style: polish mobile ui and unify design system`; push a `origin/feature/profile-preferences-ui-polish`.

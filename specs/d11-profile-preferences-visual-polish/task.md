@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Spec | D11 Profile + Preferences + Quick Setup + Visual Polish |
-| Estado | FASE A DONE (compile + tests verdes); FASE B NO EJECUTAR |
+| Estado | FASE A DONE; FASE B VALIDADA (build/tests/lint/assemble verdes; QA runtime pendiente por falta de emulador) |
 
 ## FASE A — Functional stabilization (TASK ACTIVA)
 
@@ -18,8 +18,9 @@
 
 ## FASE B — Visual Polish (NO EJECUTAR)
 
-- [ ] D11-T09 - Design system centralizado.
-- [ ] D11-T10 - Pulido visual por pantalla.
-- [ ] D11-T11 - Componentes unificados y patrones Loading/Empty/Error.
-- [ ] D11-T12 - Accesibilidad / responsive / QA runtime.
-- [ ] D11-T13 - Validación completa y commit `style: polish mobile ui and unify design system`.
+- [x] D11-T09 - Design system centralizado (ColorScheme/Typography/Shapes del prototipo, tokens Spacing/Heights/Elevations).
+- [x] D11-T10 - Pulido visual por pantalla (Onboarding, Login, Register, Explore, Favorites, PropertyCard).
+- [x] D11-T11 - Componentes unificados y patrones Loading/Empty/Error (StateViews).
+- [x] D11-T12 - Accesibilidad (semantics, contraste, targets ≥48dp) / responsive (fillMaxWidth/weight, sin tamaños rígidos).
+- [x] D11-T13 - Validación completa: `compileDebugKotlin` + `testDebugUnitTest lintDebug assembleDebug` en verde.
+- [ ] D11-T14 - QA runtime con emulador: NO EJECUTADO (sin emulador/adb disponible en el entorno).
