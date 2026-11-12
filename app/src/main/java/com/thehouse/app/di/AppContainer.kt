@@ -38,11 +38,8 @@ import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
 
 import com.thehouse.app.domain.repository.VisitsRepository
-import com.thehouse.app.domain.usecase.AddFavoriteUseCase
 import com.thehouse.app.domain.usecase.CancelVisitUseCase
 import com.thehouse.app.domain.usecase.CreateVisitUseCase
-
-import com.thehouse.app.domain.usecase.AddFavoriteUseCase
 
 import com.thehouse.app.domain.usecase.GetFavoritesUseCase
 import com.thehouse.app.domain.usecase.GetFavoriteIdsUseCase
@@ -63,9 +60,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 
-/**
- * Composition root de Dependency Injection manual.
- *
+/** Composition root de Dependency Injection manual.
  * Construye dependencias de infraestructura y las expone de forma lazy.
  * No contiene lógica de negocio ni estado mutable global.
  *
@@ -167,7 +162,7 @@ class AppContainer(context: Context) {
 
     val getFavorites: GetFavoritesUseCase by lazy { GetFavoritesUseCase(favoritesRepository) }
     val getFavoriteIds: GetFavoriteIdsUseCase by lazy { GetFavoriteIdsUseCase(favoritesRepository) }
-    val addFavorite: AddFavoriteUseCase by lazy { AddFavoriteUseCase(favoritesRepository) }
+    val addFavorite: com.thehouse.app.domain.usecase.AddFavoriteUseCase by lazy { com.thehouse.app.domain.usecase.AddFavoriteUseCase(favoritesRepository) }
     val removeFavorite: RemoveFavoriteUseCase by lazy { RemoveFavoriteUseCase(favoritesRepository) }
 
 
@@ -192,17 +187,13 @@ class AppContainer(context: Context) {
         GetUniversitiesUseCase(universityRepository)
     }
 
-    val getProperties: GetPropertiesUseCase by lazy {
-        GetPropertiesUseCase(propertyRepository)
-    }
+    val getProperties: GetPropertiesUseCase by lazy { GetPropertiesUseCase(propertyRepository) }
 
     val observeSelectedUniversity: ObserveSelectedUniversityUseCase by lazy {
         ObserveSelectedUniversityUseCase(selectedUniversityRepository)
     }
 
-    val selectUniversity: SelectUniversityUseCase by lazy {
-        SelectUniversityUseCase(selectedUniversityRepository)
-    }
+    val selectUniversity: SelectUniversityUseCase by lazy { SelectUniversityUseCase(selectedUniversityRepository) }
 
     val searchProperties: SearchPropertiesUseCase by lazy { SearchPropertiesUseCase() }
 
