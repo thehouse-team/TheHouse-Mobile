@@ -7,11 +7,10 @@
 - [x] Trazabilidad actualizada (`docs/sdd/REQUIREMENTS_TRACEABILITY.md`, fila «Perfil / cuenta»).
 - [x] `memoria.md` actualizada con la decisión de gobernanza D11.
 - [x] Commit de gobernanza solo documental.
-- [x] Clasificación del working tree realizada y documentada.
-- [ ] Clasificación de eliminaciones resuelta: **PENDIENTE DECISIÓN HUMANA** (23 archivos borrados aún requeridos por ~30 archivos sobrevivientes).
-- [ ] `compileDebugKotlin` verde: **FALLO registrado** (ver evidence.md).
-- [ ] `testDebugUnitTest` verde.
-- [ ] D11-FUNCTIONAL-READY declarado.
+- [x] Clasificación del working tree realizada y documentada.- [x] Clasificación de eliminaciones resuelta: 23 archivos core restaurados selectivamente con `git restore --source=HEAD --` (autorizado por humano); sin reset/clean/stash/force push.
+- [x] `compileDebugKotlin` verde: **BUILD SUCCESSFUL (44s)**.
+- [x] `testDebugUnitTest` verde: **99 tests, 0 fallos (23 suites)**.
+- [x] D11-FUNCTIONAL-READY declarado.
 
 ## FASE B — Visual Polish (NO EJECUTADO)
 

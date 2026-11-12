@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Spec | D11 Profile + Preferences + Quick Setup + Visual Polish |
-| Estado | FASE A activa; FASE B NO EJECUTAR |
+| Estado | FASE A DONE (compile + tests verdes); FASE B NO EJECUTAR |
 
 ## FASE A — Functional stabilization (TASK ACTIVA)
 
@@ -11,10 +11,10 @@
 - [x] D11-T02 - Registro de spec/plan/task/checklist/evidence D11 y actualización de trazabilidad.
 - [x] D11-T03 - Commit de gobernanza solo documental (`docs: register d11 profile preferences and visual polish`).
 - [x] D11-T04 - Clasificación del working tree (D11 legítimo / cambio ajeno / dudoso) sin descartar nada.
-- [ ] D11-T05 - Ejecutar `.\gradlew.bat compileDebugKotlin` y registrar resultado real. **[EJECUTADO: FALLO — ver evidence.md]**
-- [ ] D11-T06 - Resolver eliminaciones de 23 archivos requeridos por código sobreviviente (decisión humana pendiente).
-- [ ] D11-T07 - Corregir errores de compilación del código D11 nuevo.
-- [ ] D11-T08 - `testDebugUnitTest` y commit funcional `feat: add real profile preferences and quick setup`.
+- [x] D11-T05 - Ejecutar `.\gradlew.bat compileDebugKotlin` y registrar resultado real. **[SEGUNDA EJECUCIÓN: BUILD SUCCESSFUL]**
+- [x] D11-T06 - Restaurar los 23 archivos core eliminados (git restore --source=HEAD selectivo, archivo por archivo, autorizado).
+- [x] D11-T07 - Corregir errores de compilación del código D11 nuevo (ver evidence.md FASE A).
+- [x] D11-T08 - `testDebugUnitTest` (99 tests, 0 fallos) y commit funcional `feat: add real profile preferences and quick setup`.
 
 ## FASE B — Visual Polish (NO EJECUTAR)
 
