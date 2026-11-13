@@ -59,6 +59,9 @@ fun HomeScreen(
     onOpenConversations: () -> Unit = {},
     onOpenLandlordRequests: () -> Unit = {},
     onOpenLandlord: () -> Unit = {},
+    onOpenMyRental: () -> Unit = {},
+    onOpenRentalCode: () -> Unit = {},
+    onOpenLandlordAgreements: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
@@ -267,6 +270,27 @@ fun HomeScreen(
                 ) {
                     Text("Solicitudes recibidas (arrendador)")
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onOpenMyRental,
+                        modifier = Modifier
+                            .height(48.dp)
+                            .weight(1f),
+                    ) {
+                        Text("Mi renta")
+                    }
+                    OutlinedButton(
+                        onClick = onOpenRentalCode,
+                        modifier = Modifier
+                            .height(48.dp)
+                            .weight(1f),
+                    ) {
+                        Text("Introducir código")
+                    }
+                }
                 OutlinedButton(
                     onClick = onOpenLandlord,
                     modifier = Modifier
@@ -274,6 +298,14 @@ fun HomeScreen(
                         .height(48.dp),
                 ) {
                     Text("Mis alojamientos (arrendador)")
+                }
+                OutlinedButton(
+                    onClick = onOpenLandlordAgreements,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Text("Mis acuerdos (arrendador)")
                 }
                 if (state.isLoggingOut) {
                     CircularProgressIndicator(modifier = Modifier.height(44.dp))

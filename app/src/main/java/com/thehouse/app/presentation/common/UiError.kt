@@ -12,6 +12,7 @@ sealed interface UiError {
     data object AccountSuspended : UiError
     data object NotFound : UiError
     data object Conflict : UiError
+    data object Gone : UiError
     data object RateLimited : UiError
     data object Server : UiError
     data object Unknown : UiError

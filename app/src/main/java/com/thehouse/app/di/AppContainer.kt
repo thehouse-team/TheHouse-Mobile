@@ -397,4 +397,53 @@ class AppContainer(context: Context) {
     val getBuildingVerification: com.thehouse.app.domain.usecase.GetBuildingVerificationUseCase by lazy {
         com.thehouse.app.domain.usecase.GetBuildingVerificationUseCase(reportsRepository)
     }
+
+    // ===== D13.1 Agreements + My Rental =====
+
+    val agreementsApi: com.thehouse.app.data.remote.api.AgreementsApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.AgreementsApi::class.java)
+    }
+
+    val agreementsRepository: com.thehouse.app.domain.repository.AgreementsRepository by lazy {
+        com.thehouse.app.data.agreements.repository.AgreementsRepositoryImpl(
+            api = agreementsApi,
+            json = json,
+        )
+    }
+
+    val createAgreement: com.thehouse.app.domain.usecase.CreateAgreementUseCase by lazy {
+        com.thehouse.app.domain.usecase.CreateAgreementUseCase(agreementsRepository)
+    }
+
+    val getLandlordAgreements: com.thehouse.app.domain.usecase.GetLandlordAgreementsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordAgreementsUseCase(agreementsRepository)
+    }
+
+    val getLandlordAgreement: com.thehouse.app.domain.usecase.GetLandlordAgreementUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordAgreementUseCase(agreementsRepository)
+    }
+
+    val issueAgreementCode: com.thehouse.app.domain.usecase.IssueAgreementCodeUseCase by lazy {
+        com.thehouse.app.domain.usecase.IssueAgreementCodeUseCase(agreementsRepository)
+    }
+
+    val cancelAgreement: com.thehouse.app.domain.usecase.CancelAgreementUseCase by lazy {
+        com.thehouse.app.domain.usecase.CancelAgreementUseCase(agreementsRepository)
+    }
+
+    val endAgreement: com.thehouse.app.domain.usecase.EndAgreementUseCase by lazy {
+        com.thehouse.app.domain.usecase.EndAgreementUseCase(agreementsRepository)
+    }
+
+    val previewAgreement: com.thehouse.app.domain.usecase.PreviewAgreementUseCase by lazy {
+        com.thehouse.app.domain.usecase.PreviewAgreementUseCase(agreementsRepository)
+    }
+
+    val acceptAgreement: com.thehouse.app.domain.usecase.AcceptAgreementUseCase by lazy {
+        com.thehouse.app.domain.usecase.AcceptAgreementUseCase(agreementsRepository)
+    }
+
+    val getMyRental: com.thehouse.app.domain.usecase.GetMyRentalUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetMyRentalUseCase(agreementsRepository)
+    }
 }

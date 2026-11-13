@@ -43,6 +43,9 @@ import com.thehouse.app.presentation.navigation.CreateRequestRoute
 import com.thehouse.app.presentation.navigation.LandlordRequestDetailRoute
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
 import com.thehouse.app.presentation.navigation.ReportRoute
+import com.thehouse.app.presentation.navigation.AgreementPreviewRoute
+import com.thehouse.app.presentation.navigation.CreateAgreementRoute as CreateAgreementNavRoute
+import com.thehouse.app.presentation.navigation.LandlordAgreementDetailRoute
 import com.thehouse.app.presentation.navigation.RequestDetailRoute
 import com.thehouse.app.presentation.navigation.BuildingDetailRoute
 import com.thehouse.app.presentation.navigation.BuildingFormRoute
@@ -237,6 +240,15 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         },
                         onOpenLandlord = {
                             navController.navigate(AppRoutes.landlordDashboard.route) { launchSingleTop = true }
+                        },
+                        onOpenMyRental = {
+                            navController.navigate(AppRoutes.myRental.route) { launchSingleTop = true }
+                        },
+                        onOpenRentalCode = {
+                            navController.navigate(AppRoutes.rentalCode.route) { launchSingleTop = true }
+                        },
+                        onOpenLandlordAgreements = {
+                            navController.navigate(AppRoutes.landlordAgreements.route) { launchSingleTop = true }
                         },
                     )
                 }
@@ -537,6 +549,11 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                     launchSingleTop = true
                                 }
                             },
+                            onCreateAgreement = { reqId ->
+                                navController.navigate(CreateAgreementNavRoute(reqId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
                         )
                     }
                 }
@@ -719,6 +736,120 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                     launchSingleTop = true
                                 }
                             },
+                        )
+                    }
+                }
+                composable(AppRoutes.myRental.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.rental.MyRentalDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onRequireLogin = {
+                                navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            },
+                            onOpenConversation = { conversationId ->
+                                navController.navigate(ConversationRoute(conversationId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(AppRoutes.rentalCode.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val rf = remember(factory) { factory.rentalCode() }
+                        com.thehouse.app.presentation.rental.RentalCodeDestination(
+                            factory = rf,
+                            onBack = { navController.popBackStack() },
+                            onNavigateToPreview = { code ->
+                                navController.navigate(AgreementPreviewRoute(code).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = AgreementPreviewRoute.PATTERN,
+                    arguments = listOf(navArgument(AgreementPreviewRoute.ID_ARGUMENT) { type = NavType.StringType }),
+                ) { entry ->
+                    val raw = entry.arguments?.getString(AgreementPreviewRoute.ID_ARGUMENT).orEmpty()
+                    val code = AgreementPreviewRoute.decode(raw)
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val pf = remember(factory, code) { factory.agreementPreview(code) }
+                        com.thehouse.app.presentation.rental.AgreementPreviewDestination(
+                            factory = pf,
+                            onBack = { navController.popBackStack() },
+                            onNavigateToMyRental = {
+                                navController.navigate(AppRoutes.myRental.route) {
+                                    popUpTo(AppRoutes.rentalCode.route) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(AppRoutes.landlordAgreements.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        com.thehouse.app.presentation.landlord.LandlordAgreementsDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onOpenDetail = { id ->
+                                navController.navigate(LandlordAgreementDetailRoute(id).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = LandlordAgreementDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(LandlordAgreementDetailRoute.ID_ARGUMENT) { type = NavType.StringType }),
+                ) { entry ->
+                    val id = entry.arguments?.getString(LandlordAgreementDetailRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val df = remember(factory, id) { factory.landlordAgreementDetail(id) }
+                        com.thehouse.app.presentation.landlord.LandlordAgreementDetailDestination(
+                            factory = df,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(
+                    route = CreateAgreementNavRoute.PATTERN,
+                    arguments = listOf(navArgument(CreateAgreementNavRoute.ID_ARGUMENT) { type = NavType.StringType }),
+                ) { entry ->
+                    val requestId = entry.arguments?.getString(CreateAgreementNavRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        val cf = remember(factory, requestId) { factory.createAgreement(requestId) }
+                        com.thehouse.app.presentation.landlord.CreateAgreementDestination(
+                            factory = cf,
+                            onBack = { navController.popBackStack() },
+                            onDone = { navController.popBackStack() },
                         )
                     }
                 }

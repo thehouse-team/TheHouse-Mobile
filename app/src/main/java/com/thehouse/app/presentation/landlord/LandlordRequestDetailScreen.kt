@@ -47,6 +47,7 @@ fun LandlordRequestDetailDestination(
     factory: ViewModelProvider.Factory,
     onBack: () -> Unit,
     onOpenConversation: (String) -> Unit,
+    onCreateAgreement: (String) -> Unit = {},
 ) {
     val viewModel: LandlordRequestDetailViewModel = viewModel(
         key = "landlord-request-detail:$requestId",
@@ -67,6 +68,7 @@ fun LandlordRequestDetailDestination(
         onAccept = { viewModel.onEvent(LandlordRequestDetailEvent.Accept) },
         onReject = { reason, note -> viewModel.onEvent(LandlordRequestDetailEvent.Reject(reason, note)) },
         onOpenConversation = onOpenConversation,
+        onCreateAgreement = { onCreateAgreement(requestId) },
     )
 }
 
@@ -78,6 +80,7 @@ fun LandlordRequestDetailScreen(
     onAccept: () -> Unit,
     onReject: (reason: String, note: String?) -> Unit,
     onOpenConversation: (String) -> Unit = {},
+    onCreateAgreement: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var showRejectPanel by remember { mutableStateOf(false) }
@@ -130,6 +133,15 @@ fun LandlordRequestDetailScreen(
                         Text("Motivo: ${rejection.reason}", style = MaterialTheme.typography.bodyLarge)
                         rejection.note?.takeIf { it.isNotBlank() }?.let { note ->
                             Text("Nota: $note", style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+
+                    if (request.status == RequestStatus.ACCEPTED) {
+                        OutlinedButton(
+                            onClick = onCreateAgreement,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        ) {
+                            Text("Crear acuerdo")
                         }
                     }
 

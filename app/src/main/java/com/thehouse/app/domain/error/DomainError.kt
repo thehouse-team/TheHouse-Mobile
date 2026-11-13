@@ -12,6 +12,7 @@ sealed interface DomainError {
     data object AccountSuspended : DomainError
     data object NotFound : DomainError
     data object Conflict : DomainError
+    data object Gone : DomainError
     data object RateLimited : DomainError
     data object Server : DomainError
     data object Unknown : DomainError

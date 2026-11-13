@@ -66,6 +66,21 @@ object AppRoutes {
         override val route: String = "arrendador"
     }
 
+    /** D13.1: acuerdos del arrendador. */
+    val landlordAgreements: AppRoute = object : AppRoute {
+        override val route: String = "acuerdos_arrendador"
+    }
+
+    /** D13.1: Mi renta (estudiante). */
+    val myRental: AppRoute = object : AppRoute {
+        override val route: String = "mi_renta"
+    }
+
+    /** D13.1: introducir código de renta (estudiante). */
+    val rentalCode: AppRoute = object : AppRoute {
+        override val route: String = "codigo_renta"
+    }
+
     /** D9: lista de conversaciones. */
     val conversations: AppRoute = object : AppRoute {
         override val route: String = "conversaciones"

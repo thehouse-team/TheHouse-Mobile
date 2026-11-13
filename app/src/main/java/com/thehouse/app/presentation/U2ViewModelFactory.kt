@@ -162,6 +162,45 @@ class U2ViewModelFactory(
         }
     }
 
+    fun createAgreement(requestId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.landlord.CreateAgreementViewModel(
+                requestId = requestId,
+                createAgreement = container.createAgreement,
+            )
+        }
+    }
+
+    fun landlordAgreementDetail(agreementId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.landlord.LandlordAgreementDetailViewModel(
+                agreementId = agreementId,
+                getAgreement = container.getLandlordAgreement,
+                issueCode = container.issueAgreementCode,
+                cancelAgreement = container.cancelAgreement,
+                endAgreement = container.endAgreement,
+            )
+        }
+    }
+
+    fun rentalCode(): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.rental.RentalCodeViewModel(
+                previewAgreement = container.previewAgreement,
+            )
+        }
+    }
+
+    fun agreementPreview(code: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.rental.AgreementPreviewViewModel(
+                code = code,
+                previewAgreement = container.previewAgreement,
+                acceptAgreement = container.acceptAgreement,
+            )
+        }
+    }
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(RootViewModel::class.java) ->
             RootViewModel(container) as T
@@ -227,6 +266,16 @@ class U2ViewModelFactory(
             com.thehouse.app.presentation.landlord.LandlordDashboardViewModel(
                 getProfile = container.getLandlordProfile,
                 getBuildings = container.getLandlordBuildings,
+            ) as T
+
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.landlord.LandlordAgreementsViewModel::class.java) ->
+            com.thehouse.app.presentation.landlord.LandlordAgreementsViewModel(
+                getLandlordAgreements = container.getLandlordAgreements,
+            ) as T
+
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.rental.MyRentalViewModel::class.java) ->
+            com.thehouse.app.presentation.rental.MyRentalViewModel(
+                getMyRental = container.getMyRental,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")
