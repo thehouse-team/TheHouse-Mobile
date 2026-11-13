@@ -172,6 +172,9 @@ fun BuildingDetailScreen(
                         )
                     }
                     item {
+                        VerificationCard(state.verification)
+                    }
+                    item {
                         state.infoMessage?.let { message ->
                             Text(
                                 message,
@@ -273,6 +276,54 @@ private fun PublicationCard(
                 ) {
                     Text(if (isPublishing) "Enviando…" else "Enviar a revisión")
                 }
+            com.thehouse.app.domain.model.BuildingStatus.REJECTED ->
+                Text(
+                    "Tu publicación fue rechazada.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            com.thehouse.app.domain.model.BuildingStatus.SUSPENDED ->
+                Text(
+                    "Tu publicación está suspendida.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+        }
+    }
+}
+
+/**
+ * Tarjeta de verificación (NV-21 §6.1): estados reales y último motivo.
+ * No revela quién revisó (el Backend tampoco lo envía).
+ */
+@Composable
+private fun VerificationCard(
+    verification: com.thehouse.app.domain.model.VerificationInfo?,
+) {
+    if (verification == null) return
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text("Verificación", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Estado: ${LandlordErrorMessages.statusLabel(verification.status.api)}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        verification.lastDecision?.let { decision ->
+            val decisionLabel = when (decision.decision) {
+                com.thehouse.app.domain.model.VerificationDecision.APPROVED ->
+                    "Aprobada"
+                com.thehouse.app.domain.model.VerificationDecision.CHANGES_REQUESTED ->
+                    "Se pidieron correcciones"
+                com.thehouse.app.domain.model.VerificationDecision.REJECTED ->
+                    "Rechazada"
+            }
+            Text(
+                buildString {
+                    append("Última decisión: $decisionLabel")
+                    decision.reason?.let { append(" — $it") }
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

@@ -376,4 +376,25 @@ class AppContainer(context: Context) {
     val publishBuilding: com.thehouse.app.domain.usecase.PublishBuildingUseCase by lazy {
         com.thehouse.app.domain.usecase.PublishBuildingUseCase(landlordRepository)
     }
+
+    // ===== D13 Reportes / verificación (NV-21, reutiliza Retrofit/HttpClient D3) =====
+
+    val reportsApi: com.thehouse.app.data.remote.api.ReportsApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.ReportsApi::class.java)
+    }
+
+    val reportsRepository: com.thehouse.app.domain.repository.ReportsRepository by lazy {
+        com.thehouse.app.data.reports.repository.ReportsRepositoryImpl(
+            api = reportsApi,
+            json = json,
+        )
+    }
+
+    val createReport: com.thehouse.app.domain.usecase.CreateReportUseCase by lazy {
+        com.thehouse.app.domain.usecase.CreateReportUseCase(reportsRepository)
+    }
+
+    val getBuildingVerification: com.thehouse.app.domain.usecase.GetBuildingVerificationUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetBuildingVerificationUseCase(reportsRepository)
+    }
 }

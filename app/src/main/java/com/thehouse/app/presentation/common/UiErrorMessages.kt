@@ -11,6 +11,7 @@ object UiErrorMessages {
         UiError.Network -> "No hay conexión. Verifica tu red e intenta de nuevo."
         UiError.Timeout -> "La conexión tardó demasiado. Intenta de nuevo."
         UiError.Unauthorized -> "Credenciales inválidas. Revisa tu correo y contraseña."
+        UiError.AccountSuspended -> "Tu cuenta está suspendida."
         UiError.NotFound -> "No se encontró lo solicitado."
         UiError.Conflict -> "Ese correo ya está registrado. Inicia sesión en lugar de crear una cuenta nueva."
         UiError.RateLimited -> "Demasiados intentos. Espera un momento e intenta de nuevo."

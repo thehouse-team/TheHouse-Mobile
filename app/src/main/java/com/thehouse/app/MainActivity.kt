@@ -26,6 +26,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.thehouse.app.domain.model.ReportTargetType
 import com.thehouse.app.domain.model.SessionState
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.auth.LoginScreen
@@ -41,6 +42,7 @@ import com.thehouse.app.presentation.navigation.ConversationRoute
 import com.thehouse.app.presentation.navigation.CreateRequestRoute
 import com.thehouse.app.presentation.navigation.LandlordRequestDetailRoute
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
+import com.thehouse.app.presentation.navigation.ReportRoute
 import com.thehouse.app.presentation.navigation.RequestDetailRoute
 import com.thehouse.app.presentation.navigation.BuildingDetailRoute
 import com.thehouse.app.presentation.navigation.BuildingFormRoute
@@ -97,6 +99,7 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
     val container = (LocalContext.current.applicationContext as TheHouseApplication).container
     val sessionState by container.sessionStore.state.collectAsStateWithLifecycle()
     val isAuthenticated = sessionState is SessionState.Active
+    val isAccountSuspended = sessionState is SessionState.Suspended
     val displayName = (sessionState as? SessionState.Active)?.session?.displayName.orEmpty()
 
     LaunchedEffect(Unit) {
@@ -106,7 +109,7 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val selectedTab = TabNavigationState.fromRoute(currentRoute)
-    val showBottomNav = AppRoutes.isBottomTab(currentRoute)
+    val showBottomNav = AppRoutes.isBottomTab(currentRoute) && !isAccountSuspended
 
     Scaffold(
         modifier = modifier,
@@ -119,7 +122,13 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
             }
         },
     ) { padding ->
-        if (rootState.isResolving) {
+        if (isAccountSuspended) {
+            com.thehouse.app.presentation.auth.AccountSuspendedScreen(
+                isLoggingOut = rootState.isLoggingOut,
+                onLogout = rootViewModel::logoutSuspendedAccount,
+                modifier = Modifier.padding(padding),
+            )
+        } else if (rootState.isResolving) {
             Surface(modifier = Modifier.fillMaxSize()) {
                 androidx.compose.foundation.layout.Box(
                     modifier = Modifier.fillMaxSize(),
@@ -446,6 +455,46 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                     launchSingleTop = true
                                 }
                             },
+                            onReportRoom = { roomId ->
+                                navController.navigate(
+                                    ReportRoute(ReportTargetType.ROOM, roomId).route,
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onReportBuilding = { buildingId ->
+                                navController.navigate(
+                                    ReportRoute(ReportTargetType.BUILDING, buildingId).route,
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(
+                    route = ReportRoute.PATTERN,
+                    arguments = listOf(
+                        navArgument(ReportRoute.TYPE_ARGUMENT) { type = NavType.StringType },
+                        navArgument(ReportRoute.ID_ARGUMENT) { type = NavType.StringType },
+                    ),
+                ) { entry ->
+                    val targetTypeApi = entry.arguments?.getString(ReportRoute.TYPE_ARGUMENT).orEmpty()
+                    val targetId = entry.arguments?.getString(ReportRoute.ID_ARGUMENT).orEmpty()
+                    val targetType = ReportTargetType.entries.firstOrNull { it.api == targetTypeApi }
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else if (targetType == null || targetId.isEmpty()) {
+                        // Ruta D13 validada: sin target válido no hay reporte (sin fallback inventado).
+                        LaunchedEffect(Unit) { navController.popBackStack() }
+                    } else {
+                        com.thehouse.app.presentation.reports.ReportDestination(
+                            targetType = targetType,
+                            targetId = targetId,
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
                         )
                     }
                 }

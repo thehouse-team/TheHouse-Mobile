@@ -36,6 +36,8 @@ fun RequestDetailDestination(
     factory: ViewModelProvider.Factory,
     onBack: () -> Unit,
     onOpenConversation: (String) -> Unit,
+    onReportRoom: (String) -> Unit,
+    onReportBuilding: (String) -> Unit,
 ) {
     val viewModel: RequestDetailViewModel = viewModel(
         key = "request-detail:$requestId",
@@ -57,6 +59,8 @@ fun RequestDetailDestination(
                 if (request.conversationId == conversationId) onOpenConversation(conversationId)
             }
         },
+        onReportRoom = { roomId -> onReportRoom(roomId) },
+        onReportBuilding = { buildingId -> onReportBuilding(buildingId) },
     )
 }
 
@@ -67,6 +71,8 @@ fun RequestDetailScreen(
     onRetry: () -> Unit,
     onCancel: () -> Unit,
     onOpenConversation: (String) -> Unit,
+    onReportRoom: (String) -> Unit,
+    onReportBuilding: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { padding ->
@@ -142,6 +148,19 @@ fun RequestDetailScreen(
                         ) {
                             Text("Abrir conversación")
                         }
+                    }
+                    Text("Reportar", style = MaterialTheme.typography.titleMedium)
+                    OutlinedButton(
+                        onClick = { onReportRoom(request.room.id) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    ) {
+                        Text("Reportar cuarto")
+                    }
+                    OutlinedButton(
+                        onClick = { onReportBuilding(request.room.buildingId) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    ) {
+                        Text("Reportar edificio")
                     }
                     if (request.status == com.thehouse.app.domain.model.RequestStatus.PENDING) {
                         OutlinedButton(

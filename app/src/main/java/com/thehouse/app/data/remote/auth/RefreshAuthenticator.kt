@@ -3,7 +3,9 @@ package com.thehouse.app.data.remote.auth
 import com.thehouse.app.data.auth.session.InMemorySessionStore
 import com.thehouse.app.data.auth.storage.SessionTokenStorage
 import com.thehouse.app.data.remote.dto.auth.AuthResponseDto
+import com.thehouse.app.data.remote.dto.visits.ProblemDetailsDto
 import com.thehouse.app.data.serialization.JsonProvider
+import com.thehouse.app.domain.model.SessionState
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
@@ -65,6 +67,7 @@ class RefreshAuthenticator(
         if (response.priorResponse != null) return null
 
         synchronized(lock) {
+            if (sessionStore.state.value is SessionState.Suspended) return null
             val sentToken = response.request.header("Authorization")?.removePrefix("Bearer ")
             val currentToken = sessionStore.accessToken
             if (currentToken.isNullOrBlank()) return null
@@ -103,6 +106,7 @@ class RefreshAuthenticator(
         return try {
             refreshClient.newCall(request).execute().use { resp ->
                 if (resp.code == 200) {
+                    if (sessionStore.state.value is SessionState.Suspended) return null
                     val text = resp.body?.string().orEmpty()
                     val dto = json.decodeFromString(AuthResponseDto.serializer(), text)
                     val newAccess = dto.accessToken ?: dto.token
@@ -115,7 +119,13 @@ class RefreshAuthenticator(
                         refreshTokenStorage.clear()
                     }
                     newAccess
-                } else if (resp.code == 401) {
+                } else if (resp.code == 403) {
+                    val code = runCatching {
+                        json.decodeFromString<ProblemDetailsDto>(resp.body?.string().orEmpty()).code
+                    }.getOrNull()
+                    if (code == "account_suspended") sessionStore.suspendAccount()
+                    null
+                } else if (resp.code == 401 && sessionStore.state.value !is SessionState.Suspended) {
                     sessionStore.clear()
                     refreshTokenStorage.clear()
                     null

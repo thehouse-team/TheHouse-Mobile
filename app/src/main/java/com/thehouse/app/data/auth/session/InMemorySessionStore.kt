@@ -23,16 +23,32 @@ class InMemorySessionStore {
     var accessToken: String? = null
         private set
 
+    @Synchronized
     fun activate(session: UserSession, accessToken: String?) {
+        // Una hidratación en vuelo no puede deshacer una suspensión confirmada.
+        if (state.value is SessionState.Suspended) return
         this.accessToken = accessToken
         mutableState.value = SessionState.Active(session)
     }
 
+    @Synchronized
     fun updateAccessToken(token: String?) {
+        if (state.value is SessionState.Suspended) return
         accessToken = token
     }
 
+    @Synchronized
+    fun suspendAccount() {
+        val identity = when (val current = state.value) {
+            is SessionState.Active -> current.session
+            is SessionState.Suspended -> current.session
+            SessionState.Anonymous -> null
+        }
+        mutableState.value = SessionState.Suspended(identity)
+    }
+
     /** Limpia por completo el estado de sesión, incluido el access token. */
+    @Synchronized
     fun clear() {
         accessToken = null
         mutableState.value = SessionState.Anonymous

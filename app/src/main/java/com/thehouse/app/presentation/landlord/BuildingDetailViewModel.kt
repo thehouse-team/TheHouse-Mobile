@@ -29,6 +29,7 @@ data class BuildingDetailUiState(
     val isPublishing: Boolean = false,
     val isDeleting: Boolean = false,
     val busyRoomId: String? = null,
+    val verification: com.thehouse.app.domain.model.VerificationInfo? = null,
     val versionConflict: Boolean = false,
     /** Mensaje tras publicar: el estado real lo dice el Backend (in_review). */
     val infoMessage: String? = null,
@@ -60,6 +61,7 @@ class BuildingDetailViewModel(
     private val deleteBuilding: DeleteBuildingUseCase,
     private val pauseRoom: PauseRoomUseCase,
     private val resumeRoom: ResumeRoomUseCase,
+    private val getVerification: com.thehouse.app.domain.usecase.GetBuildingVerificationUseCase,
 ) : BaseViewModel<BuildingDetailUiState, BuildingDetailEvent, BuildingDetailEffect>(
     BuildingDetailUiState(),
 ) {
@@ -93,6 +95,7 @@ class BuildingDetailViewModel(
                     updateState { it.copy(isLoading = false, building = building) }
                     loadRooms()
                     loadPublication()
+                    loadVerification()
                 },
                 onFailure = { throwable -> handleFailure(throwable) },
             )
@@ -103,6 +106,15 @@ class BuildingDetailViewModel(
         launch {
             getRooms(buildingId).fold(
                 onSuccess = { page -> updateState { it.copy(rooms = page.items) } },
+                onFailure = { throwable -> handleFailure(throwable) },
+            )
+        }
+    }
+
+    private fun loadVerification() {
+        launch {
+            getVerification(buildingId).fold(
+                onSuccess = { info -> updateState { it.copy(verification = info) } },
                 onFailure = { throwable -> handleFailure(throwable) },
             )
         }

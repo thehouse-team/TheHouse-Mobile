@@ -6,6 +6,8 @@ import com.thehouse.app.data.auth.storage.SessionTokenStorage
 import com.thehouse.app.data.error.DataError
 import com.thehouse.app.data.error.toDomainError
 import com.thehouse.app.data.remote.api.AuthApi
+import com.thehouse.app.data.remote.readProblemCode
+import com.thehouse.app.data.serialization.JsonProvider
 import com.thehouse.app.data.remote.dto.auth.AuthResponseDto
 import com.thehouse.app.data.remote.dto.auth.LoginRequestDto
 import com.thehouse.app.data.remote.dto.auth.RefreshRequestDto
@@ -115,6 +117,9 @@ class AuthRepositoryImpl(
         refreshMutex.withLock { doRefreshLocked(oldAccessToken = oldAccessToken) }
 
     private suspend fun doRefreshLocked(oldAccessToken: String?): Result<String?> {
+        if (sessionStore.state.value is SessionState.Suspended) {
+            return Result.failure(DomainException(DomainError.AccountSuspended))
+        }
         val current = sessionStore.accessToken
         if (oldAccessToken != null && current != null && current != oldAccessToken) {
             return Result.success(current)
@@ -132,6 +137,8 @@ class AuthRepositoryImpl(
             val newAccess = dto?.accessToken ?: dto?.token
             val newRefresh = dto?.refreshToken
             when {
+                sessionStore.state.value is SessionState.Suspended ->
+                    Result.failure(DomainException(DomainError.AccountSuspended))
                 response.isSuccessful && !newAccess.isNullOrBlank() -> {
                     sessionStore.updateAccessToken(newAccess)
                     // Rotación: SIEMPRE reemplazar el refresh anterior.
@@ -150,7 +157,7 @@ class AuthRepositoryImpl(
                 }
                 else -> {
                     Result.failure(
-                        DomainException(DataError.Http(response.code()).toDomainError()),
+                        authenticationError(response),
                     )
                 }
             }
@@ -164,6 +171,9 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun getCurrentUser(): Result<UserSession?> {
+        if (sessionStore.state.value is SessionState.Suspended) {
+            return Result.failure(DomainException(DomainError.AccountSuspended))
+        }
         val token = sessionStore.accessToken
         if (token.isNullOrBlank()) {
             return Result.failure(DomainException(DomainError.Unauthorized))
@@ -173,7 +183,11 @@ class AuthRepositoryImpl(
         val error = first.exceptionOrNull() as? DomainException
         if (error?.error != DomainError.Unauthorized) return first
         // 401 → refresh single-flight (máximo 1) y retry único.
-        val refreshed = refreshIfStale(oldAccessToken = token).getOrNull()
+        val refreshResult = refreshIfStale(oldAccessToken = token)
+        if ((refreshResult.exceptionOrNull() as? DomainException)?.error == DomainError.AccountSuspended) {
+            return Result.failure(DomainException(DomainError.AccountSuspended))
+        }
+        val refreshed = refreshResult.getOrNull()
         if (refreshed.isNullOrBlank()) {
             // Refresh 401 ya limpió sesión (doRefreshLocked); 401 se propaga.
             return Result.failure(DomainException(DomainError.Unauthorized))
@@ -198,13 +212,15 @@ class AuthRepositoryImpl(
             val response = api.getCurrentUser("Bearer $accessToken")
             val dto = response.body()
             when {
+                sessionStore.state.value is SessionState.Suspended ->
+                    Result.failure(DomainException(DomainError.AccountSuspended))
                 response.isSuccessful && dto != null -> {
                     val user = dto.toDomain()
                     sessionStore.activate(user, accessToken)
                     Result.success(user)
                 }
                 else -> Result.failure(
-                    DomainException(DataError.Http(response.code()).toDomainError()),
+                    authenticationError(response),
                 )
             }
         } catch (timeout: SocketTimeoutException) {
@@ -217,6 +233,9 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun restoreSession(): Result<UserSession?> {
+        if (sessionStore.state.value is SessionState.Suspended) {
+            return Result.failure(DomainException(DomainError.AccountSuspended))
+        }
         val refreshToken = refreshTokenStorage.readRefreshToken()
             ?.toString(Charsets.UTF_8)
         if (refreshToken.isNullOrBlank()) {
@@ -224,7 +243,11 @@ class AuthRepositoryImpl(
             return Result.success(null)
         }
         // Refresh single-flight (ruta de arranque; secencial, sin doble refresh).
-        val newAccess = refreshAccessToken().getOrNull()
+        val refreshResult = refreshAccessToken()
+        if ((refreshResult.exceptionOrNull() as? DomainException)?.error == DomainError.AccountSuspended) {
+            return Result.failure(DomainException(DomainError.AccountSuspended))
+        }
+        val newAccess = refreshResult.getOrNull()
         if (newAccess.isNullOrBlank()) {
             // Refresh 401 ya limpió; otros errores dejan Anonymous sin inventar sesión.
             sessionStore.clear()
@@ -236,7 +259,9 @@ class AuthRepositoryImpl(
             me
         } else {
             val error = me.exceptionOrNull() as? DomainException
-            if (error?.error == DomainError.Unauthorized) {
+            if (error?.error == DomainError.AccountSuspended) {
+                return Result.failure(error)
+            } else if (error?.error == DomainError.Unauthorized) {
                 sessionStore.clear()
                 refreshTokenStorage.clear()
             } else {
@@ -258,7 +283,11 @@ class AuthRepositoryImpl(
         val payload = try {
             toSessionPayload(response).getOrThrow()
         } catch (auth: DomainException) {
-            sessionStore.clear()
+            if (auth.error == DomainError.AccountSuspended) {
+                sessionStore.suspendAccount()
+            } else if (sessionStore.state.value !is SessionState.Suspended) {
+                sessionStore.clear()
+            }
             return Result.failure(auth)
         } catch (timeout: SocketTimeoutException) {
             sessionStore.clear()
@@ -269,6 +298,10 @@ class AuthRepositoryImpl(
         } catch (unexpected: Exception) {
             sessionStore.clear()
             return Result.failure(DomainException(DomainError.Unknown))
+        }
+
+        if (sessionStore.state.value is SessionState.Suspended) {
+            return Result.failure(DomainException(DomainError.AccountSuspended))
         }
 
         // Guardar tokens: access solo en memoria; refresh cifrado.
@@ -289,6 +322,9 @@ class AuthRepositoryImpl(
             fetchMe(payload.accessToken).getOrNull()
         } catch (_: Exception) {
             null
+        }
+        if (sessionStore.state.value is SessionState.Suspended) {
+            return Result.failure(DomainException(DomainError.AccountSuspended))
         }
         return if (hydrated != null) {
             Result.success(hydrated)
@@ -320,9 +356,16 @@ class AuthRepositoryImpl(
             }
             response.isSuccessful ->
                 Result.failure(DomainException(DomainError.Unknown))
-            else ->
-                Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
+            else -> Result.failure(authenticationError(response))
         }
+
+    private fun authenticationError(response: Response<*>): DomainException {
+        if (response.code() == 403 && response.readProblemCode(JsonProvider.create()) == "account_suspended") {
+            sessionStore.suspendAccount()
+            return DomainException(DomainError.AccountSuspended)
+        }
+        return DomainException(DataError.Http(response.code()).toDomainError())
+    }
 
     private data class SessionPayload(
         val user: UserSession,

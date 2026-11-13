@@ -9,6 +9,7 @@ sealed interface UiError {
     data object Network : UiError
     data object Timeout : UiError
     data object Unauthorized : UiError
+    data object AccountSuspended : UiError
     data object NotFound : UiError
     data object Conflict : UiError
     data object RateLimited : UiError

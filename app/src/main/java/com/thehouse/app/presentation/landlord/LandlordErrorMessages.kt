@@ -13,6 +13,7 @@ object LandlordErrorMessages {
     fun map(exception: LandlordException?): String {
         if (exception == null) return "Ocurrió un error inesperado. Intenta de nuevo."
         return when {
+            exception.domainError == DomainError.AccountSuspended -> "Tu cuenta está suspendida."
             exception.code == LandlordErrorCode.LANDLORD_REQUIRED ->
                 "Necesitas activar el modo arrendador para realizar esta acción."
             exception.code == LandlordErrorCode.VERSION_CONFLICT ->
@@ -45,6 +46,7 @@ object LandlordErrorMessages {
         DomainError.Network -> "No hay conexión. Verifica tu red e intenta de nuevo."
         DomainError.Timeout -> "La conexión tardó demasiado. Intenta de nuevo."
         DomainError.Unauthorized -> "Inicia sesión para continuar."
+        DomainError.AccountSuspended -> "Tu cuenta está suspendida."
         DomainError.NotFound -> "No se encontró lo solicitado."
         DomainError.Conflict -> "La operación entró en conflicto. Actualiza e intenta de nuevo."
         DomainError.RateLimited -> "Demasiadas solicitudes. Espera un momento e intenta de nuevo."
@@ -56,6 +58,8 @@ object LandlordErrorMessages {
         "draft" -> "Borrador"
         "in_review" -> "En revisión"
         "verified" -> "Verificado"
+        "rejected" -> "Rechazado"
+        "suspended" -> "Suspendido"
         "setup" -> "En configuración"
         "ready" -> "Listo"
         "available" -> "Disponible"
