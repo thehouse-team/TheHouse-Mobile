@@ -2,7 +2,8 @@ package com.thehouse.app.data.requests.repository
 
 import com.thehouse.app.data.remote.api.RequestsApi
 import com.thehouse.app.data.remote.dto.requests.CreateRequestDto
-import com.thehouse.app.data.remote.dto.visits.ProblemDetailsDto
+import com.thehouse.app.data.remote.readProblemCode
+import com.thehouse.app.data.remote.auth.AccountSuspendedIOException
 import com.thehouse.app.data.remote.dto.requests.RejectRequestDto
 import com.thehouse.app.data.remote.dto.requests.RequestsListResponseDto
 import com.thehouse.app.data.remote.dto.requests.RoomRequestDto
@@ -119,32 +120,30 @@ class RequestsRepositoryImpl(
     }
 
     private fun errorFor(response: Response<*>): RequestException {
-        val code = parseCode(response)
-        val domainError = when (response.code()) {
-            401, 403 -> DomainError.Unauthorized
-            404 -> DomainError.NotFound
-            409 -> DomainError.Conflict
-            422 -> DomainError.Unknown
-            408 -> DomainError.Timeout
-            429 -> DomainError.RateLimited
-            in 500..599 -> DomainError.Server
+        val rawProblemCode = response.readProblemCode(json)
+        val code = RequestErrorCode.fromApi(rawProblemCode)
+        val domainError = when {
+            response.code() == 403 && rawProblemCode == "account_suspended" ->
+                DomainError.AccountSuspended
+            response.code() == 401 || response.code() == 403 -> DomainError.Unauthorized
+            response.code() == 404 -> DomainError.NotFound
+            response.code() == 409 -> DomainError.Conflict
+            response.code() == 422 -> DomainError.Unknown
+            response.code() == 408 -> DomainError.Timeout
+            response.code() == 429 -> DomainError.RateLimited
+            response.code() in 500..599 -> DomainError.Server
             else -> DomainError.Unknown
         }
         val retryAfter = response.headers()["Retry-After"]?.toLongOrNull()
         return RequestException(domainError, code, retryAfter)
     }
 
-    private fun parseCode(response: Response<*>): RequestErrorCode {
-        val raw = runCatching { response.errorBody()?.string() }.getOrNull()
-            ?: return RequestErrorCode.UNKNOWN
-        val problem = runCatching { json.decodeFromString<ProblemDetailsDto>(raw) }.getOrNull()
-        return RequestErrorCode.fromApi(problem?.code)
-    }
-
     private suspend fun <T> safeCall(block: suspend () -> Result<T>): Result<T> = try {
         block()
     } catch (cancelled: CancellationException) {
         throw cancelled
+    } catch (suspended: AccountSuspendedIOException) {
+        Result.failure(RequestException(DomainError.AccountSuspended))
     } catch (timeout: SocketTimeoutException) {
         Result.failure(RequestException(DomainError.Timeout))
     } catch (network: IOException) {

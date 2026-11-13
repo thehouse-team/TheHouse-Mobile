@@ -6,7 +6,8 @@ import com.thehouse.app.data.remote.dto.landlord.BuildingAddressDto
 import com.thehouse.app.data.remote.dto.landlord.CreateBuildingDto
 import com.thehouse.app.data.remote.dto.landlord.CreateLandlordProfileDto
 import com.thehouse.app.data.remote.dto.landlord.GenerateRoomsDto
-import com.thehouse.app.data.remote.dto.landlord.ProblemDetailsDto
+import com.thehouse.app.data.remote.readProblemCode
+import com.thehouse.app.data.remote.auth.AccountSuspendedIOException
 import com.thehouse.app.data.remote.dto.landlord.RoomBaseDto
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.LandlordErrorCode
@@ -298,38 +299,35 @@ class LandlordRepositoryImpl(
     }
 
     private fun errorFor(response: Response<*>): LandlordException {
-        val code = parseCode(response)
-        val domainError = when (response.code()) {
-            400 -> DomainError.Unknown
-            401 -> DomainError.Unauthorized
-            403 -> DomainError.Unauthorized
-            404 -> DomainError.NotFound
-            409 -> DomainError.Conflict
-            408 -> DomainError.Timeout
-            429 -> DomainError.RateLimited
-            in 500..599 -> DomainError.Server
+        val rawCode = response.readProblemCode(json)
+        val code = LandlordErrorCode.fromApi(rawCode)
+        val domainError = when {
+            // Contrato NV-21: cuenta suspendida → 403 account_suspended.
+            response.code() == 403 && rawCode == "account_suspended" ->
+                DomainError.AccountSuspended
+            response.code() == 401 -> DomainError.Unauthorized
+            response.code() == 403 -> DomainError.Unauthorized
+            response.code() == 404 -> DomainError.NotFound
+            response.code() == 409 -> DomainError.Conflict
+            response.code() == 408 -> DomainError.Timeout
+            response.code() == 429 -> DomainError.RateLimited
+            response.code() in 500..599 -> DomainError.Server
             else -> DomainError.Unknown
         }
         val businessCode = when (response.code()) {
             400 -> LandlordErrorCode.VALIDATION
-            403 -> LandlordErrorCode.LANDLORD_REQUIRED
             else -> code
         }
         val retryAfter = response.headers()["Retry-After"]?.toLongOrNull()
         return LandlordException(domainError, businessCode, retryAfter)
     }
 
-    private fun parseCode(response: Response<*>): LandlordErrorCode {
-        val raw = runCatching { response.errorBody()?.string() }.getOrNull()
-            ?: return LandlordErrorCode.UNKNOWN
-        val problem = runCatching { json.decodeFromString<ProblemDetailsDto>(raw) }.getOrNull()
-        return LandlordErrorCode.fromApi(problem?.code)
-    }
-
     private suspend fun <T> safeCall(block: suspend () -> Result<T>): Result<T> = try {
         block()
     } catch (cancelled: CancellationException) {
         throw cancelled
+    } catch (suspended: AccountSuspendedIOException) {
+        Result.failure(LandlordException(DomainError.AccountSuspended))
     } catch (timeout: SocketTimeoutException) {
         Result.failure(LandlordException(DomainError.Timeout))
     } catch (network: IOException) {

@@ -9,6 +9,7 @@ sealed interface DomainError {
     data object Network : DomainError
     data object Timeout : DomainError
     data object Unauthorized : DomainError
+    data object AccountSuspended : DomainError
     data object NotFound : DomainError
     data object Conflict : DomainError
     data object RateLimited : DomainError

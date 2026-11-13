@@ -41,7 +41,9 @@ enum class AllowedTenants(val api: String) {
 enum class BuildingStatus(val api: String) {
     DRAFT("draft"),
     IN_REVIEW("in_review"),
-    VERIFIED("verified");
+    VERIFIED("verified"),
+    REJECTED("rejected"),
+    SUSPENDED("suspended");
 
     companion object {
         fun fromApi(value: String): BuildingStatus =

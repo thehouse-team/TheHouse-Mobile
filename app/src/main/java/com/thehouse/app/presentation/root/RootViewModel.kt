@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 data class RootUiState(
     val isResolving: Boolean = true,
     val targetRoute: String? = null,
+    val isLoggingOut: Boolean = false,
 )
 
 class RootViewModel(
@@ -40,6 +41,7 @@ class RootViewModel(
     private val session = container.sessionStore.state
     private val onboardingRepository = container.onboardingRepository
     private val restoreSession = container.restoreSession
+    private val logout = container.logout
 
     private val mutableState = MutableStateFlow(RootUiState())
     val state: StateFlow<RootUiState> = mutableState.asStateFlow()
@@ -59,6 +61,11 @@ class RootViewModel(
     }
 
     private suspend fun resolve(value: SessionState) {
+        if (value is SessionState.Suspended) {
+            // Pantalla global, sin navegar a Login ni destruir la sesión.
+            mutableState.update { it.copy(isResolving = false) }
+            return
+        }
         val userKeyDerived = onboardingRepository.keyFor(sessionUserId(value))
         when (value) {
             SessionState.Anonymous -> {
@@ -78,6 +85,19 @@ class RootViewModel(
                 }.getOrDefault(false)
                 val target = if (completed) AppRoutes.home.route else AppRoutes.onboarding.route
                 updateTarget(target)
+            }
+            is SessionState.Suspended -> Unit
+        }
+    }
+
+    fun logoutSuspendedAccount() {
+        if (session.value !is SessionState.Suspended || state.value.isLoggingOut) return
+        mutableState.update { it.copy(isLoggingOut = true) }
+        viewModelScope.launch {
+            try {
+                logout()
+            } finally {
+                mutableState.update { it.copy(isLoggingOut = false) }
             }
         }
     }

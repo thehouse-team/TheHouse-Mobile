@@ -20,4 +20,6 @@ data class UserSession(
 sealed interface SessionState {
     data object Anonymous : SessionState
     data class Active(val session: UserSession) : SessionState
+    /** Confirmada por Backend; conserva identidad, no equivale a logout. */
+    data class Suspended(val session: UserSession?) : SessionState
 }

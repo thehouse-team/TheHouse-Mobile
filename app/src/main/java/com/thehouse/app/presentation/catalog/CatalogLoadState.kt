@@ -33,6 +33,7 @@ fun CatalogLoadState<*>.errorMessage(): String? = when (this) {
         UiError.Network -> "Sin conexión. Inténtalo de nuevo."
         UiError.Timeout -> "Tiempo agotado. Inténtalo de nuevo."
         UiError.Unauthorized -> "Sesión inválida. Inicia sesión."
+        UiError.AccountSuspended -> "Tu cuenta está suspendida."
         UiError.NotFound -> "No encontrado."
         UiError.Server -> "Error del servidor. Inténtalo de nuevo."
         else -> "Algo salió mal. Inténtalo de nuevo."

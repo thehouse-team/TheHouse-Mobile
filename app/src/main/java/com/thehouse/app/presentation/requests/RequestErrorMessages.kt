@@ -40,6 +40,7 @@ object RequestErrorMessages {
         DomainError.RateLimited -> "Demasiadas solicitudes. Espera un momento e intenta de nuevo."
         DomainError.Server -> "El servicio no está disponible ahora. Intenta más tarde."
         DomainError.Unauthorized -> "Tu sesión expiró. Inicia sesión de nuevo."
+        DomainError.AccountSuspended -> "Tu cuenta está suspendida."
         DomainError.NotFound -> "No se encontró lo solicitado."
         else -> "Ocurrió un error inesperado. Intenta de nuevo."
     }

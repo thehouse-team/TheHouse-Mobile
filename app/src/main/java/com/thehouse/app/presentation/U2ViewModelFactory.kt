@@ -131,6 +131,7 @@ class U2ViewModelFactory(
                 deleteBuilding = container.deleteBuilding,
                 pauseRoom = container.pauseRoom,
                 resumeRoom = container.resumeRoom,
+                getVerification = container.getBuildingVerification,
             )
         }
     }
@@ -144,6 +145,19 @@ class U2ViewModelFactory(
                 updateRoom = container.updateRoom,
                 deleteRoom = container.deleteRoom,
                 getRooms = container.getLandlordRooms,
+            )
+        }
+    }
+
+    fun report(targetType: String, targetId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            val type = com.thehouse.app.domain.model.ReportTargetType.entries
+                .firstOrNull { it.api == targetType }
+                ?: com.thehouse.app.domain.model.ReportTargetType.ROOM
+            com.thehouse.app.presentation.reports.ReportViewModel(
+                targetType = type,
+                targetId = targetId,
+                createReport = container.createReport,
             )
         }
     }
