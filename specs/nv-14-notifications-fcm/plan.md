@@ -4,7 +4,7 @@
 |---|---|
 | Spec | NV-14 Notifications |
 | Spec oficial | `specs/nv-14-notifications-fcm/` |
-| Fase A | In-App Notifications — **APPROVED FOR GOVERNANCE** — **IMPLEMENTATION: DO NOT EXECUTE todavía** |
+| Fase A | In-App Notifications — **APPROVED / IMPLEMENTED & TESTED (unit)** — runtime pendiente por entorno |
 | Fase B | FCM / Push remoto — **PLANNED** — **DO NOT EXECUTE** |
 
 ## Precondiciones de gobernanza (cumplidas en esta preparación)

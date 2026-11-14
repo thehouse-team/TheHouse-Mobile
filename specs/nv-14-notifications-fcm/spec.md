@@ -12,7 +12,7 @@
 
 | Fase | Alcance | Status | Autorización |
 |---|---|---|---|
-| **Fase A** | Notificaciones in-app reales | **APPROVED FOR GOVERNANCE** | **IMPLEMENTATION: DO NOT EXECUTE todavía** (requiere autorización humana explícita de implementación) |
+| **Fase A** | Notificaciones in-app reales | **IMPLEMENTED & TESTED (unit)** | **APROBADA / EJECUTADA** (runtime E2E pendiente: RUNTIME-BLOCKED sin ADB/emulador) |
 | **Fase B** | FCM / Push remoto | **PLANNED** | **DO NOT EXECUTE** |
 
 > FCM/push remoto permanece separado y no autorizado. No agregar Firebase, no pedir permisos push ni crear token FCM en Fase A.
