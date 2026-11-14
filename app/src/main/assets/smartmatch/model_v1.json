@@ -1,0 +1,42 @@
+{
+  "modelVersion": "1.0.0",
+  "featureVersion": "1.0.0",
+  "algorithm": "logistic_regression",
+  "features": [
+    "budget_fit",
+    "services_overlap",
+    "price_affinity",
+    "currency_match"
+  ],
+  "coefficients": [
+    0.4850737517,
+    0.4725854379,
+    0.3189351232,
+    0.2018936648
+  ],
+  "bias": 0.5221309866,
+  "scaler": {
+    "mean": [
+      0.4950010121,
+      0.4807325102,
+      0.5089880793,
+      0.887804878
+    ],
+    "std": [
+      0.293049304,
+      0.2848923136,
+      0.2907957577,
+      0.3156063633
+    ]
+  },
+  "training": {
+    "type": "offline_supervised_synthetic",
+    "seed": 42,
+    "examples": 410,
+    "epochs": 3000,
+    "learningRate": 0.5,
+    "l2": 0.01,
+    "note": "Modelo inicial entrenado sobre datos sintéticos controlados; no representa aprendizaje histórico de comportamiento real de usuarios."
+  },
+  "sha256": "1e918ea48458f62bd7101a4c9b3400974f39d0f6d26660a8823f5e6edbed1537"
+}

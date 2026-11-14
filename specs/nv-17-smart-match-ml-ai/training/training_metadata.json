@@ -1,0 +1,16 @@
+{
+  "modelVersion": "1.0.0",
+  "featureVersion": "1.0.0",
+  "seed": 42,
+  "examples": 410,
+  "features": [
+    "budget_fit",
+    "services_overlap",
+    "price_affinity",
+    "currency_match"
+  ],
+  "sha256": "1e918ea48458f62bd7101a4c9b3400974f39d0f6d26660a8823f5e6edbed1537",
+  "hashMethod": "sha256 of UTF-8 JSON serialization of artifact without sha256 field (json.dumps indent=2, ensure_ascii=False, sort_keys=False, LF)",
+  "algorithm": "logistic_regression",
+  "note": "Entrenamiento offline determinista sobre dataset sintético controlado, sin PII ni datos productivos."
+}
