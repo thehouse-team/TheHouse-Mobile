@@ -59,6 +59,7 @@ class ConversationViewModel(
     private val sendMessage: SendMessageUseCase,
     private val markRead: MarkConversationReadUseCase,
     private val pollIntervalOverrideMs: Long? = null,
+    private val onConversationRead: (suspend () -> Unit)? = null,
 ) : BaseViewModel<ConversationUiState, ConversationEvent, ConversationEffect>(
     ConversationUiState(),
 ) {
@@ -178,7 +179,10 @@ class ConversationViewModel(
         // Marcar leído tras éxito; el unread local se refresca al re-entrar a la lista.
         val last = lastMessageId
         if (last != null) {
-            launch { markRead(conversationId, last) }
+            launch {
+                markRead(conversationId, last)
+                onConversationRead?.invoke()
+            }
         }
     }
 
@@ -213,7 +217,10 @@ class ConversationViewModel(
                         )
                     }
                     lastMessageId = sent.message.id
-                    launch { markRead(conversationId, sent.message.id) }
+                    launch {
+                        markRead(conversationId, sent.message.id)
+                        onConversationRead?.invoke()
+                    }
                 },
                 onFailure = { throwable ->
                     val exception = throwable as? ChatException
