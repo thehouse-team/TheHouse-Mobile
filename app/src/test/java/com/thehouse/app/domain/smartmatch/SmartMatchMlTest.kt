@@ -15,8 +15,18 @@ import kotlin.math.abs
 
 class SmartMatchMlTest {
 
+    private fun artifactFile(): File {
+        val candidates = listOf(
+            File("app/src/main/assets/smartmatch/model_v1.json"),
+            File("src/main/assets/smartmatch/model_v1.json"),
+            File("../app/src/main/assets/smartmatch/model_v1.json"),
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: error("model_v1.json not found. cwd=${File(".").absolutePath}")
+    }
+
     private fun loadProductionModel(): LogisticRegressionSmartMatchModel {
-        val raw = File("app/src/main/assets/smartmatch/model_v1.json").readText()
+        val raw = artifactFile().readText()
         return LogisticRegressionSmartMatchModel.loadFromJson(raw)
     }
 
@@ -92,7 +102,7 @@ class SmartMatchMlTest {
     @Test
     fun `inference uses trained artifact coefficients not hardcoded engine`() {
         // Motor de producción = coeficientes aprendidos del artefacto (cargado desde JSON), no pesos fijos en código.
-        val raw = File("app/src/main/assets/smartmatch/model_v1.json").readText()
+        val raw = artifactFile().readText()
         assertTrue(raw.contains("\"coefficients\""))
         assertTrue(raw.contains("\"bias\""))
         val model = loadProductionModel()
@@ -100,9 +110,9 @@ class SmartMatchMlTest {
         val v = FeatureVector(doubleArrayOf(1.0, 1.0, 1.0, 1.0))
         val p = model.predictProbability(v)
         assertTrue(p in 0.0..1.0)
-        // Si alteramos el "artefacto" (coeficientes) cambia la salida -> prueba que el motor usa el artefacto.
-        val mutated = raw.replace("\"bias\":", "\"bias\": 9.99, \"_x\":")
-            .replaceFirst(Regex("\"bias\":\\s*[-0-9.eE]+"), "\"bias\": 5.0")
+        // Si alteramos el "artefacto" (coeficientes/bias) cambia la salida -> prueba que el motor usa el artefacto.
+        val mutated = raw.replaceFirst(Regex("\"bias\"\\s*:\\s*[-0-9.eE]+"), "\"bias\": 5.0")
+            .replace(Regex(",?\\s*\"sha256\"\\s*:\\s*\"[a-fA-F0-9]*\""), "")
         val mutatedModel = LogisticRegressionSmartMatchModel.loadFromJson(mutated)
         val p2 = mutatedModel.predictProbability(v)
         assertNotEquals(p, p2, 1e-12)

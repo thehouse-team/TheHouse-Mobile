@@ -8,6 +8,16 @@ import java.io.File
 
 class ModelArtifactTest {
 
+    private fun artifactFile(): File {
+        val candidates = listOf(
+            File("app/src/main/assets/smartmatch/model_v1.json"),
+            File("src/main/assets/smartmatch/model_v1.json"),
+            File("../app/src/main/assets/smartmatch/model_v1.json"),
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: error("model_v1.json not found. cwd=${File(".").absolutePath}")
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `malformed artifact missing coefficients fails`() {
         val bad = """
@@ -45,7 +55,7 @@ class ModelArtifactTest {
 
     @Test
     fun `artifact hash matches declared`() {
-        val raw = File("app/src/main/assets/smartmatch/model_v1.json").readText()
+        val raw = artifactFile().readText()
         val model = LogisticRegressionSmartMatchModel.loadFromJson(raw)
         // recompute same way as loader
         val without = LogisticRegressionSmartMatchModel.removeSha256Field(raw)

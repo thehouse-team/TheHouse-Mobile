@@ -2,11 +2,13 @@ package com.thehouse.app.presentation.smartmatch
 
 import com.thehouse.app.domain.common.DispatcherProvider
 import com.thehouse.app.domain.error.DomainError
+import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.Budget
 import com.thehouse.app.domain.model.PagedResult
 import com.thehouse.app.domain.model.Preference
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.model.SessionState
+import com.thehouse.app.domain.model.UserSession
 import com.thehouse.app.domain.repository.PreferenceRepository
 import com.thehouse.app.domain.smartmatch.FeatureVector
 import com.thehouse.app.domain.smartmatch.SmartMatchModel
@@ -17,8 +19,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -35,7 +35,6 @@ class SmartMatchViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val dispatchers = object : DispatcherProvider {
-        override val main: CoroutineDispatcher = testDispatcher
         override val io: CoroutineDispatcher = testDispatcher
         override val default: CoroutineDispatcher = testDispatcher
     }
@@ -62,6 +61,10 @@ class SmartMatchViewModelTest {
         override fun predictProbability(vector: FeatureVector): Double = vector.values.average().coerceIn(0.0, 1.0)
     }
 
+    private fun activeSession() = SessionState.Active(
+        UserSession(userId = "u1", displayName = "n", email = "e@t.com"),
+    )
+
     private fun property(id: String) = Property(id, "t$id", 3000.0, "MXN", "Puebla", null, 1, 1, 20.0, "2026-01-01T00:00:00Z", null, listOf("wifi"))
     private fun meaningfulPref() = Preference(Budget(2000.0, 4000.0, "MXN"), null, listOf("wifi"), null, null, null, null, null, "MXN")
 
@@ -71,7 +74,7 @@ class SmartMatchViewModelTest {
     @Test
     fun `no preferences state`() = runTest {
         val vm = SmartMatchViewModel(
-            sessionState = MutableStateFlow(SessionState.Active(com.thehouse.app.domain.model.AuthSession("e", "n", null))),
+            sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = null),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
@@ -84,7 +87,7 @@ class SmartMatchViewModelTest {
     @Test
     fun `empty candidates state`() = runTest {
         val vm = SmartMatchViewModel(
-            sessionState = MutableStateFlow(SessionState.Active(com.thehouse.app.domain.model.AuthSession("e", "n", null))),
+            sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
@@ -97,9 +100,9 @@ class SmartMatchViewModelTest {
     @Test
     fun `network error maps to error state`() = runTest {
         val vm = SmartMatchViewModel(
-            sessionState = MutableStateFlow(SessionState.Active(com.thehouse.app.domain.model.AuthSession("e", "n", null))),
+            sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
-            getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.failure(DomainError.Network))),
+            getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.failure(DomainException(DomainError.Network)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
         )
@@ -111,7 +114,7 @@ class SmartMatchViewModelTest {
     fun `content with ranked results`() = runTest {
         val props = listOf(property("1"), property("2"))
         val vm = SmartMatchViewModel(
-            sessionState = MutableStateFlow(SessionState.Active(com.thehouse.app.domain.model.AuthSession("e", "n", null))),
+            sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(props,1,20,2,1)))),
             runSmartMatch = RunSmartMatchUseCase(model),
