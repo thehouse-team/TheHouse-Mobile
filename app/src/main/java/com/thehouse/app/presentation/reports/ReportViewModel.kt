@@ -101,6 +101,7 @@ class ReportViewModel(
                 DomainError.AccountSuspended -> "Tu cuenta está suspendida."
                 DomainError.NotFound -> "No se encontró el contenido a reportar."
                 DomainError.Conflict -> "El reporte entró en conflicto. Intenta de nuevo."
+                DomainError.Gone -> "El contenido ya no está disponible."
                 DomainError.RateLimited -> "Demasiadas solicitudes. Espera un momento e intenta de nuevo."
                 DomainError.Server -> "El servicio no está disponible ahora. Intenta más tarde."
                 DomainError.Unknown -> "Revisa los datos e intenta de nuevo."

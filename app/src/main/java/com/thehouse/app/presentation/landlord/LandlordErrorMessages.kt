@@ -49,6 +49,7 @@ object LandlordErrorMessages {
         DomainError.AccountSuspended -> "Tu cuenta está suspendida."
         DomainError.NotFound -> "No se encontró lo solicitado."
         DomainError.Conflict -> "La operación entró en conflicto. Actualiza e intenta de nuevo."
+        DomainError.Gone -> "El recurso ya no está disponible."
         DomainError.RateLimited -> "Demasiadas solicitudes. Espera un momento e intenta de nuevo."
         DomainError.Server -> "El servicio no está disponible ahora. Intenta más tarde."
         DomainError.Unknown -> "Ocurrió un error inesperado. Intenta de nuevo."
