@@ -315,18 +315,26 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                 }
                 composable(AppRoutes.smartMatch.route) {
                     SmartMatchScreen(
+                        factory = factory,
+                        onRequireLogin = {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        },
+                        onConfigurePreferences = {
+                            // D11 Preferences UI no expuesta como ruta en este punto; CTA requerido por estado NoPreferences.
+                            navController.navigate(AppRoutes.home.route) { launchSingleTop = true }
+                        },
+                        onPropertyClick = { id ->
+                            navController.navigate(PropertyDetailRoute(id).route) { launchSingleTop = true }
+                        },
                         onFavoriteClick = {
                             if (!isAuthenticated) {
-                                navController.navigate(AppRoutes.login.route) {
-                                    launchSingleTop = true
-                                }
+                                navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                             }
+                            // Toggle de favoritos reutiliza flujo existente vía detalle/listas; no se duplica lógica aquí.
                         },
                         onContactClick = {
                             if (!isAuthenticated) {
-                                navController.navigate(AppRoutes.login.route) {
-                                    launchSingleTop = true
-                                }
+                                navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                             }
                         },
                     )

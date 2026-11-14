@@ -446,4 +446,14 @@ class AppContainer(context: Context) {
     val getMyRental: com.thehouse.app.domain.usecase.GetMyRentalUseCase by lazy {
         com.thehouse.app.domain.usecase.GetMyRentalUseCase(agreementsRepository)
     }
+
+    // ===== NV-17 Smart Match ML (on-device, $0) =====
+
+    val smartMatchModel: com.thehouse.app.domain.smartmatch.SmartMatchModel by lazy {
+        com.thehouse.app.data.smartmatch.LogisticRegressionSmartMatchModel.loadFromAssets(appContext)
+    }
+
+    val runSmartMatch: com.thehouse.app.domain.usecase.RunSmartMatchUseCase by lazy {
+        com.thehouse.app.domain.usecase.RunSmartMatchUseCase(smartMatchModel)
+    }
 }

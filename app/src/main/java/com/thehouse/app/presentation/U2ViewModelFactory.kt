@@ -278,6 +278,15 @@ class U2ViewModelFactory(
                 getMyRental = container.getMyRental,
             ) as T
 
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.smartmatch.SmartMatchViewModel::class.java) ->
+            com.thehouse.app.presentation.smartmatch.SmartMatchViewModel(
+                sessionState = container.sessionStore.state,
+                preferenceRepository = container.preferencesRepository,
+                getProperties = container.getProperties,
+                runSmartMatch = container.runSmartMatch,
+                dispatchers = container.dispatchers,
+            ) as T
+
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")
     }
 }
