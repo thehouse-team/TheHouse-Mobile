@@ -86,6 +86,11 @@ object AppRoutes {
         override val route: String = "conversaciones"
     }
 
+    /** NV-14 Fase A: centro de notificaciones in-app. */
+    val notifications: AppRoute = object : AppRoute {
+        override val route: String = "notificaciones"
+    }
+
     val bottomTabs: List<AppRoute> = listOf(home, explore, smartMatch, favorites)
 
     fun isBottomTab(route: String?): Boolean = bottomTabs.any { it.route == route }

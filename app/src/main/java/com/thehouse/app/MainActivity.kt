@@ -54,6 +54,7 @@ import com.thehouse.app.presentation.navigation.ScheduleVisitRoute
 import com.thehouse.app.presentation.navigation.VisitDetailRoute
 import com.thehouse.app.presentation.navigation.BottomTab
 import com.thehouse.app.presentation.navigation.TabNavigationState
+import com.thehouse.app.presentation.notifications.NotificationsDestination
 import com.thehouse.app.presentation.onboarding.OnboardingScreen
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailDestination
@@ -716,6 +717,46 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             onBack = { navController.popBackStack() },
                             onConversationClick = { conversationId ->
                                 navController.navigate(ConversationRoute(conversationId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                composable(AppRoutes.notifications.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        NotificationsDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onNavigateToRequest = { requestId ->
+                                navController.navigate(RequestDetailRoute(requestId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onNavigateToConversation = { conversationId ->
+                                navController.navigate(ConversationRoute(conversationId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onNavigateToVisit = { visitId ->
+                                navController.navigate(VisitDetailRoute(visitId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onNavigateToAgreement = {
+                                // "Agreement Detail real": no existe ruta de detalle de acuerdo por id
+                                // para estudiante; se navega a Mi renta (flujo real disponible).
+                                navController.navigate(AppRoutes.myRental.route) { launchSingleTop = true }
+                            },
+                            onNavigateToRental = {
+                                navController.navigate(AppRoutes.myRental.route) { launchSingleTop = true }
+                            },
+                            onNavigateToBuilding = { buildingId ->
+                                navController.navigate(BuildingDetailRoute(buildingId).route) {
                                     launchSingleTop = true
                                 }
                             },

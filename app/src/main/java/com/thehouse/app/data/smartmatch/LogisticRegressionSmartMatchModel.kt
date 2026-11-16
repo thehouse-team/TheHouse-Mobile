@@ -78,14 +78,15 @@ class LogisticRegressionSmartMatchModel(
             }
             val declared = artifact.sha256
             val hash = if (!declared.isNullOrBlank()) {
-                val without = removeSha256Field(raw)
+                val normalized = raw.replace("\r\n", "\n")
+                val without = removeSha256Field(normalized)
                 val computed = sha256(without)
                 require(computed == declared) {
                     "Model artifact hash mismatch: expected $declared got $computed"
                 }
                 declared
             } else {
-                sha256(raw)
+                sha256(raw.replace("\r\n", "\n"))
             }
             return LogisticRegressionSmartMatchModel(artifact, hash)
         }
@@ -93,7 +94,11 @@ class LogisticRegressionSmartMatchModel(
         internal fun removeSha256Field(raw: String): String {
             // Controlled format: sha256 is a top-level string field added at end by training script.
             // Remove the line/property `"sha256": "..."` and any trailing comma before it.
-            val withoutLine = raw.replace(Regex("\\n\\s*\"sha256\"\\s*:\\s*\"[a-fA-F0-9]*\"\\s*"), "\n")
+            val normalized = raw.replace("\r\n", "\n")
+            val withoutLine = normalized.replace(
+                Regex("\\n\\s*\"sha256\"\\s*:\\s*\"[a-fA-F0-9]*\"\\s*"),
+                "\n",
+            )
             return withoutLine.replace(Regex(",\\s*\\n(\\s*\\})"), "\n$1")
         }
 

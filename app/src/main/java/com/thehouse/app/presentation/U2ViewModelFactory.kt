@@ -96,6 +96,10 @@ class U2ViewModelFactory(
                     getMessages = container.getMessages,
                     sendMessage = container.sendMessage,
                     markRead = container.markConversationRead,
+                    onConversationRead = {
+                        // NV-14: leer conversación marca aviso como leído; refrescar unread count.
+                        container.getUnreadNotificationsCount(null)
+                    },
                 )
             }
         }
@@ -222,6 +226,7 @@ class U2ViewModelFactory(
                 getProperties = container.getProperties,
                 selectedRepository = container.selectedUniversityRepository,
                 selectUniversity = container.selectUniversity,
+                getUnreadNotificationsCount = container.getUnreadNotificationsCount,
             ) as T
 
         modelClass.isAssignableFrom(ExploreViewModel::class.java) ->
@@ -285,6 +290,14 @@ class U2ViewModelFactory(
                 getProperties = container.getProperties,
                 runSmartMatch = container.runSmartMatch,
                 dispatchers = container.dispatchers,
+            ) as T
+
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.notifications.NotificationsViewModel::class.java) ->
+            com.thehouse.app.presentation.notifications.NotificationsViewModel(
+                getNotifications = container.getNotifications,
+                getUnreadCount = container.getUnreadNotificationsCount,
+                markNotificationRead = container.markNotificationRead,
+                markAllNotificationsRead = container.markAllNotificationsRead,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")

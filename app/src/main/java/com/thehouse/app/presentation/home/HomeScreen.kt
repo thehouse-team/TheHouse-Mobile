@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.catalog.CatalogLoadState
@@ -62,6 +64,7 @@ fun HomeScreen(
     onOpenMyRental: () -> Unit = {},
     onOpenRentalCode: () -> Unit = {},
     onOpenLandlordAgreements: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
@@ -74,6 +77,16 @@ fun HomeScreen(
                 HomeEffect.RequireLogin -> onRequireLogin()
             }
         }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        viewModel.onEvent(HomeEvent.StartUnreadPolling)
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        viewModel.onEvent(HomeEvent.StopUnreadPolling)
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onEvent(HomeEvent.RefreshUnread)
     }
 
     Scaffold(modifier = modifier) { padding ->
@@ -241,6 +254,15 @@ fun HomeScreen(
             }
 
             if (!state.isGuest) {
+                val unread = state.unreadNotifications
+                OutlinedButton(
+                    onClick = onOpenNotifications,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Text(if (unread > 0) "Notificaciones ($unread)" else "Notificaciones")
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

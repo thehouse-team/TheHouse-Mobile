@@ -5,9 +5,11 @@ import com.thehouse.app.domain.auth.ProtectedAction
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.model.SessionState
 import com.thehouse.app.domain.model.University
+import com.thehouse.app.domain.model.UnreadCountFetch
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
 import com.thehouse.app.domain.usecase.GetUniversitiesUseCase
+import com.thehouse.app.domain.usecase.GetUnreadNotificationsCountUseCase
 import com.thehouse.app.domain.usecase.LogoutUseCase
 import com.thehouse.app.domain.usecase.SelectUniversityUseCase
 import com.thehouse.app.presentation.catalog.CatalogLoadState
@@ -15,6 +17,9 @@ import com.thehouse.app.presentation.catalog.toCatalogState
 import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiEvent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -43,6 +48,7 @@ data class HomeUiState(
     val featuredProperty: Property? = null,
     val propertiesVersion: Int = 0,
     val universitiesVersion: Int = 0,
+    val unreadNotifications: Int = 0,
 )
 
 sealed interface HomeEvent : UiEvent {
@@ -56,6 +62,9 @@ sealed interface HomeEvent : UiEvent {
     data object RetryUniversitiesClicked : HomeEvent
     data object RetryPropertiesClicked : HomeEvent
     data class UniversitySelected(val universityId: String) : HomeEvent
+    data object RefreshUnread : HomeEvent
+    data object StartUnreadPolling : HomeEvent
+    data object StopUnreadPolling : HomeEvent
 }
 
 sealed interface HomeEffect : UiEffect {
@@ -70,7 +79,16 @@ class HomeViewModel(
     private val getProperties: GetPropertiesUseCase? = null,
     private val selectedRepository: SelectedUniversityRepository? = null,
     private val selectUniversity: SelectUniversityUseCase? = null,
+    private val getUnreadNotificationsCount: GetUnreadNotificationsCountUseCase? = null,
 ) : BaseViewModel<HomeUiState, HomeEvent, HomeEffect>(HomeUiState()) {
+
+    private var unreadEtag: String? = null
+    private var unreadPollingJob: Job? = null
+
+    override fun onCleared() {
+        unreadPollingJob?.cancel()
+        super.onCleared()
+    }
 
     init {
         updateState {
@@ -99,7 +117,58 @@ class HomeViewModel(
             HomeEvent.RetryUniversitiesClicked -> loadUniversities()
             HomeEvent.RetryPropertiesClicked -> loadProperties()
             is HomeEvent.UniversitySelected -> select(event.universityId)
+            HomeEvent.RefreshUnread -> refreshUnread()
+            HomeEvent.StartUnreadPolling -> startUnreadPolling()
+            HomeEvent.StopUnreadPolling -> stopUnreadPolling()
         }
+    }
+
+    private fun refreshUnread() {
+        val useCase = getUnreadNotificationsCount ?: return
+        if (sessionState.value !is SessionState.Active) {
+            updateState { it.copy(unreadNotifications = 0) }
+            return
+        }
+        launch {
+            try {
+                val result = useCase(unreadEtag)
+                result.fold(
+                    onSuccess = { fetch ->
+                        when (fetch) {
+                            is UnreadCountFetch.NotModified -> Unit
+                            is UnreadCountFetch.Modified -> {
+                                unreadEtag = fetch.etag
+                                updateState { it.copy(unreadNotifications = fetch.count.unread.coerceAtLeast(0)) }
+                            }
+                        }
+                    },
+                    onFailure = { /* mantener estado actual */ },
+                )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            }
+        }
+    }
+
+    private fun startUnreadPolling() {
+        if (getUnreadNotificationsCount == null) return
+        if (sessionState.value !is SessionState.Active) return
+        if (unreadPollingJob?.isActive == true) return
+        unreadPollingJob = launch {
+            try {
+                while (true) {
+                    refreshUnread()
+                    delay(30_000L)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            }
+        }
+    }
+
+    private fun stopUnreadPolling() {
+        unreadPollingJob?.cancel()
+        unreadPollingJob = null
     }
 
     fun loadUniversities() {

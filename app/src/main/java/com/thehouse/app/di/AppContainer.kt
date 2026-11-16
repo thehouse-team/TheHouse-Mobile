@@ -456,4 +456,33 @@ class AppContainer(context: Context) {
     val runSmartMatch: com.thehouse.app.domain.usecase.RunSmartMatchUseCase by lazy {
         com.thehouse.app.domain.usecase.RunSmartMatchUseCase(smartMatchModel)
     }
+
+    // ===== NV-14 Fase A — Notificaciones in-app reales =====
+
+    val notificationsApi: com.thehouse.app.data.remote.api.NotificationsApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.NotificationsApi::class.java)
+    }
+
+    val notificationsRepository: com.thehouse.app.domain.repository.NotificationsRepository by lazy {
+        com.thehouse.app.data.notifications.repository.NotificationsRepositoryImpl(
+            api = notificationsApi,
+            json = json,
+        )
+    }
+
+    val getNotifications: com.thehouse.app.domain.usecase.GetNotificationsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetNotificationsUseCase(notificationsRepository)
+    }
+
+    val getUnreadNotificationsCount: com.thehouse.app.domain.usecase.GetUnreadNotificationsCountUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetUnreadNotificationsCountUseCase(notificationsRepository)
+    }
+
+    val markNotificationRead: com.thehouse.app.domain.usecase.MarkNotificationReadUseCase by lazy {
+        com.thehouse.app.domain.usecase.MarkNotificationReadUseCase(notificationsRepository)
+    }
+
+    val markAllNotificationsRead: com.thehouse.app.domain.usecase.MarkAllNotificationsReadUseCase by lazy {
+        com.thehouse.app.domain.usecase.MarkAllNotificationsReadUseCase(notificationsRepository)
+    }
 }
