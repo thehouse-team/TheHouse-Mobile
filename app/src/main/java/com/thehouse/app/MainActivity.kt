@@ -1,6 +1,7 @@
 package com.thehouse.app
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,6 +29,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.thehouse.app.domain.model.ReportTargetType
 import com.thehouse.app.domain.model.SessionState
+import com.thehouse.app.domain.push.NotificationDestination
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.auth.LoginScreen
 import com.thehouse.app.presentation.auth.RegisterScreen
@@ -82,7 +84,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val factory = U2ViewModelFactory((application as TheHouseApplication).container)
+        val container = (application as TheHouseApplication).container
+        if (savedInstanceState == null) {
+            // Cold start desde una notificación local (Fase B).
+            container.pushNavigationIntentHandler.handle(intent)
+        }
+        val factory = U2ViewModelFactory(container)
 
         setContent {
             TheHouseTheme {
@@ -91,6 +98,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // App ya abierta: FLAG_ACTIVITY_SINGLE_TOP + launchMode singleTop.
+        (application as TheHouseApplication).container.pushNavigationIntentHandler.handle(intent)
     }
 }
 
@@ -102,6 +116,8 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
 
     val container = (LocalContext.current.applicationContext as TheHouseApplication).container
     val sessionState by container.sessionStore.state.collectAsStateWithLifecycle()
+    val pendingNotificationDestination by container.pendingNotificationNavigation.destination
+        .collectAsStateWithLifecycle()
     val isAuthenticated = sessionState is SessionState.Active
     val isAccountSuspended = sessionState is SessionState.Suspended
     val displayName = (sessionState as? SessionState.Active)?.session?.displayName.orEmpty()
@@ -941,6 +957,26 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                     }
                 }
             }
+
+            // NV-14 Fase B: target de push tras resolverse root/sesión.
+            // Se declara después del efecto de root para que su navegación
+            // no sobrescriba el destino de la notificación.
+            LaunchedEffect(
+                pendingNotificationDestination,
+                isAuthenticated,
+                isAccountSuspended,
+                rootState.isResolving,
+            ) {
+                val destination = pendingNotificationDestination ?: return@LaunchedEffect
+                if (rootState.isResolving || isAccountSuspended) return@LaunchedEffect
+                if (!isAuthenticated) {
+                    // No se consume: el target se reanuda tras Login.
+                    navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                    return@LaunchedEffect
+                }
+                navController.navigate(destination.toRoute()) { launchSingleTop = true }
+                container.pendingNotificationNavigation.consume()
+            }
         }
     }
 }
@@ -953,4 +989,18 @@ private fun NavController.navigateToTab(tab: BottomTab) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/**
+ * Único mapeo destino → ruta real existente. Sin rutas inventadas:
+ * agreement/rental → Mi renta (decisión Fase A).
+ */
+private fun NotificationDestination.toRoute(): String = when (this) {
+    is NotificationDestination.Request -> RequestDetailRoute(id).route
+    is NotificationDestination.Conversation -> ConversationRoute(id).route
+    is NotificationDestination.Visit -> VisitDetailRoute(id).route
+    NotificationDestination.Agreement,
+    NotificationDestination.Rental -> AppRoutes.myRental.route
+    is NotificationDestination.Building -> BuildingDetailRoute(id).route
+    NotificationDestination.NotificationCenter -> AppRoutes.notifications.route
 }

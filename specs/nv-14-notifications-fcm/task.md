@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | Spec | NV-14 Notifications (`specs/nv-14-notifications-fcm/`) |
-| Fase A | In-App Notifications — **APPROVED FOR GOVERNANCE** — **IMPLEMENTATION: DO NOT EXECUTE todavía** |
-| Fase B | FCM / Push remoto — **PLANNED** — **DO NOT EXECUTE** |
+| Fase A | In-App Notifications — **APPROVED / IMPLEMENTED & TESTED (unit)** |
+| Fase B | FCM / Push remoto — **APPROVED / IMPLEMENTED & TESTED (unit/build)** — runtime **FCM-RUNTIME-PARTIAL** |
 
 ## Fase A — Tasks trazables (APROBADA PARA IMPLEMENTACIÓN, EJECUTADA)
 
@@ -18,12 +18,15 @@
 - [x] **NV-14-A-T08 — Tests/regresión**: list/filtros/paginación, unread 200, ETag/If-None-Match/304 mantiene estado, read 204/404, read-all (+ categoría), polling ~30 s/start-stop, foreground refresh, targets, count agrupado, integración chat read. Regresión D3–NV17.
 - [x] **NV-14-A-T09 — Runtime/evidence**: `compileDebugKotlin` y, si verde, `testDebugUnitTest lintDebug assembleDebug`; runtime ADB si disponible o RUNTIME-BLOCKED; evidencia real en `evidence.md`.
 
-## Fase B — FCM / Push remoto (PLANNED, DO NOT EXECUTE)
+## Fase B — FCM / Push remoto (APROBADA / EJECUTADA, runtime parcial)
 
-- [ ] **NV-14-B-T01** — Confirmar contrato de eventos/token (NV-27) o BLOCKED. *(NO EJECUTAR)*
-- [ ] **NV-14-B-T02** — Evaluación COST-001 Firebase/FCM (o BLOCKED). *(NO EJECUTAR)*
-- [ ] **NV-14-B-T03** — Configurar Firebase/FCM (solo tras B-T01/B-T02 y autorización explícita). *(NO EJECUTAR)*
-- [ ] **NV-14-B-T04** — Registro/desregistro de token con sesión/logout. *(NO EJECUTAR)*
-- [ ] **NV-14-B-T05** — Manejo de notificaciones + deep links seguros (sin PII). *(NO EJECUTAR)*
-- [ ] **NV-14-B-T06** — Tests y prueba real de notificación. *(NO EJECUTAR)*
-- [ ] **NV-14-B-T07** — Build/tests/lint y evidence.md. *(NO EJECUTAR)*
+- [x] **NV-14-B-T01 — Contrato token/device**: búsqueda en Backend/specs disponible sin endpoint real → **FCM-TOKEN-BACKEND-BLOCKED**; no se inventó `POST /devices` ni similar.
+- [x] **NV-14-B-T02 — COST-001**: FCM free tier $0, sin billing, límites/riesgo/alternativa documentados.
+- [x] **NV-14-B-T03 — Configuración Firebase/FCM**: BoM `35.2.0`, `firebase-messaging`, plugin `com.google.gms.google-services` `4.6.0` aplicado condicionalmente; **sin `google-services.json`** (no se generó archivo falso).
+- [x] **NV-14-B-T04 — Token/sesión/logout**: `onNewToken` + consulta al activar sesión; validación y almacenamiento solo en memoria; fingerprint truncado; logout cancela notificaciones locales/target pendiente sin romper Firebase.
+- [x] **NV-14-B-T05 — Foreground/background**: payload data-only parseado; foreground solo señal de refresco (sin duplicar in-app); background notificación local; sin sesión válida se suprime.
+- [x] **NV-14-B-T06 — Canales**: `thehouse_requests`, `thehouse_visits`, `thehouse_system` con nombre, descripción e importancia.
+- [x] **NV-14-B-T07 — Permiso Android 13+**: `POST_NOTIFICATIONS` contextual en Notification Center; rationale visible; rechazo seguro; Android <13 sin runtime permission.
+- [x] **NV-14-B-T08 — Navegación segura**: mapper único `NotificationDestinationResolver`; cold start + `onNewIntent`; target pendiente sobrevive Login; fallback Notification Center.
+- [x] **NV-14-B-T09 — Tests/regresión**: 47 tests nuevos (parsing, 6 targets, fallback, onNewToken, permiso, foreground/background, sesión inválida, logs sin token) + regresión.
+- [x] **NV-14-B-T10 — Build/evidencia**: `testDebugUnitTest lintDebug assembleDebug` ejecutado; runtime real **FCM-RUNTIME-PARTIAL** (sin `google-services.json` ni sender Backend; emulador detectado por ADB sin `system_server`/package service).

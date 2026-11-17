@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// NV-14 Fase B: el plugin oficial de Google solo se aplica cuando el proyecto
+// Firebase está configurado. Sin `google-services.json` el build sigue siendo
+// reproducible y el runtime FCM queda explícitamente bloqueado.
+val googleServicesConfigured = file("google-services.json").exists()
+if (googleServicesConfigured) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.thehouse.app"
     compileSdk {
@@ -21,6 +29,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"https://ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io/\"")
+        buildConfigField("boolean", "FCM_CONFIGURED", googleServicesConfigured.toString())
     }
 
     // NV-03: las credenciales de firma provienen de variables de entorno (nunca del repositorio).
@@ -125,6 +134,9 @@ dependencies {
     implementation(libs.coil.network.okhttp)
 
     implementation(libs.androidx.work.runtime.ktx)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

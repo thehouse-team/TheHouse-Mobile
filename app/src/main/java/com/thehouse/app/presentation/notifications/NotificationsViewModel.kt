@@ -17,6 +17,8 @@ import com.thehouse.app.presentation.common.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
 enum class NotificationFilter(val label: String, val category: NotificationCategory?) {
@@ -63,12 +65,23 @@ class NotificationsViewModel(
     private val markNotificationRead: MarkNotificationReadUseCase,
     private val markAllNotificationsRead: MarkAllNotificationsReadUseCase,
     private val pollIntervalMs: Long = 30_000L,
+    private val pushRefreshSignals: Flow<Unit> = emptyFlow(),
 ) : BaseViewModel<NotificationsUiState, NotificationsEvent, NotificationsEffect>(
     NotificationsUiState(isLoading = true),
 ) {
 
     private var unreadEtag: String? = null
     private var pollingJob: Job? = null
+
+    init {
+        // NV-14 Fase B: push foreground = señal; se recarga estado real del Backend.
+        launch {
+            pushRefreshSignals.collect {
+                refreshUnread()
+                loadNotifications(reset = true)
+            }
+        }
+    }
 
     override fun onCleared() {
         pollingJob?.cancel()

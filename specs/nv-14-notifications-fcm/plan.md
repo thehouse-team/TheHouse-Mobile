@@ -4,8 +4,8 @@
 |---|---|
 | Spec | NV-14 Notifications |
 | Spec oficial | `specs/nv-14-notifications-fcm/` |
-| Fase A | In-App Notifications — **APPROVED / IMPLEMENTED & TESTED (unit)** — runtime pendiente por entorno |
-| Fase B | FCM / Push remoto — **PLANNED** — **DO NOT EXECUTE** |
+| Fase A | In-App Notifications — **APPROVED / IMPLEMENTED & TESTED (unit)** — runtime pendiente (emulador ADB sin framework operativo; sin credenciales) |
+| Fase B | FCM / Push remoto — **APPROVED / IMPLEMENTED & TESTED (unit/build)** — runtime **FCM-RUNTIME-PARTIAL** |
 
 ## Precondiciones de gobernanza (cumplidas en esta preparación)
 - Preservar estado actual (`feature/smart-match-ml`, sin reset/restore/clean/stash/force push).
@@ -36,14 +36,31 @@
 - Rutas/targets inexistentes inventados, refactors globales, segundo Retrofit.
 - Polling 1 s, WorkManager cada 30 s, requests desde recomposición.
 
-## Fase B — FCM / Push remoto (PLANNED, DO NOT EXECUTE)
+## Fase B — Plan de implementación FCM / Push (EJECUTADO, runtime parcial)
 
-| Etapa (documental, no autorizada) | Alcance |
-|---|---|
-| B1 | Contrato de eventos/token + evaluación COST-001 Firebase/FCM (o BLOCKED) |
-| B2 | Configuración Firebase/FCM + registro/desregistro de token (sesión/logout) |
-| B3 | Manejo foreground/background/deep links; sin PII en payloads/bloqueo |
-| B4 | Calidad/evidencia: build/tests/lint + prueba real |
+> Precondición: Fase A sin regresiones. FCM es evento/señal; el estado real sigue viniendo del Backend. Sin endpoints/tokens inventados.
 
-- Firebase MCP permanece deshabilitado hasta autorización explícita de Fase B (AGENTS.md §18).
-- No agregar Firebase, no pedir permisos push, no crear token FCM ahora.
+| Task | Objetivo | Verificable (evidencia) |
+|---|---|---|
+| **B-T01** Contrato token/device | Buscar contrato real de registro de token/device en Backend/specs | **FCM-TOKEN-BACKEND-BLOCKED**: no existe contrato; sin endpoint inventado |
+| **B-T02** COST-001 | Demostrar FCM $0 (free tier, límites, tarjeta, mitigación, alternativa) | Documentado en spec/evidence; sin billing ni servicios extra |
+| **B-T03** Firebase/FCM | BoM `35.2.0`, `firebase-messaging`, plugin `google-services` condicional a `google-services.json` | Build sin archivo real; `FCM_CONFIGURED=false`; sin secreto falso |
+| **B-T04** Token/sesión/logout | `onNewToken` + consulta al activar sesión; validación; solo memoria; fingerprint; logout local | Tests token; sin token en logs; sin registro Backend |
+| **B-T05** Recepción foreground/background | Parser data-only; foreground solo señal; background notificación local; sesión inválida suprime | Tests handler foreground/background/invalid/session |
+| **B-T06** Canales | `thehouse_requests`, `thehouse_visits`, `thehouse_system` con nombre/descripción/importancia | `NotificationChannelRegistry`; sin sonidos propios |
+| **B-T07** Permiso Android 13+ | `POST_NOTIFICATIONS` contextual en Notification Center, rationale, rechazo seguro, <13 sin runtime | Policy tests 32/33, granted/denied/permanent |
+| **B-T08** Navegación segura | Mapper único target→ruta; cold start/onNewIntent; pending target sobrevive Login; fallback Notification Center | Navigation/intent tests; MainActivity singleTop |
+| **B-T09** Tests/regresión | Parsing, target desconocido, 6 navegaciones, onNewToken, permiso, foreground/background, sesión, no token en logs | 47 tests nuevos + regresión completa |
+| **B-T10** Build/evidencia | `testDebugUnitTest lintDebug assembleDebug` una vez; runtime ADB/Firebase si existe | Evidencia real; **FCM-RUNTIME-PARTIAL** si falta configuración/sender/ADB |
+
+### Validación ejecutada (Fase B)
+1. `.\gradlew.bat compileDebugKotlin` → verde (tras corregir `goAsync` inexistente en Service).
+2. `.\gradlew.bat compileDebugUnitTestKotlin` → verde.
+3. Tests dirigidos NV-14 → 56/56 verdes.
+4. Set final: `.\gradlew.bat testDebugUnitTest lintDebug assembleDebug` → ver `evidence.md`.
+
+### Fuera de Fase B
+- Registro/desregistro de token en Backend (sin contrato → `FCM-TOKEN-BACKEND-BLOCKED`).
+- Envío real desde consola/Backend (sin proyecto Firebase/sender → runtime parcial).
+- FID/installation-id migration, topics, campañas, Analytics, Cloud Functions.
+- Cambios en Fase A, refactors globales, segundo Retrofit.

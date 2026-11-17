@@ -20,8 +20,10 @@ import com.thehouse.app.presentation.common.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * MVVM + UDF del Home (D4 Guest + D5 catálogo real, NV-05/NV-06/NV-07).
@@ -80,6 +82,7 @@ class HomeViewModel(
     private val selectedRepository: SelectedUniversityRepository? = null,
     private val selectUniversity: SelectUniversityUseCase? = null,
     private val getUnreadNotificationsCount: GetUnreadNotificationsCountUseCase? = null,
+    private val pushRefreshSignals: Flow<Unit> = emptyFlow(),
 ) : BaseViewModel<HomeUiState, HomeEvent, HomeEffect>(HomeUiState()) {
 
     private var unreadEtag: String? = null
@@ -106,6 +109,12 @@ class HomeViewModel(
         }
         loadUniversities()
         loadProperties()
+        // NV-14 Fase B: FCM es señal; el estado real se consulta al Backend.
+        launch {
+            pushRefreshSignals.collect {
+                if (sessionState.value is SessionState.Active) refreshUnread()
+            }
+        }
     }
 
     override fun onEvent(event: HomeEvent) {
