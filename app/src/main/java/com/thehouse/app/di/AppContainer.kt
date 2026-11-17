@@ -32,6 +32,7 @@ import com.thehouse.app.data.remote.auth.BearerTokenInterceptor
 import com.thehouse.app.data.remote.auth.RefreshAuthenticator
 import com.thehouse.app.data.serialization.JsonProvider
 import com.thehouse.app.domain.common.DispatcherProvider
+import com.thehouse.app.domain.model.SessionState
 import com.thehouse.app.domain.repository.AuthRepository
 import com.thehouse.app.domain.repository.FavoritesRepository
 import com.thehouse.app.domain.repository.OnboardingRepository
@@ -70,6 +71,11 @@ import com.thehouse.app.domain.usecase.GetQuickSetupUseCase
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 /** Composition root de Dependency Injection manual.
  * Construye dependencias de infraestructura y las expone de forma lazy.
@@ -484,5 +490,104 @@ class AppContainer(context: Context) {
 
     val markAllNotificationsRead: com.thehouse.app.domain.usecase.MarkAllNotificationsReadUseCase by lazy {
         com.thehouse.app.domain.usecase.MarkAllNotificationsReadUseCase(notificationsRepository)
+    }
+
+    // ===== NV-14 Fase B — FCM / Push =====
+    // Backend token registration: FCM-TOKEN-BACKEND-BLOCKED (no existe contrato
+    // real de devices/token en el backend disponible). No se crea endpoint.
+
+    val applicationScope: CoroutineScope by lazy {
+        CoroutineScope(SupervisorJob() + dispatchers.io)
+    }
+
+    /** Señal FCM para que Home/Notification Center refresquen estado real del Backend. */
+    val pushRefreshSignals: MutableSharedFlow<Unit> by lazy {
+        MutableSharedFlow(extraBufferCapacity = 1)
+    }
+
+    val pushLogger: com.thehouse.app.domain.push.PushLogger by lazy {
+        com.thehouse.app.data.notifications.push.AndroidPushLogger()
+    }
+
+    val notificationChannels by lazy {
+        com.thehouse.app.data.notifications.push.NotificationChannelRegistry(appContext)
+    }
+
+    val appVisibilityTracker by lazy {
+        com.thehouse.app.data.notifications.push.AppVisibilityTracker()
+    }
+
+    val localPushNotifier: com.thehouse.app.domain.push.LocalPushNotifier by lazy {
+        com.thehouse.app.data.notifications.push.AndroidLocalPushNotifier(
+            context = appContext,
+            channels = notificationChannels,
+            logger = pushLogger,
+        )
+    }
+
+    val pushTokenProvider: com.thehouse.app.domain.push.PushTokenProvider by lazy {
+        com.thehouse.app.data.notifications.push.FirebasePushTokenProvider(
+            context = appContext,
+            logger = pushLogger,
+        )
+    }
+
+    val pushTokenCoordinator by lazy {
+        com.thehouse.app.domain.push.PushTokenCoordinator(
+            provider = pushTokenProvider,
+            logger = pushLogger,
+        )
+    }
+
+    val pushSessionGate: com.thehouse.app.domain.push.PushSessionGate by lazy {
+        com.thehouse.app.data.notifications.push.PersistentPushSessionGate(
+            sessionStore = sessionStore,
+            restoreSession = restoreSession,
+        )
+    }
+
+    val pushMessageHandler by lazy {
+        com.thehouse.app.data.notifications.push.PushMessageHandler(
+            parser = com.thehouse.app.domain.push.PushPayloadParser,
+            sessionGate = pushSessionGate,
+            visibility = appVisibilityTracker,
+            localNotifier = localPushNotifier,
+            refreshSignals = pushRefreshSignals,
+            logger = pushLogger,
+        )
+    }
+
+    val pendingNotificationNavigation by lazy {
+        com.thehouse.app.data.notifications.push.PendingNotificationNavigation()
+    }
+
+    val pushNavigationIntentHandler by lazy {
+        com.thehouse.app.data.notifications.push.AndroidPushNavigationIntentHandler(
+            pendingNavigation = pendingNotificationNavigation,
+            logger = pushLogger,
+        )
+    }
+
+    /**
+     * Observa transiciones de sesión relevantes para push:
+     * - Active → no Active: cancela notificaciones locales y target pendiente
+     *   (evita que datos de una sesión anterior queden visibles).
+     * - → Active: obtiene/refresca token FCM (sin registrarlo en Backend).
+     */
+    fun observePushSession() {
+        applicationScope.launch {
+            var previous: SessionState? = null
+            sessionStore.state.collect { current ->
+                val wasActive = previous is SessionState.Active
+                if (wasActive && current !is SessionState.Active) {
+                    pendingNotificationNavigation.clear()
+                    runCatching { localPushNotifier.cancelAll() }
+                }
+                if (current is SessionState.Active && !wasActive) {
+                    pushTokenCoordinator.refresh()
+                }
+                previous = current
+            }
+        }
     }
 }

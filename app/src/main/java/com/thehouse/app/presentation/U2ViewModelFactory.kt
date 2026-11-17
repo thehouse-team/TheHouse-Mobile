@@ -227,6 +227,7 @@ class U2ViewModelFactory(
                 selectedRepository = container.selectedUniversityRepository,
                 selectUniversity = container.selectUniversity,
                 getUnreadNotificationsCount = container.getUnreadNotificationsCount,
+                pushRefreshSignals = container.pushRefreshSignals,
             ) as T
 
         modelClass.isAssignableFrom(ExploreViewModel::class.java) ->
@@ -298,6 +299,7 @@ class U2ViewModelFactory(
                 getUnreadCount = container.getUnreadNotificationsCount,
                 markNotificationRead = container.markNotificationRead,
                 markAllNotificationsRead = container.markAllNotificationsRead,
+                pushRefreshSignals = container.pushRefreshSignals,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")

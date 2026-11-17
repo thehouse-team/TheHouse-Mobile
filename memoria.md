@@ -111,12 +111,12 @@ Estados permitidos: `APROBADO`, `PROPUESTO`, `PENDIENTE`, `DESCARTADO`.
 - **Justificación:** API Android recomendada para trabajo persistente y con restricciones.
 - **Impacto:** No se implementan workers funcionales sin spec; la estrategia offline/sync se definirá con entidades reales.
 
-## M-MOB-016 — Firebase Cloud Messaging futuro
+## M-MOB-016 — Firebase Cloud Messaging
 
-- **Decisión:** FCM se implementará en una spec funcional futura, no ahora.
-- **Estado:** PENDIENTE
-- **Justificación:** Requiere proyecto Firebase, `google-services.json`, plugin y configuración externa; no debe improvisarse.
-- **Impacto:** No hay Firebase configurado. Referencia no instalada: Firebase Android BoM `35.1.0`; deberá verificarse la versión vigente cuando se autorice la spec.
+- **Decisión:** FCM implementado en NV-14 FASE B con Firebase Android BoM `35.2.0` (`firebase-messaging` 26.0.2) y plugin `com.google.gms.google-services` `4.6.0` aplicado condicionalmente solo si existe `app/google-services.json`.
+- **Estado:** APROBADO (ejecutado 2026-11-17; configuración externa pendiente)
+- **Justificación:** Requiere proyecto Firebase y `google-services.json` reales; el archivo no existe y no se generó uno falso. El build compila con `BuildConfig.FCM_CONFIGURED=false`.
+- **Impacto:** Sin `google-services.json` no se inicializa Firebase ni se obtiene token real. El registro del token en Backend sigue bloqueado (`FCM-TOKEN-BACKEND-BLOCKED`) hasta contrato real de devices/token.
 
 ## M-MOB-017 — Google Maps futuro
 
@@ -389,3 +389,10 @@ ame/consentimientos (quedan solo en la UI); AuthValidators registra mínimo 12 y
 - **Estado:** APROBADO por instrucción humana explícita.
 - **Justificación:** Contrato espejo `specs/nv-21-verification-moderation/spec.md` v1.1.0 §6/§6.1; sin endpoints/DTOs/enums inventados; COST-001 $0 (sin proveedores nuevos).
 - **Impacto:** `compileDebugKotlin` verde tras corregir la integración interrumpida (`onReportRoom` sin conectar, ruta sin registrar, `getVerification` sin inyectar, `when` incompleto, import duplicado); `testDebugUnitTest lintDebug assembleDebug` BUILD SUCCESSFUL con 206 tests / 0 failures / 0 errors (D13: 15 + 8 + 9). RUNTIME-BLOCKED (sin adb/emulador). T10 Moderación permanece BLOCKED (NV-13 borrador). Spec en `specs/d13-reports-verification-moderation/`.
+
+## M-MOB-052 — NV-14 FASE B Push FCM real (2026-11-17)
+
+- **Decisión:** Implementar FCM real en `feature/real-notifications` preservando FASE A: data-only keys `notificationId/category/title/body/targetKind/targetId`, `NotificationDestinationResolver` compartido como único mapper target→navegación, foreground solo emite refresh signal (sin duplicar notificación), background notifica localmente, sin sesión se suprime, canales `thehouse_requests/thehouse_visits/thehouse_system`, permiso `POST_NOTIFICATIONS` contextual Android 13+.
+- **Estado:** APROBADO por instrucción humana explícita para FASE B Mobile.
+- **Justificación:** Contratos reales FASE A (`/users/me/notifications`) sin inventar endpoints; no existe contrato Backend de token/device (`FCM-TOKEN-BACKEND-BLOCKED`), token FCM solo en memoria y nunca enviado. Sin `google-services.json` no se crea archivo falso.
+- **Impacto:** Gate final `testDebugUnitTest lintDebug assembleDebug` BUILD SUCCESSFUL: 297 tests / 0 failures, lint 0 errores / 20 warnings, APK debug generado. Runtime FCM parcial por falta de `google-services.json`, sender Backend y emulador ADB sin `system_server`/package service. Migración futura de token clásico a FID `register()` fuera de alcance.

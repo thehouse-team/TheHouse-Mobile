@@ -24,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -44,7 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.domain.model.AppNotification
 import com.thehouse.app.domain.model.NotificationTarget
-import com.thehouse.app.domain.model.NotificationTargetKind
+import com.thehouse.app.domain.push.NotificationDestination
+import com.thehouse.app.domain.push.NotificationDestinationResolver
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
@@ -99,6 +101,8 @@ fun NotificationsDestination(
         viewModel.onEvent(NotificationsEvent.ForegroundRefresh)
     }
 
+    val permission = rememberNotificationPermissionUi()
+
     NotificationsScreen(
         state = state,
         onBack = onBack,
@@ -107,6 +111,8 @@ fun NotificationsDestination(
         onOpen = { viewModel.onEvent(NotificationsEvent.OpenNotification(it)) },
         onMarkAllRead = { viewModel.onEvent(NotificationsEvent.MarkAllRead) },
         onLoadMore = { viewModel.onEvent(NotificationsEvent.LoadMore) },
+        permissionStatus = permission.status,
+        onEnableNotifications = permission.onEnable,
     )
 }
 
@@ -119,16 +125,16 @@ private fun handleTarget(
     onNavigateToRental: () -> Unit,
     onNavigateToBuilding: (String) -> Unit,
 ) {
-    when (target.kind) {
-        NotificationTargetKind.REQUEST -> onNavigateToRequest(target.id)
-        NotificationTargetKind.CONVERSATION -> onNavigateToConversation(target.id)
-        NotificationTargetKind.VISIT -> onNavigateToVisit(target.id)
+    when (val destination = NotificationDestinationResolver.fromTarget(target)) {
+        is NotificationDestination.Request -> onNavigateToRequest(destination.id)
+        is NotificationDestination.Conversation -> onNavigateToConversation(destination.id)
+        is NotificationDestination.Visit -> onNavigateToVisit(destination.id)
         // "Agreement Detail real": sin ruta de detalle de acuerdo por id en cliente estudiante;
         // se dirige a Mi renta (flujo real disponible). Documentado en evidencia NV-14.
-        NotificationTargetKind.AGREEMENT -> onNavigateToAgreement()
-        NotificationTargetKind.RENTAL -> onNavigateToRental()
-        NotificationTargetKind.BUILDING -> onNavigateToBuilding(target.id)
-        NotificationTargetKind.UNKNOWN -> Unit
+        NotificationDestination.Agreement -> onNavigateToAgreement()
+        NotificationDestination.Rental -> onNavigateToRental()
+        is NotificationDestination.Building -> onNavigateToBuilding(destination.id)
+        NotificationDestination.NotificationCenter -> Unit
     }
 }
 
@@ -143,6 +149,8 @@ fun NotificationsScreen(
     onMarkAllRead: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
+    permissionStatus: NotificationPermissionStatus = NotificationPermissionStatus.GRANTED,
+    onEnableNotifications: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
@@ -184,6 +192,10 @@ fun NotificationsScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            NotificationPermissionCard(
+                status = permissionStatus,
+                onEnable = onEnableNotifications,
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -336,6 +348,61 @@ private fun NotificationRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Tarjeta contextual de permiso. No se muestra en Android < 13 ni con permiso
+ * concedido. El texto visible actúa como rationale antes del diálogo del sistema.
+ */
+@Composable
+private fun NotificationPermissionCard(
+    status: NotificationPermissionStatus,
+    onEnable: () -> Unit,
+) {
+    if (status == NotificationPermissionStatus.GRANTED) return
+
+    val permanentlyDenied = status == NotificationPermissionStatus.PERMANENTLY_DENIED
+    val title = if (permanentlyDenied) {
+        "Notificaciones desactivadas"
+    } else {
+        "Activa las notificaciones"
+    }
+    val message = if (permanentlyDenied) {
+        "Puedes habilitarlas desde los ajustes del sistema para recibir avisos de solicitudes, visitas y novedades."
+    } else {
+        "Recibe avisos de solicitudes, visitas y novedades. Puedes seguir usando la app sin activarlas."
+    }
+    val action = if (permanentlyDenied) "Abrir ajustes" else "Activar"
+
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            TextButton(
+                onClick = onEnable,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text(action)
             }
         }
     }

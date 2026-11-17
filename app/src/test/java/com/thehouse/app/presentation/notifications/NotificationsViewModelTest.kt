@@ -16,6 +16,9 @@ import com.thehouse.app.domain.usecase.MarkAllNotificationsReadUseCase
 import com.thehouse.app.domain.usecase.MarkNotificationReadUseCase
 import com.thehouse.app.testutil.TestMainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -87,13 +90,18 @@ class NotificationsViewModelTest {
         }
     }
 
-    private fun vm(repo: FakeNotificationsRepository, pollMs: Long = 30_000L) =
+    private fun vm(
+        repo: FakeNotificationsRepository,
+        pollMs: Long = 30_000L,
+        pushRefreshSignals: Flow<Unit> = emptyFlow(),
+    ) =
         NotificationsViewModel(
             getNotifications = GetNotificationsUseCase(repo),
             getUnreadCount = GetUnreadNotificationsCountUseCase(repo),
             markNotificationRead = MarkNotificationReadUseCase(repo),
             markAllNotificationsRead = MarkAllNotificationsReadUseCase(repo),
             pollIntervalMs = pollMs,
+            pushRefreshSignals = pushRefreshSignals,
         )
 
     @Test
@@ -118,6 +126,50 @@ class NotificationsViewModelTest {
         assertEquals(1, vm.uiState.value.items.size)
         assertEquals(2, vm.uiState.value.items.first().count)
         assertEquals(false, vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `push signal refreshes unread and reloads first page`() = runTest {
+        val repo = FakeNotificationsRepository().apply {
+            listResults.add(
+                Result.success(
+                    NotificationsPage(
+                        items = listOf(notification("n-1", read = true)),
+                        page = 1,
+                        pageSize = 20,
+                        totalItems = 1,
+                        totalPages = 1,
+                    ),
+                ),
+            )
+        }
+        val signals = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val vm = vm(repo, pushRefreshSignals = signals)
+        runCurrent()
+        vm.onEvent(NotificationsEvent.Load)
+        runCurrent()
+        assertEquals(1, vm.uiState.value.items.size)
+
+        repo.listResults.add(
+            Result.success(
+                NotificationsPage(
+                    items = listOf(notification("n-2", read = true)),
+                    page = 1,
+                    pageSize = 20,
+                    totalItems = 1,
+                    totalPages = 1,
+                ),
+            ),
+        )
+        repo.unreadResults.add(
+            Result.success(UnreadCountFetch.Modified(UnreadCount(2, 2, 0, 0), "\"e2\"")),
+        )
+
+        signals.tryEmit(Unit)
+        runCurrent()
+
+        assertEquals(2, vm.uiState.value.unreadCount?.unread)
+        assertEquals("n-2", vm.uiState.value.items.first().id)
     }
 
     @Test
