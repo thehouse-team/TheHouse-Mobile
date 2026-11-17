@@ -25,4 +25,9 @@ class FavoriteIdsStore {
     }
 
     fun contains(id: String): Boolean = id in _ids.value
+
+    /** Limpia la caché en memoria (p. ej. tras eliminar la cuenta). */
+    fun clear() {
+        _ids.value = emptySet()
+    }
 }

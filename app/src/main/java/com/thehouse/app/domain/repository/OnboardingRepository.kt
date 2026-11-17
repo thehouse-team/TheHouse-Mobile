@@ -16,4 +16,12 @@ interface OnboardingRepository {
     suspend fun isCompleted(key: String): Boolean
 
     suspend fun setCompleted(key: String, completed: Boolean)
+
+    /**
+     * Borra solo la marca del usuario indicado.
+     *
+     * NV-15: se usa tras eliminar la cuenta para no dejar datos locales
+     * asociados al usuario. No debe limpiar otras claves.
+     */
+    suspend fun clear(key: String)
 }

@@ -58,6 +58,7 @@ import com.thehouse.app.presentation.navigation.BottomTab
 import com.thehouse.app.presentation.navigation.TabNavigationState
 import com.thehouse.app.presentation.notifications.NotificationsDestination
 import com.thehouse.app.presentation.onboarding.OnboardingScreen
+import com.thehouse.app.presentation.privacy.PrivacyDestination
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailDestination
 import com.thehouse.app.presentation.smartmatch.SmartMatchScreen
@@ -266,6 +267,9 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         },
                         onOpenLandlordAgreements = {
                             navController.navigate(AppRoutes.landlordAgreements.route) { launchSingleTop = true }
+                        },
+                        onOpenPrivacy = {
+                            navController.navigate(AppRoutes.privacy.route) { launchSingleTop = true }
                         },
                     )
                 }
@@ -778,6 +782,28 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             },
                         )
                     }
+                }
+                composable(AppRoutes.privacy.route) {
+                    // NV-15: ruta pública. La eliminación de cuenta solo se
+                    // ofrece con sesión activa y contrato Backend confirmado.
+                    PrivacyDestination(
+                        factory = factory,
+                        onBack = { navController.popBackStack() },
+                        onRequireLogin = {
+                            navController.navigate(AppRoutes.login.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onAccountDeleted = {
+                            rootViewModel.onAccountDeleted()
+                            // Fuera del área privada y sin back hacia pantallas
+                            // autenticadas de la cuenta eliminada.
+                            navController.navigate(AppRoutes.login.route) {
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
                 composable(
                     route = CreateRequestRoute.PATTERN,

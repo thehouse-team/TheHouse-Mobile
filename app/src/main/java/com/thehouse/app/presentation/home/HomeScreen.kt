@@ -65,6 +65,7 @@ fun HomeScreen(
     onOpenRentalCode: () -> Unit = {},
     onOpenLandlordAgreements: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
+    onOpenPrivacy: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
@@ -350,6 +351,17 @@ fun HomeScreen(
                 ) {
                     Text("Iniciar sesión")
                 }
+            }
+
+            // NV-15: acceso a privacidad desde el área de cuenta, disponible
+            // también como invitado (sin sesión no hay eliminación de cuenta).
+            OutlinedButton(
+                onClick = onOpenPrivacy,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            ) {
+                Text("Privacidad")
             }
         }
     }
