@@ -396,3 +396,10 @@ ame/consentimientos (quedan solo en la UI); AuthValidators registra mínimo 12 y
 - **Estado:** APROBADO por instrucción humana explícita para FASE B Mobile.
 - **Justificación:** Contratos reales FASE A (`/users/me/notifications`) sin inventar endpoints; no existe contrato Backend de token/device (`FCM-TOKEN-BACKEND-BLOCKED`), token FCM solo en memoria y nunca enviado. Sin `google-services.json` no se crea archivo falso.
 - **Impacto:** Gate final `testDebugUnitTest lintDebug assembleDebug` BUILD SUCCESSFUL: 297 tests / 0 failures, lint 0 errores / 20 warnings, APK debug generado. Runtime FCM parcial por falta de `google-services.json`, sender Backend y emulador ADB sin `system_server`/package service. Migración futura de token clásico a FID `register()` fuera de alcance.
+
+## M-MOB-053 - NV-15 Privacy + Delete Account Mobile (2026-11-17)
+
+- **Decisión:** Ejecutar NV-15 Mobile (autorización humana explícita) en `feature/privacy-delete-account`: ruta pública `privacidad` con entrada desde Home, URL centralizada `BuildConfig.PRIVACY_POLICY_URL` (vacía), validación HTTPS pura, diálogo de confirmación irreversible con cancelar/loading/doble-submit, `DeleteAccountUseCase` con guard de contrato y purga local posterior al éxito (sesión/refresh token, onboarding del usuario, favoritos, target push, notificaciones locales y caché HTTP). Sin endpoint, DTO ni URL inventados.
+- **Estado:** PARTIAL APROBADO en Mobile: `DELETE-ACCOUNT-BACKEND-BLOCKED` + `BLOCKED-PRIVACY-URL`.
+- **Justificación:** `origin/main` Backend `9dfb497` no expone ruta de eliminación y `specs/nv-10-account-session/spec.md:23` la difiere; la landing solo tiene anclas `#privacidad` sin contenido real. `AccountRepository.isDeletionAvailable=false` muestra el bloqueo sin simular borrado.
+- **Impacto:** Gate final `testDebugUnitTest lintDebug assembleDebug` BUILD SUCCESSFUL: 323 tests / 0 failures, lint 0 errores / 20 warnings (ninguno en privacy), APK debug generado. Runtime en dispositivo NO EJECUTADO (sin evidencia ADB). Spec actualizada en `specs/nv-15-privacy-delete-account/`.

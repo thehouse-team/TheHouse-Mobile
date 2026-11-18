@@ -91,6 +91,11 @@ object AppRoutes {
         override val route: String = "notificaciones"
     }
 
+    /** NV-15: privacidad y eliminación de cuenta. */
+    val privacy: AppRoute = object : AppRoute {
+        override val route: String = "privacidad"
+    }
+
     val bottomTabs: List<AppRoute> = listOf(home, explore, smartMatch, favorites)
 
     fun isBottomTab(route: String?): Boolean = bottomTabs.any { it.route == route }

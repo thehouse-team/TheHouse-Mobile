@@ -22,13 +22,16 @@ android {
         applicationId = "com.thehouse.app"
         minSdk = 26
         targetSdk = 37
-        // Política de versionamiento: VERSIONING.md → 1.0.0 = 10000
-        versionCode = 10000
-        versionName = "1.0.0"
+        // Hotfix 1.1.1: corrige crash de startup en release (AGP optimization/packageScope).
+        versionCode = 10101
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"https://ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io/\"")
+        // NV-15: URL centralizada del aviso de privacidad. Vacío = BLOCKED-PRIVACY-URL;
+        // no se hardcodea un dominio ni se inventa contenido legal.
+        buildConfigField("String", "PRIVACY_POLICY_URL", "\"\"")
         buildConfigField("boolean", "FCM_CONFIGURED", googleServicesConfigured.toString())
     }
 
@@ -56,8 +59,7 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
             optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+                enable = false
             }
         }
     }

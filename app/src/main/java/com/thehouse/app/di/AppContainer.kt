@@ -143,12 +143,19 @@ class AppContainer(context: Context) {
 
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
 
-    val authRepository: AuthRepository by lazy {
+    private val authRepositoryImpl: AuthRepositoryImpl by lazy {
         AuthRepositoryImpl(
             api = authApi,
             sessionStore = sessionStore,
             refreshTokenStorage = refreshTokenStorage,
         )
+    }
+
+    val authRepository: AuthRepository by lazy { authRepositoryImpl }
+
+    /** NV-15: limpieza local de sesión sin red (delete account / logout). */
+    val localSessionCleaner: com.thehouse.app.domain.auth.LocalSessionCleaner by lazy {
+        authRepositoryImpl
     }
 
     val onboardingRepository: OnboardingRepository by lazy {
@@ -461,6 +468,34 @@ class AppContainer(context: Context) {
 
     val runSmartMatch: com.thehouse.app.domain.usecase.RunSmartMatchUseCase by lazy {
         com.thehouse.app.domain.usecase.RunSmartMatchUseCase(smartMatchModel)
+    }
+
+    // ===== NV-15 Privacidad + Eliminar cuenta =====
+    // DELETE-ACCOUNT-BACKEND-BLOCKED: no hay contrato Backend real. El
+    // repositorio declara isDeletionAvailable=false y no ejecuta HTTP.
+
+    val accountRepository: com.thehouse.app.domain.repository.AccountRepository by lazy {
+        com.thehouse.app.data.account.repository.AccountRepositoryImpl()
+    }
+
+    val localUserDataPurger: com.thehouse.app.domain.repository.LocalUserDataPurger by lazy {
+        com.thehouse.app.data.account.repository.LocalUserDataPurgerImpl(
+            onboardingRepository = onboardingRepository,
+            favoritesStore = favoriteIdsStore,
+            pendingNotificationNavigation = pendingNotificationNavigation,
+            localPushNotifier = localPushNotifier,
+            httpCache = httpClient.cache,
+            localSessionCleaner = localSessionCleaner,
+            dispatchers = dispatchers,
+        )
+    }
+
+    val deleteAccount: com.thehouse.app.domain.usecase.DeleteAccountUseCase by lazy {
+        com.thehouse.app.domain.usecase.DeleteAccountUseCase(
+            accountRepository = accountRepository,
+            localUserDataPurger = localUserDataPurger,
+            sessionState = sessionStore.state,
+        )
     }
 
     // ===== NV-14 Fase A — Notificaciones in-app reales =====

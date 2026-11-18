@@ -46,6 +46,12 @@ class RootViewModel(
     private val mutableState = MutableStateFlow(RootUiState())
     val state: StateFlow<RootUiState> = mutableState.asStateFlow()
 
+    /**
+     * NV-15: tras eliminar la cuenta, la sesión cae a Anonymous. El root debe
+     * llevar a Login (no a Home como Guest) y la sesión no debe restaurarse.
+     */
+    private var accountDeleted = false
+
     init {
         viewModelScope.launch {
             // Restauración silenciosa al arranque; el estado resultante
@@ -60,7 +66,21 @@ class RootViewModel(
         }
     }
 
+    /** Llamado por la UI cuando el Backend confirmó la eliminación de cuenta. */
+    fun onAccountDeleted() {
+        accountDeleted = true
+        updateTarget(AppRoutes.login.route)
+    }
+
     private suspend fun resolve(value: SessionState) {
+        if (accountDeleted) {
+            accountDeleted = false
+            if (value is SessionState.Anonymous) {
+                updateTarget(AppRoutes.login.route)
+                return
+            }
+            // Si el usuario vuelve a autenticarse, se retoma la decisión normal.
+        }
         if (value is SessionState.Suspended) {
             // Pantalla global, sin navegar a Login ni destruir la sesión.
             mutableState.update { it.copy(isResolving = false) }

@@ -67,6 +67,10 @@ private class FakeOnboardingRepository : OnboardingRepository {
     override suspend fun setCompleted(key: String, completed: Boolean) {
         this.completed = completed
     }
+
+    override suspend fun clear(key: String) {
+        completed = false
+    }
 }
 
 class HomeGuestNavigationTest {

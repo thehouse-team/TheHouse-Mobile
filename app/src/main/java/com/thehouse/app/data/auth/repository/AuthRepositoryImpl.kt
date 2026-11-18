@@ -48,7 +48,7 @@ class AuthRepositoryImpl(
     private val api: AuthApi,
     private val sessionStore: InMemorySessionStore,
     private val refreshTokenStorage: SessionTokenStorage,
-) : AuthRepository {
+) : AuthRepository, com.thehouse.app.domain.auth.LocalSessionCleaner {
 
     private val refreshMutex = Mutex()
 
@@ -76,12 +76,20 @@ class AuthRepositoryImpl(
             api.login(LoginRequestDto(email = email.trim(), password = password)),
         )
 
+    /**
+     * Limpieza local sin red (NV-15): access token, refresh token y estado.
+     * Se usa tras eliminar la cuenta y como primer paso del logout.
+     */
+    override suspend fun clearLocalSession() {
+        sessionStore.clear()
+        refreshTokenStorage.clear()
+    }
+
     override suspend fun logout(): Result<Unit> {
         // Capturar token antes de limpiar: logout lleva Bearer (contrato D3).
         val token = sessionStore.accessToken
         // Limpieza local SIEMPRE: criterio de seguridad de la spec (logout local).
-        sessionStore.clear()
-        refreshTokenStorage.clear()
+        clearLocalSession()
 
         return try {
             val response = api.logout(token?.let { "Bearer $it" })

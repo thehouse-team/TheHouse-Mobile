@@ -25,6 +25,10 @@ class OnboardingPreferencesRepository(
         preferences.putBoolean(storageKey(key), completed)
     }
 
+    override suspend fun clear(key: String) {
+        preferences.remove(storageKey(key))
+    }
+
     fun observeCompleted(key: String): kotlinx.coroutines.flow.Flow<Boolean> =
         preferences.observeBoolean(storageKey(key), false)
 

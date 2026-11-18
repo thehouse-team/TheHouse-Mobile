@@ -153,6 +153,17 @@ class U2ViewModelFactory(
         }
     }
 
+    /** NV-15: privacidad + eliminación de cuenta. */
+    fun privacy(): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.privacy.PrivacyViewModel(
+                privacyPolicyUrl = container.config.privacyPolicyUrl,
+                sessionState = container.sessionStore.state,
+                deleteAccount = container.deleteAccount,
+            )
+        }
+    }
+
     fun report(targetType: String, targetId: String): ViewModelProvider.Factory = viewModelFactory {
         initializer {
             val type = com.thehouse.app.domain.model.ReportTargetType.entries
