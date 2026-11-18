@@ -35,6 +35,7 @@ class U2ViewModelFactory(
                 propertyId = propertyId,
                 getPropertyById = GetPropertyByIdUseCase(container.propertyRepository),
                 sessionState = container.sessionStore.state,
+                connectivityObserver = container.connectivityObserver,
             )
         }
     }
@@ -245,6 +246,7 @@ class U2ViewModelFactory(
             ExploreViewModel(
                 getProperties = container.getProperties,
                 searchProperties = container.searchProperties,
+                connectivityObserver = container.connectivityObserver,
             ) as T
 
         modelClass.isAssignableFrom(FavoritesViewModel::class.java) ->
@@ -253,6 +255,7 @@ class U2ViewModelFactory(
                 removeFavorite = container.removeFavorite,
                 favoriteIdsStore = container.favoriteIdsStore,
                 sessionState = container.sessionStore.state,
+                connectivityObserver = container.connectivityObserver,
             ) as T
 
         modelClass.isAssignableFrom(VisitsViewModel::class.java) ->

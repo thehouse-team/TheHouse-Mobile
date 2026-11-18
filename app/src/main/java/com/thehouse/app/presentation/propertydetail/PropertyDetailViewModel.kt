@@ -2,6 +2,7 @@ package com.thehouse.app.presentation.propertydetail
 
 import com.thehouse.app.domain.auth.AccessPolicy
 import com.thehouse.app.domain.auth.ProtectedAction
+import com.thehouse.app.domain.connectivity.ConnectivityObserver
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.Property
@@ -12,6 +13,7 @@ import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiEvent
 import com.thehouse.app.presentation.common.toUiError
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 sealed interface PropertyDetailUiState {
@@ -40,9 +42,12 @@ class PropertyDetailViewModel(
     private val propertyId: String,
     private val getPropertyById: GetPropertyByIdUseCase,
     private val sessionState: StateFlow<SessionState>,
+    connectivityObserver: ConnectivityObserver? = null,
 ) : BaseViewModel<PropertyDetailUiState, PropertyDetailEvent, PropertyDetailEffect>(
     PropertyDetailUiState.Loading,
 ) {
+
+    val isOnline: StateFlow<Boolean> = connectivityObserver?.isOnline ?: MutableStateFlow(true)
     private var requestInFlight = false
 
     init {

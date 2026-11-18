@@ -3,20 +3,24 @@
 | Campo | Valor |
 |---|---|
 | Spec ID | NV-16 |
-| STATUS | PLANNED |
-| AUTHORIZATION | DO NOT EXECUTE |
+| STATUS | APPROVED FOR IMPLEMENTATION |
+| AUTHORIZATION | APPROVED FOR IMPLEMENTATION (autorización humana explícita en sesión, alcance acotado) |
 | Dependencias | NV-01, NV-09, NV-27, NV-20 |
 
 ## Problema
 El usuario necesita usar la app con conexion intermitente y que sus cambios (favoritos, visitas, borradores) se sincronicen sin perdidas ni duplicados.
 
 ## Alcance
-- Estrategia offline-first: cache local (Room/DataStore) como fuente de lectura y cola de escrituras pendientes.
-- Workers de sincronizacion con reintentos/backoff y resolucion de conflictos documentada.
+- Estrategia cache-first + network refresh para lecturas cacheables seguras: propiedades (listado/detalle), universidades, favoritos (lectura) y perfil/preferencias (lectura segura).
+- Reutilización de repositorios/mappers/DTO-domain existentes y de infraestructura local existente (DataStore/PreferencesStore) para cache JSON; no se crea segunda base Room (no existe BD Room actual con entidades).
+- Estado offline/stale mínimo en UI cuando hay cache utilizable; error/retry existente cuando no hay cache.
+- Invalidación simple: respuesta backend válida reemplaza cache; logout/delete account limpia cache privada user-specific.
 
 ## No-alcance
-- Sync de entidades sin contrato NV-27; resolucion de conflictos inventada sin reglas del backend.
-- KSP/Room activados sin autorizacion (NV-01: KSP no configurado).
+- Cola de escrituras offline, sync en background, WorkManager workers/polling/wakeups (sin operaciones syncables con contrato real aprobado en este alcance).
+- Persistencia de JWT, refresh token, FCM token, agreement codes, qrToken u otros secretos/PII sensible innecesaria.
+- Cache/sync de requests, chat, visitas, notificaciones o agreements sin contrato/estrategia segura aprobada.
+- Modificación de Backend, Docker, merge, force push o reescritura de módulos completos.
 
 ## Requisitos
 - NV16-REQ-001: Toda entidad sincronizable tiene contrato confirmado en NV-27; sin contrato, solo cache de lectura.

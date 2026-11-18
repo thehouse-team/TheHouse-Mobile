@@ -1,5 +1,6 @@
 package com.thehouse.app.presentation.explore
 
+import com.thehouse.app.domain.connectivity.ConnectivityObserver
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
 import com.thehouse.app.domain.usecase.SearchPropertiesUseCase
@@ -8,6 +9,8 @@ import com.thehouse.app.presentation.catalog.toCatalogState
 import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiEvent
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * MVVM + UDF de Explorar (D5, NV-07 parcial).
@@ -33,7 +36,10 @@ sealed interface ExploreEffect : UiEffect
 class ExploreViewModel(
     private val getProperties: GetPropertiesUseCase? = null,
     private val searchProperties: SearchPropertiesUseCase = SearchPropertiesUseCase(),
+    connectivityObserver: ConnectivityObserver? = null,
 ) : BaseViewModel<ExploreUiState, ExploreEvent, ExploreEffect>(ExploreUiState()) {
+
+    val isOnline: StateFlow<Boolean> = connectivityObserver?.isOnline ?: MutableStateFlow(true)
 
     init {
         load()

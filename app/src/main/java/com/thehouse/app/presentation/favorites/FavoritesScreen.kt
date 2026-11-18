@@ -23,6 +23,7 @@ import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.OfflineStatusBanner
 
 @Composable
 fun FavoritesScreen(
@@ -35,6 +36,7 @@ fun FavoritesScreen(
     onExploreClick: () -> Unit,
     onRemove: (String) -> Unit,
     onRetry: () -> Unit,
+    isOnline: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { padding ->
@@ -51,6 +53,15 @@ fun FavoritesScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.semantics { contentDescription = "Título Favoritos" },
             )
+            if (!isOnline) {
+                OfflineStatusBanner(
+                    text = if (isAuthenticated && items.isNotEmpty() && error == null) {
+                        "Sin conexión · Mostrando información guardada"
+                    } else {
+                        "Sin conexión"
+                    }
+                )
+            }
             if (!isAuthenticated) {
                 EmptyStateView(
                     title = "Inicia sesión",

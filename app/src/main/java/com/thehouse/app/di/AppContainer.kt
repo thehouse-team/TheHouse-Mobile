@@ -6,8 +6,10 @@ import com.thehouse.app.data.auth.repository.AuthRepositoryImpl
 import com.thehouse.app.data.auth.repository.OnboardingPreferencesRepository
 import com.thehouse.app.data.auth.session.InMemorySessionStore
 import com.thehouse.app.data.auth.storage.EncryptedRefreshTokenStorage
+import com.thehouse.app.data.cache.OfflineCacheStore
 import com.thehouse.app.data.config.AppConfig
 import com.thehouse.app.data.config.AppConfigProvider
+import com.thehouse.app.data.connectivity.AndroidConnectivityObserver
 import com.thehouse.app.data.dispatcher.DefaultDispatcherProvider
 import com.thehouse.app.data.image.ImageLoaderFactory
 import com.thehouse.app.data.preferences.DataStorePreferencesStore
@@ -32,6 +34,7 @@ import com.thehouse.app.data.remote.auth.BearerTokenInterceptor
 import com.thehouse.app.data.remote.auth.RefreshAuthenticator
 import com.thehouse.app.data.serialization.JsonProvider
 import com.thehouse.app.domain.common.DispatcherProvider
+import com.thehouse.app.domain.connectivity.ConnectivityObserver
 import com.thehouse.app.domain.model.SessionState
 import com.thehouse.app.domain.repository.AuthRepository
 import com.thehouse.app.domain.repository.FavoritesRepository
@@ -95,6 +98,18 @@ class AppContainer(context: Context) {
 
     val preferences: PreferencesStore by lazy {
         DataStorePreferencesStore(appContext.appPreferencesDataStore)
+    }
+
+    val offlineCacheStore: OfflineCacheStore by lazy {
+        OfflineCacheStore(preferences = preferences, json = json)
+    }
+
+    val connectivityObserver: ConnectivityObserver by lazy {
+        AndroidConnectivityObserver(appContext)
+    }
+
+    private val currentUserIdProvider: () -> String? = {
+        (sessionStore.state.value as? SessionState.Active)?.session?.userId
     }
 
     // ===== NV-04 Auth + Onboarding (D3: sesión persistente) =====
@@ -169,17 +184,21 @@ class AppContainer(context: Context) {
     val propertyApi: PropertyApi by lazy { retrofit.create(PropertyApi::class.java) }
 
     val universityRepository: UniversityRepository by lazy {
-        UniversityRepositoryImpl(api = universityApi)
+        UniversityRepositoryImpl(api = universityApi, cache = offlineCacheStore)
     }
 
     val propertyRepository: PropertyRepository by lazy {
-        PropertyRepositoryImpl(api = propertyApi)
+        PropertyRepositoryImpl(api = propertyApi, cache = offlineCacheStore)
     }
 
     val favoritesApi: FavoritesApi by lazy { retrofit.create(FavoritesApi::class.java) }
 
     val favoritesRepository: FavoritesRepository by lazy {
-        FavoritesRepositoryImpl(api = favoritesApi)
+        FavoritesRepositoryImpl(
+            api = favoritesApi,
+            cache = offlineCacheStore,
+            currentUserId = currentUserIdProvider,
+        )
     }
 
     val favoriteIdsStore: FavoriteIdsStore by lazy { FavoriteIdsStore() }
@@ -197,11 +216,19 @@ class AppContainer(context: Context) {
     val preferencesApi: PreferencesApi by lazy { retrofit.create(PreferencesApi::class.java) }
 
     val profileRepository: com.thehouse.app.domain.repository.ProfileRepository by lazy {
-        com.thehouse.app.data.repository.ProfileRepositoryImpl(profileApi)
+        com.thehouse.app.data.repository.ProfileRepositoryImpl(
+            api = profileApi,
+            cache = offlineCacheStore,
+            currentUserId = currentUserIdProvider,
+        )
     }
 
     val preferencesRepository: com.thehouse.app.domain.repository.PreferenceRepository by lazy {
-        com.thehouse.app.data.repository.PreferenceRepositoryImpl(preferencesApi)
+        com.thehouse.app.data.repository.PreferenceRepositoryImpl(
+            api = preferencesApi,
+            cache = offlineCacheStore,
+            currentUserId = currentUserIdProvider,
+        )
     }
 
     val getProfile: GetProfileUseCase by lazy { GetProfileUseCase(profileRepository) }
@@ -487,6 +514,7 @@ class AppContainer(context: Context) {
             httpCache = httpClient.cache,
             localSessionCleaner = localSessionCleaner,
             dispatchers = dispatchers,
+            offlineCacheStore = offlineCacheStore,
         )
     }
 
@@ -615,6 +643,14 @@ class AppContainer(context: Context) {
             sessionStore.state.collect { current ->
                 val wasActive = previous is SessionState.Active
                 if (wasActive && current !is SessionState.Active) {
+                    val previousUserId = (previous as? SessionState.Active)?.session?.userId
+                    if (!previousUserId.isNullOrBlank()) {
+                        runCatching {
+                            OfflineCacheStore.Keys.privateKeysFor(previousUserId).forEach { key ->
+                                offlineCacheStore.remove(key)
+                            }
+                        }
+                    }
                     pendingNotificationNavigation.clear()
                     runCatching { localPushNotifier.cancelAll() }
                 }

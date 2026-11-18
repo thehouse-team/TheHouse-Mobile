@@ -363,6 +363,7 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                 composable(AppRoutes.favorites.route) {
                     val favVm: FavoritesViewModel = viewModel(factory = factory)
                     val favState by favVm.uiState.collectAsStateWithLifecycle()
+                    val favOnline by favVm.isOnline.collectAsStateWithLifecycle()
                     LaunchedEffect(isAuthenticated) {
                         if (isAuthenticated) favVm.onEvent(FavoritesEvent.Load)
                     }
@@ -382,6 +383,7 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         },
                         onRemove = { id -> favVm.onEvent(FavoritesEvent.Remove(id)) },
                         onRetry = { favVm.onEvent(FavoritesEvent.Load) },
+                        isOnline = favOnline,
                     )
                 }
                 composable(AppRoutes.visits.route) {
