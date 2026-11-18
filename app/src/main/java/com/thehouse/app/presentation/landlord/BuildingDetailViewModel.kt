@@ -3,19 +3,25 @@ package com.thehouse.app.presentation.landlord
 import com.thehouse.app.domain.error.LandlordErrorCode
 import com.thehouse.app.domain.error.LandlordException
 import com.thehouse.app.domain.model.Building
+import com.thehouse.app.domain.model.BuildingDocuments
 import com.thehouse.app.domain.model.BuildingStatus
 import com.thehouse.app.domain.model.PublicationStatus
 import com.thehouse.app.domain.model.Room
-import com.thehouse.app.domain.model.RoomStatus
+import com.thehouse.app.domain.usecase.DeleteBuildingPhotoUseCase
 import com.thehouse.app.domain.usecase.DeleteBuildingUseCase
+import com.thehouse.app.domain.usecase.GetBuildingDocumentsUseCase
 import com.thehouse.app.domain.usecase.GetLandlordBuildingUseCase
 import com.thehouse.app.domain.usecase.GetLandlordRoomsUseCase
 import com.thehouse.app.domain.usecase.GetPublicationStatusUseCase
 import com.thehouse.app.domain.usecase.PauseRoomUseCase
 import com.thehouse.app.domain.usecase.PublishBuildingUseCase
 import com.thehouse.app.domain.usecase.ResumeRoomUseCase
+import com.thehouse.app.domain.usecase.UploadBuildingPhotoUseCase
+import com.thehouse.app.domain.usecase.UploadIneDocumentUseCase
+import com.thehouse.app.domain.usecase.UploadPropertyProofDocumentUseCase
 import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEvent
+import java.io.File
 
 /**
  * Detalle de edificio + cuartos + publicación.
@@ -26,9 +32,12 @@ data class BuildingDetailUiState(
     val building: Building? = null,
     val rooms: List<Room> = emptyList(),
     val publication: PublicationStatus? = null,
+    val documents: BuildingDocuments? = null,
     val isPublishing: Boolean = false,
     val isDeleting: Boolean = false,
     val busyRoomId: String? = null,
+    val isUploadingPhoto: Boolean = false,
+    val isUploadingDocument: Boolean = false,
     val verification: com.thehouse.app.domain.model.VerificationInfo? = null,
     val versionConflict: Boolean = false,
     /** Mensaje tras publicar: el estado real lo dice el Backend (in_review). */
@@ -45,6 +54,10 @@ sealed interface BuildingDetailEvent : UiEvent {
     data object Delete : BuildingDetailEvent
     data class PauseRoom(val roomId: String) : BuildingDetailEvent
     data class ResumeRoom(val roomId: String) : BuildingDetailEvent
+    data class UploadBuildingPhoto(val file: File, val mimeType: String) : BuildingDetailEvent
+    data object DeleteBuildingPhoto : BuildingDetailEvent
+    data class UploadIne(val file: File, val mimeType: String) : BuildingDetailEvent
+    data class UploadPropertyProof(val file: File, val mimeType: String) : BuildingDetailEvent
 }
 
 sealed interface BuildingDetailEffect : com.thehouse.app.presentation.common.UiEffect {
@@ -62,6 +75,11 @@ class BuildingDetailViewModel(
     private val pauseRoom: PauseRoomUseCase,
     private val resumeRoom: ResumeRoomUseCase,
     private val getVerification: com.thehouse.app.domain.usecase.GetBuildingVerificationUseCase,
+    private val uploadBuildingPhoto: UploadBuildingPhotoUseCase,
+    private val deleteBuildingPhoto: DeleteBuildingPhotoUseCase,
+    private val uploadIneDocument: UploadIneDocumentUseCase,
+    private val uploadPropertyProofDocument: UploadPropertyProofDocumentUseCase,
+    private val getBuildingDocuments: GetBuildingDocumentsUseCase,
 ) : BaseViewModel<BuildingDetailUiState, BuildingDetailEvent, BuildingDetailEffect>(
     BuildingDetailUiState(),
 ) {
@@ -77,6 +95,10 @@ class BuildingDetailViewModel(
             BuildingDetailEvent.Delete -> delete()
             is BuildingDetailEvent.PauseRoom -> changeRoomState(event.roomId, pause = true)
             is BuildingDetailEvent.ResumeRoom -> changeRoomState(event.roomId, pause = false)
+            is BuildingDetailEvent.UploadBuildingPhoto -> uploadPhoto(event.file, event.mimeType)
+            BuildingDetailEvent.DeleteBuildingPhoto -> removePhoto()
+            is BuildingDetailEvent.UploadIne -> uploadDocument(ine = true, event.file, event.mimeType)
+            is BuildingDetailEvent.UploadPropertyProof -> uploadDocument(ine = false, event.file, event.mimeType)
         }
     }
 
@@ -96,6 +118,7 @@ class BuildingDetailViewModel(
                     loadRooms()
                     loadPublication()
                     loadVerification()
+                    loadDocuments()
                 },
                 onFailure = { throwable -> handleFailure(throwable) },
             )
@@ -126,6 +149,87 @@ class BuildingDetailViewModel(
                 onSuccess = { publication -> updateState { it.copy(publication = publication) } },
                 onFailure = { throwable -> handleFailure(throwable) },
             )
+        }
+    }
+
+    private fun loadDocuments() {
+        launch {
+            getBuildingDocuments(buildingId).fold(
+                onSuccess = { docs -> updateState { it.copy(documents = docs) } },
+                onFailure = { throwable -> handleFailure(throwable) },
+            )
+        }
+    }
+
+    private fun uploadPhoto(file: File, mimeType: String) {
+        if (uiState.value.isUploadingPhoto) return
+        updateState { it.copy(isUploadingPhoto = true, errorCode = null, errorMessage = null, infoMessage = null) }
+        launch {
+            val result = uploadBuildingPhoto(buildingId, file, mimeType)
+            file.delete()
+            result.fold(
+                onSuccess = {
+                    refreshBuildingAndPublication("Foto del edificio actualizada.")
+                    updateState { it.copy(isUploadingPhoto = false) }
+                },
+                onFailure = { throwable ->
+                    updateState { it.copy(isUploadingPhoto = false) }
+                    handleFailure(throwable)
+                },
+            )
+        }
+    }
+
+    private fun removePhoto() {
+        if (uiState.value.isUploadingPhoto) return
+        updateState { it.copy(isUploadingPhoto = true, errorCode = null, errorMessage = null, infoMessage = null) }
+        launch {
+            deleteBuildingPhoto(buildingId).fold(
+                onSuccess = {
+                    refreshBuildingAndPublication("Foto del edificio eliminada.")
+                    updateState { it.copy(isUploadingPhoto = false) }
+                },
+                onFailure = { throwable ->
+                    updateState { it.copy(isUploadingPhoto = false) }
+                    handleFailure(throwable)
+                },
+            )
+        }
+    }
+
+    private fun uploadDocument(ine: Boolean, file: File, mimeType: String) {
+        if (uiState.value.isUploadingDocument) return
+        updateState { it.copy(isUploadingDocument = true, errorCode = null, errorMessage = null, infoMessage = null) }
+        launch {
+            val result = if (ine) {
+                uploadIneDocument(buildingId, file, mimeType)
+            } else {
+                uploadPropertyProofDocument(buildingId, file, mimeType)
+            }
+            file.delete()
+            result.fold(
+                onSuccess = {
+                    loadDocuments()
+                    loadPublication()
+                    updateState {
+                        it.copy(
+                            isUploadingDocument = false,
+                            infoMessage = if (ine) "INE cargada." else "Comprobante de propiedad cargado.",
+                        )
+                    }
+                },
+                onFailure = { throwable ->
+                    updateState { it.copy(isUploadingDocument = false) }
+                    handleFailure(throwable)
+                },
+            )
+        }
+    }
+
+    private fun refreshBuildingAndPublication(info: String) {
+        launch {
+            getBuilding(buildingId).onSuccess { building -> updateState { it.copy(building = building, infoMessage = info) } }
+            loadPublication()
         }
     }
 

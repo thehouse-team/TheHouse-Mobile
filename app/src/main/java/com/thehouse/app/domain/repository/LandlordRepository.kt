@@ -1,6 +1,7 @@
 package com.thehouse.app.domain.repository
 
 import com.thehouse.app.domain.model.Building
+import com.thehouse.app.domain.model.BuildingDocuments
 import com.thehouse.app.domain.model.BuildingPatch
 import com.thehouse.app.domain.model.AllowedTenants
 import com.thehouse.app.domain.model.BuildingAddress
@@ -15,6 +16,7 @@ import com.thehouse.app.domain.model.RentalMode
 import com.thehouse.app.domain.model.Room
 import com.thehouse.app.domain.model.RoomBase
 import com.thehouse.app.domain.model.RoomPatch
+import java.io.File
 
 /** Contrato de dominio del arrendador (D12). La Data lo implementa. */
 interface LandlordRepository {
@@ -74,4 +76,12 @@ interface LandlordRepository {
 
     /** 202 = enviado a revisión; el Backend indica el estado real. */
     suspend fun publishBuilding(id: String): Result<Building>
+
+    suspend fun uploadBuildingPhoto(buildingId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun deleteBuildingPhoto(buildingId: String): Result<Unit>
+    suspend fun uploadRoomPhoto(roomId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun deleteRoomPhoto(roomId: String, photoId: String): Result<Unit>
+    suspend fun uploadIneDocument(buildingId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun uploadPropertyProofDocument(buildingId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun getBuildingDocuments(buildingId: String): Result<BuildingDocuments>
 }

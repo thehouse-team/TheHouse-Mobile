@@ -1,15 +1,20 @@
 package com.thehouse.app.data.landlord.mapper
 
 import com.thehouse.app.data.remote.dto.landlord.BuildingAddressDto
+import com.thehouse.app.data.remote.dto.landlord.BuildingDocumentDto
+import com.thehouse.app.data.remote.dto.landlord.BuildingDocumentsResponseDto
 import com.thehouse.app.data.remote.dto.landlord.BuildingDto
 import com.thehouse.app.data.remote.dto.landlord.BuildingLocationDto
 import com.thehouse.app.data.remote.dto.landlord.DashboardSummaryDto
 import com.thehouse.app.data.remote.dto.landlord.LandlordProfileDto
+import com.thehouse.app.data.remote.dto.landlord.MediaItemDto
 import com.thehouse.app.data.remote.dto.landlord.PublicationStatusDto
 import com.thehouse.app.data.remote.dto.landlord.RoomDto
 import com.thehouse.app.domain.model.AllowedTenants
 import com.thehouse.app.domain.model.Building
 import com.thehouse.app.domain.model.BuildingAddress
+import com.thehouse.app.domain.model.BuildingDocument
+import com.thehouse.app.domain.model.BuildingDocuments
 import com.thehouse.app.domain.model.BuildingLocation
 import com.thehouse.app.domain.model.BuildingStatus
 import com.thehouse.app.domain.model.BuildingType
@@ -17,6 +22,7 @@ import com.thehouse.app.domain.model.BathroomType
 import com.thehouse.app.domain.model.DashboardSummary
 import com.thehouse.app.domain.model.Furniture
 import com.thehouse.app.domain.model.LandlordProfile
+import com.thehouse.app.domain.model.MediaItem
 import com.thehouse.app.domain.model.MinContract
 import com.thehouse.app.domain.model.NearestUniversity
 import com.thehouse.app.domain.model.PublicationStatus
@@ -33,6 +39,16 @@ fun LandlordProfileDto.toDomain(): LandlordProfile = LandlordProfile(
     rentalMode = if (rentalMode == RentalMode.AGENCY.api) RentalMode.AGENCY else RentalMode.INDIVIDUAL,
     rfc = rfc,
     acceptedTermsVersion = acceptedTermsVersion,
+    createdAt = createdAt,
+)
+
+fun MediaItemDto.toDomain(): MediaItem = MediaItem(
+    id = id,
+    url = url,
+    thumbUrl = thumbUrl,
+    width = width,
+    height = height,
+    bytes = bytes,
     createdAt = createdAt,
 )
 
@@ -58,6 +74,7 @@ fun BuildingDto.toDomain(): Building = Building(
     version = version,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    photo = photo?.toDomain(),
 )
 
 fun DashboardSummaryDto.toDomain(): DashboardSummary = DashboardSummary(
@@ -96,7 +113,25 @@ fun RoomDto.toDomain(): Room = Room(
     version = version,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    photos = photos.map { it.toDomain() },
 )
+
+fun BuildingDocumentDto.toDomain(): BuildingDocument = BuildingDocument(
+    type = type,
+    id = id,
+    fileName = fileName,
+    status = status,
+    createdAt = createdAt,
+)
+
+fun BuildingDocumentsResponseDto.toDomain(): BuildingDocuments {
+    val list = items.map { it.toDomain() }
+    val ineDoc = ine?.toDomain() ?: list.firstOrNull { it.type.equals("ine", ignoreCase = true) }
+    val proofDoc = propertyProof?.toDomain() ?: list.firstOrNull {
+        it.type.equals("property_proof", ignoreCase = true)
+    }
+    return BuildingDocuments(ine = ineDoc, propertyProof = proofDoc, raw = list)
+}
 
 fun PublicationStatusDto.toDomain(): PublicationStatus = PublicationStatus(
     canPublish = canPublish,

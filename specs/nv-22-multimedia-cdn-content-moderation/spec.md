@@ -3,28 +3,29 @@
 | Campo | Valor |
 |---|---|
 | Spec ID | NV-22 |
-| STATUS | PARTIAL (hardening local móvil ejecutado; upload/moderación remota/backend y flujos de captura no existentes) |
+| STATUS | PARTIAL/INTEGRATED (multimedia real de landlord integrada con contrato desplegado; moderación automática no planificada) |
 | AUTHORIZATION | AUTORIZADO por instrucción humana explícita 2026-11-17 (sin Backend, sin endpoints inventados, sin merge) |
 | Dependencias | NV-01 (Coil), NV-21 (permisos), NV-14/NV-15/NV-16 (no regresión), NV-27 (contrato backend) |
 
 ## Problema
 La selección/captura/subida futura de multimedia y el contenido generado por usuarios requieren mínimo privilegio, validación local, protección de privacidad y estados honestos frente a contratos de moderación no disponibles.
 
-## Estado real auditado
-- No existen flujos actuales de cámara, galería, Photo Picker ni upload multipart en la app.
-- No existe contrato backend ejecutable de moderación automática previa al upload (`/moderate`, `/scan-image`, `/content-check` o equivalentes: **no inventar**). NV-13 media/docs es borrador/no ejecutable; D13 moderación automática bloqueada.
-- Coil boundary presente (NV-01); sin pipeline de thumbs/upload de negocio implementado.
+## Estado real (actualizado)
+- **MULTIMEDIA REAL = autorizado e integrado** (contrato Backend desplegado `ca-thehouse-u2...`): foto de edificio, fotos de cuarto, documentos INE/comprobante de propiedad.
+- **Moderación automática = NOT PLANNED/BLOCKED** (`AUTOMATIC-MODERATION-NOT-PLANNED`). **Revisión humana Backend = existente**. No se muestra "contenido aprobado por IA".
+- Selección con Photo Picker/Activity Result (`OpenDocument` para documentos) sin permisos amplios de almacenamiento. Cámara no declarada/no solicitada (sin flujo real de captura).
+- URLs/media se usan exactamente como las entrega Backend (`url`, `thumbUrl`), incluidas rutas privadas/públicas según estado. Coach/Coil reutilizado.
 
 ## Alcance ejecutado (Mobile)
-- **Selección multimedia (preparación):** preferencia por Android Photo Picker / Activity Result APIs (sin `READ_EXTERNAL_STORAGE`/`READ_MEDIA_*` innecesarios). Helpers/contratos reutilizables sin forzar flujos inexistentes.
-- **Cámara:** sin permiso/solicitud declarada porque no hay función real; política preparada para solicitud contextual solo al usar captura futura.
-- **Ubicación:** no requerida; sin permisos de ubicación.
-- **Validación local antes de upload futuro:** MIME permitido (imágenes), tamaño máximo razonable, archivo vacío/corrupto/inaccesible, selección cancelada, URI inválida/no disponible; validación defensiva sin confiar solo en extensión.
-- **Procesamiento seguro (cuando aplique):** lectura por `ContentResolver`, compresión razonable preparada en background, sin bloquear UI thread, sin recomprimir repetidamente por diseño de API.
-- **Privacidad/metadatos:** saneamiento best-effort de imágenes (redecodificación con orientación + recompresión) para no propagar EXIF GPS/metadatos innecesarios en artefactos procesados; sin registrar URI completa sensible, paths privados, binarios ni PII.
-- **Moderación:** `MULTIMEDIA-MODERATION-BACKEND-BLOCKED`. Arquitectura/estados preparados (`seleccionando`, `procesando`, `listo`, `error validación`, `moderación pendiente`, `moderación rechazada`, `upload pendiente`) sin afirmar "contenido seguro/moderado" ni simular upload/moderación.
-- **Texto:** validadores locales básicos reutilizables (vacío/longitud/whitespace/control chars) sin filtro IA falso.
-- **Seguridad input:** tratamiento de URI/archivos como no confiables, uso de `ContentResolver`, sin `file://` inseguro ni path traversal.
+- **Edificio:** `PUT/DELETE /api/v1/landlord/buildings/{id}/photo` (multipart `file`, JPEG/PNG/WebP, <=5MB), visualización con `photo.url/thumbUrl` tal como llegan.
+- **Cuartos:** `POST /api/v1/landlord/rooms/{id}/photos`, `DELETE /api/v1/landlord/rooms/{id}/photos/{photoId}` (máx 4, orden backend antigua→reciente, primera foto principal, fallback a foto de edificio cuando aplique en backend). UI de gestión en edición de cuarto.
+- **Documentos:** `PUT /ine`, `PUT /property_proof` (PDF/JPEG/PNG, <=10MB), `GET /documents` solo metadatos. Sin descarga/exposición de contenido INE/property proof.
+- **Publicación:** pasos reales incluyen `building_data`, `location`, `services`, `room_ready`, `building_photo`, `documents` (ine+property proof). Manejo de `409 publication_incomplete`, `409 building_in_review` y estados reales.
+- **Errores mapeados:** `409 photos_limit/storage_limit/building_in_review/publication_incomplete/building_state`, `413`, `415 unsupported_media`, `400 image_too_large` con mensajes UX seguros.
+- **Catálogo/visualización:** mapeo aditivo `Building.photo`, `Room.photos`, `Property.thumbnailUrl`, `Property.photos`; PropertyCard/Detail y landlord usan `url/thumbUrl` sin construir URLs.
+- **Validación local:** MIME/tamaño/archivo vacío antes de upload (backend autoridad final). Imágenes saneadas best-effort (orientación/recompresión, sin EXIF GPS/metadata innecesaria) en caché; documentos copiados temporalmente para multipart sin exponer contenido.
+- **Privacidad:** sin log de URI completa/rutas privadas/contenido; sin OCR; sin persistencia innecesaria de blobs.
+- **Moderación:** `AUTOMATIC-MODERATION-NOT-PLANNED`. Validación técnica backend + revisión humana edificio + reportes/admin existentes. Sin simulación.
 
 ## No-alcance
 - Integrar/cambiar Backend, inventar endpoints/moderación, subir contenido real sin contrato aprobado.

@@ -28,7 +28,7 @@ data class University(
 /**
  * Propiedad del contrato real (lista y detalle).
  * La lista entrega estos campos; el detalle agrega description/amenities.
- * Sin Match/verificación/distancia (el backend no los entrega).
+ * Campos multimedia aditivos (url/thumbUrl/photos) se usan tal como llegan.
  */
 data class Property(
     val id: String,
@@ -43,4 +43,6 @@ data class Property(
     val createdAt: String,
     val description: String? = null,
     val amenities: List<String> = emptyList(),
+    val thumbnailUrl: String? = null,
+    val photos: List<MediaItem> = emptyList(),
 )

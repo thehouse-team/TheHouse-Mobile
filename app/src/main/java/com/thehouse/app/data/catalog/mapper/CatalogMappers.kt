@@ -1,8 +1,10 @@
 package com.thehouse.app.data.catalog.mapper
 
+import com.thehouse.app.data.remote.dto.catalog.MediaItemDto
 import com.thehouse.app.data.remote.dto.catalog.PropertyDetailDto
 import com.thehouse.app.data.remote.dto.catalog.PropertyListItemDto
 import com.thehouse.app.data.remote.dto.catalog.UniversityDto
+import com.thehouse.app.domain.model.MediaItem
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.model.University
 
@@ -20,6 +22,16 @@ object CatalogMappers {
         createdAt = createdAt,
     )
 
+    fun MediaItemDto.toDomain(): MediaItem = MediaItem(
+        id = id,
+        url = url,
+        thumbUrl = thumbUrl,
+        width = width,
+        height = height,
+        bytes = bytes,
+        createdAt = createdAt,
+    )
+
     fun PropertyListItemDto.toDomain(): Property = Property(
         id = id,
         title = title,
@@ -31,6 +43,7 @@ object CatalogMappers {
         bathrooms = bathrooms,
         areaM2 = areaM2,
         createdAt = createdAt,
+        thumbnailUrl = thumbnailUrl,
     )
 
     fun PropertyDetailDto.toDomain(): Property = Property(
@@ -46,5 +59,6 @@ object CatalogMappers {
         createdAt = createdAt,
         description = description,
         amenities = amenities,
+        photos = photos.map { it.toDomain() },
     )
 }

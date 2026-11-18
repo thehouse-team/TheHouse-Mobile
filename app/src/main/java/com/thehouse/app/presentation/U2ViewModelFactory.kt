@@ -137,6 +137,11 @@ class U2ViewModelFactory(
                 pauseRoom = container.pauseRoom,
                 resumeRoom = container.resumeRoom,
                 getVerification = container.getBuildingVerification,
+                uploadBuildingPhoto = container.uploadBuildingPhoto,
+                deleteBuildingPhoto = container.deleteBuildingPhoto,
+                uploadIneDocument = container.uploadIneDocument,
+                uploadPropertyProofDocument = container.uploadPropertyProofDocument,
+                getBuildingDocuments = container.getBuildingDocuments,
             )
         }
     }
@@ -150,6 +155,8 @@ class U2ViewModelFactory(
                 updateRoom = container.updateRoom,
                 deleteRoom = container.deleteRoom,
                 getRooms = container.getLandlordRooms,
+                uploadRoomPhoto = container.uploadRoomPhoto,
+                deleteRoomPhoto = container.deleteRoomPhoto,
             )
         }
     }

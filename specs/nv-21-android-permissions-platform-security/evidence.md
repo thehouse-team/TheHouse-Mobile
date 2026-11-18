@@ -36,4 +36,12 @@
 ## Riesgos / bloqueos
 - `BLOCKED-PRIVACY-URL` (NV-03) fuera de alcance.
 - Permisos transitivos del manifest fusionado requieren verificación en release/CI.
-- Sin contrato backend ejecutable de upload/moderación multimedia (`MULTIMEDIA-MODERATION-BACKEND-BLOCKED`).
+- Moderación automática: `AUTOMATIC-MODERATION-NOT-PLANNED` (revisión humana Backend existente).
+
+---
+
+## Integración multimedia real (2026-11-17, `feature/real-multimedia`)
+- **Cambio:** integración de multimedia real landlord (foto edificio/cuarto, documentos INE/comprobante) con Photo Picker/OpenDocument. **Sin nuevos permisos Android** declarados (sin CAMERA, sin ubicación, sin storage). `POST_NOTIFICATIONS` sin cambios.
+- **Validación local:** imágenes JPEG/PNG/WebP <=5MB; documentos PDF/JPEG/PNG <=10MB; rechazo de MIME/tamaño/vacío/URI inválida; selección cancelada segura.
+- **Gates finales reales:** `testDebugUnitTest`, `lintDebug`, `assembleDebug` **BUILD SUCCESSFUL**.
+- **Runtime/ADB:** no disponible, no ejecutado/no inventado.

@@ -3,7 +3,7 @@ package com.thehouse.app.data.remote.dto.landlord
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** DTOs EXACTOS del contrato NV-12 §6/§6.1 del Backend. No se agregan campos. */
+/** DTOs del contrato NV-12 y multimedia real desplegado. Campos aditivos permitidos por contrato. */
 
 @Serializable
 data class LandlordProfileDto(
@@ -48,6 +48,17 @@ data class NearestUniversityDto(
 )
 
 @Serializable
+data class MediaItemDto(
+    val id: String,
+    val url: String,
+    val thumbUrl: String,
+    val width: Int? = null,
+    val height: Int? = null,
+    val bytes: Long? = null,
+    val createdAt: String? = null,
+)
+
+@Serializable
 data class BuildingDto(
     val id: String,
     val type: String,
@@ -66,6 +77,7 @@ data class BuildingDto(
     val version: Int,
     val createdAt: String? = null,
     val updatedAt: String? = null,
+    val photo: MediaItemDto? = null,
 )
 
 @Serializable
@@ -117,6 +129,23 @@ data class RoomDto(
     val version: Int,
     val createdAt: String? = null,
     val updatedAt: String? = null,
+    val photos: List<MediaItemDto> = emptyList(),
+)
+
+@Serializable
+data class BuildingDocumentDto(
+    val type: String,
+    val id: String? = null,
+    val fileName: String? = null,
+    val status: String? = null,
+    val createdAt: String? = null,
+)
+
+@Serializable
+data class BuildingDocumentsResponseDto(
+    val items: List<BuildingDocumentDto> = emptyList(),
+    val ine: BuildingDocumentDto? = null,
+    val propertyProof: BuildingDocumentDto? = null,
 )
 
 @Serializable

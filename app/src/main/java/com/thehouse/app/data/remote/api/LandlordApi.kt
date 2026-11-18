@@ -1,5 +1,6 @@
 package com.thehouse.app.data.remote.api
 
+import com.thehouse.app.data.remote.dto.landlord.BuildingDocumentsResponseDto
 import com.thehouse.app.data.remote.dto.landlord.BuildingDto
 import com.thehouse.app.data.remote.dto.landlord.BuildingsListResponseDto
 import com.thehouse.app.data.remote.dto.landlord.CopyFromRoomDto
@@ -11,12 +12,16 @@ import com.thehouse.app.data.remote.dto.landlord.PublicationStatusDto
 import com.thehouse.app.data.remote.dto.landlord.RoomDto
 import com.thehouse.app.data.remote.dto.landlord.RoomsListResponseDto
 import kotlinx.serialization.json.JsonObject
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -81,4 +86,44 @@ interface LandlordApi {
 
     @POST("api/v1/landlord/buildings/{id}/publish")
     suspend fun publishBuilding(@Path("id") id: String): Response<BuildingDto>
+
+    @Multipart
+    @PUT("api/v1/landlord/buildings/{id}/photo")
+    suspend fun uploadBuildingPhoto(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part,
+    ): Response<BuildingDto>
+
+    @DELETE("api/v1/landlord/buildings/{id}/photo")
+    suspend fun deleteBuildingPhoto(@Path("id") id: String): Response<Unit>
+
+    @Multipart
+    @POST("api/v1/landlord/rooms/{id}/photos")
+    suspend fun uploadRoomPhoto(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part,
+    ): Response<RoomDto>
+
+    @DELETE("api/v1/landlord/rooms/{id}/photos/{photoId}")
+    suspend fun deleteRoomPhoto(
+        @Path("id") id: String,
+        @Path("photoId") photoId: String,
+    ): Response<RoomDto>
+
+    @Multipart
+    @PUT("api/v1/landlord/buildings/{id}/documents/ine")
+    suspend fun uploadIneDocument(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part,
+    ): Response<Unit>
+
+    @Multipart
+    @PUT("api/v1/landlord/buildings/{id}/documents/property_proof")
+    suspend fun uploadPropertyProofDocument(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part,
+    ): Response<Unit>
+
+    @GET("api/v1/landlord/buildings/{id}/documents")
+    suspend fun getBuildingDocuments(@Path("id") id: String): Response<BuildingDocumentsResponseDto>
 }

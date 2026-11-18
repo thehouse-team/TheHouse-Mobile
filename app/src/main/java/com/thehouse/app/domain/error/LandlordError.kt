@@ -17,6 +17,11 @@ enum class LandlordErrorCode {
     ROOM_RENTED,
     PUBLICATION_INCOMPLETE,
     VERSION_CONFLICT,
+    PHOTOS_LIMIT,
+    STORAGE_LIMIT,
+    UNSUPPORTED_MEDIA,
+    IMAGE_TOO_LARGE,
+    PAYLOAD_TOO_LARGE,
     VALIDATION,
     UNKNOWN;
 
@@ -34,6 +39,10 @@ enum class LandlordErrorCode {
             "room_rented" -> ROOM_RENTED
             "publication_incomplete" -> PUBLICATION_INCOMPLETE
             "version_conflict" -> VERSION_CONFLICT
+            "photos_limit" -> PHOTOS_LIMIT
+            "storage_limit" -> STORAGE_LIMIT
+            "unsupported_media" -> UNSUPPORTED_MEDIA
+            "image_too_large" -> IMAGE_TOO_LARGE
             else -> UNKNOWN
         }
     }

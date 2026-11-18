@@ -64,7 +64,7 @@ Enums EXACTOS del Backend:
 3. **Estados reales:** el edificio tras `publish` queda `in_review` → se muestra «Tu publicación está en revisión.»; no se muestra «Publicado». No se inventan ratings, ocupación falsa, verificación ni dirección pública; se muestran únicamente los campos del contrato.
 4. **Errores:** 400 validación, 401 sesión, 403 `landlord_required` específico, 404 recurso inexistente, 409 `version_conflict` refresh, 429 rate limit, 503 temporal, Network/Timeout recuperables. Nunca se muestran status HTTP, `code` interno ni ProblemDetails crudo. Nunca crash.
 5. **Formularios:** campos agrupados, validación local básica, errores junto al campo, CTA deshabilitado si inválido, loading mientras envía, protección contra doble submit. El Backend es autoridad final; no se envían campos desconocidos.
-6. **Multimedia:** el contrato de NV-12 no incluye fotos → NO se implementa upload (D13/NV-13).
+6. **Multimedia:** integración real autorizada posteriormente (2026-11-17) contra contrato Backend desplegado: foto de edificio, fotos de cuarto y documentos INE/comprobante con endpoints/validaciones reales. `url/thumbUrl` se usan tal como llegan. **Moderación automática:** `AUTOMATIC-MODERATION-NOT-PLANNED` (validación técnica backend + revisión humana existente). No se inventan endpoints/DTOs/estados.
 7. **D9.1:** no se duplica la gestión de solicitudes; el dashboard enlaza a la pantalla D9.1 existente.
 
 ## 4. Arquitectura

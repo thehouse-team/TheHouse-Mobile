@@ -33,6 +33,26 @@
 - `adb` no disponible → validación runtime manual no ejecutada/no inventada. No hay flujo UI actual de cámara/Photo Picker/upload que ejercitar en app.
 
 ## Límites / bloqueos
-- **`MULTIMEDIA-MODERATION-BACKEND-BLOCKED`**: sin contrato backend ejecutable de moderación/upload; no se simula moderación ni upload.
-- Upload real, cámara UI y video quedan fuera hasta flujo/contrato autorizado y real.
+- **`AUTOMATIC-MODERATION-NOT-PLANNED`**: no existe moderación automática; no se inventa. Revisión humana Backend existente.
+- Video no soportado por contrato en este alcance.
 - Saneamiento EXIF/metadatos: best-effort por recompresión; no se afirma eliminación total en todos los contenedores/casos.
+
+---
+
+## Integración multimedia real (2026-11-17, `feature/real-multimedia`)
+- **Precheck:** `git status --short` vacío, rama `feature/permissions-multimedia` (commit `f5c2c20`), creada `feature/real-multimedia`. Sin cambios locales ajenos.
+- **Contrato integrado (Mobile):**
+  - `PUT/DELETE /api/v1/landlord/buildings/{id}/photo` (multipart `file`)
+  - `POST /api/v1/landlord/rooms/{id}/photos`, `DELETE /api/v1/landlord/rooms/{id}/photos/{photoId}`
+  - `PUT /api/v1/landlord/buildings/{id}/documents/ine`, `PUT .../documents/property_proof`, `GET .../documents`
+  - DTOs/dominio aditivos: `Building.photo`, `Room.photos`, `Property.thumbnailUrl`, `Property.photos`, `MediaItem(id,url,thumbUrl,width,height,bytes,createdAt)`, metadatos de documentos.
+  - `url`/`thumbUrl` preservados tal como llegan (sin construir URLs). Publicación incluye `building_photo` y `documents`.
+- **Errores manejados:** `409 photos_limit/storage_limit/building_in_review/publication_incomplete/building_state`, `413`, `415 unsupported_media`, `400 image_too_large` (mensajes UX seguros, sin raw body).
+- **Permisos/selección:** sin permisos nuevos en manifest; Photo Picker para imágenes y `OpenDocument` para documentos; sin CAMERA/ubicación/storage; cancelación/URI inválida/MIME/tamaño manejados localmente.
+- **Privacidad:** sin log de URIs/rutas/contenido/documentos personales; documentos no descargados ni expuestos (solo metadatos).
+- **Moderación:** `AUTOMATIC-MODERATION-NOT-PLANNED`; revisión humana Backend existente.
+- **Gates finales (reales, una vez):**
+  - `.\gradlew.bat testDebugUnitTest` → **BUILD SUCCESSFUL**
+  - `.\gradlew.bat lintDebug` → **BUILD SUCCESSFUL**
+  - `.\gradlew.bat assembleDebug` → **BUILD SUCCESSFUL**
+- **Runtime/ADB:** `adb` no disponible → validación en dispositivo/emulador **NO EJECUTADA** (no inventada). No se usaron documentos personales reales.

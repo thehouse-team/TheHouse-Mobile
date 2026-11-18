@@ -41,6 +41,7 @@ data class PropertyListItemDto(
     val bathrooms: Int,
     val areaM2: Double,
     val createdAt: String,
+    val thumbnailUrl: String? = null,
 )
 
 @Serializable
@@ -50,6 +51,17 @@ data class PropertyListResponseDto(
     val pageSize: Int = 20,
     val totalItems: Long = 0,
     val totalPages: Int = 0,
+)
+
+@Serializable
+data class MediaItemDto(
+    val id: String,
+    val url: String,
+    val thumbUrl: String,
+    val width: Int? = null,
+    val height: Int? = null,
+    val bytes: Long? = null,
+    val createdAt: String? = null,
 )
 
 @Serializable
@@ -66,4 +78,5 @@ data class PropertyDetailDto(
     val areaM2: Double,
     val amenities: List<String> = emptyList(),
     val createdAt: String,
+    val photos: List<MediaItemDto> = emptyList(),
 )
