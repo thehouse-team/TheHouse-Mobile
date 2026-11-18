@@ -137,6 +137,11 @@ class U2ViewModelFactory(
                 pauseRoom = container.pauseRoom,
                 resumeRoom = container.resumeRoom,
                 getVerification = container.getBuildingVerification,
+                uploadBuildingPhoto = container.uploadBuildingPhoto,
+                deleteBuildingPhoto = container.deleteBuildingPhoto,
+                uploadIneDocument = container.uploadIneDocument,
+                uploadPropertyProofDocument = container.uploadPropertyProofDocument,
+                getBuildingDocuments = container.getBuildingDocuments,
             )
         }
     }
@@ -150,6 +155,8 @@ class U2ViewModelFactory(
                 updateRoom = container.updateRoom,
                 deleteRoom = container.deleteRoom,
                 getRooms = container.getLandlordRooms,
+                uploadRoomPhoto = container.uploadRoomPhoto,
+                deleteRoomPhoto = container.deleteRoomPhoto,
             )
         }
     }
@@ -286,6 +293,7 @@ class U2ViewModelFactory(
             com.thehouse.app.presentation.landlord.LandlordDashboardViewModel(
                 getProfile = container.getLandlordProfile,
                 getBuildings = container.getLandlordBuildings,
+                getLandlordStatsRooms = container.getLandlordStatsRooms,
             ) as T
 
         modelClass.isAssignableFrom(com.thehouse.app.presentation.landlord.LandlordAgreementsViewModel::class.java) ->

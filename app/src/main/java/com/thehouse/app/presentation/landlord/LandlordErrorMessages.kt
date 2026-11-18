@@ -27,13 +27,25 @@ object LandlordErrorMessages {
             exception.code == LandlordErrorCode.ROOM_NUMBER_TAKEN ->
                 "Ya existe un cuarto con ese número en el edificio."
             exception.code == LandlordErrorCode.BUILDING_IN_REVIEW ->
-                "El edificio está en revisión y no admite cambios de cuartos ahora."
+                "El edificio está en revisión y no admite cambios ahora."
+            exception.code == LandlordErrorCode.BUILDING_STATE ->
+                "El edificio no está en un estado que permita esta acción."
             exception.code == LandlordErrorCode.ROOM_STATE ->
                 "El cuarto no está en un estado que permita esta acción."
             exception.code == LandlordErrorCode.ROOM_RENTED ->
                 "No se puede modificar un cuarto rentado."
             exception.code == LandlordErrorCode.BUILDING_HAS_RENTED_ROOMS ->
                 "El edificio tiene cuartos rentados y no puede eliminarse."
+            exception.code == LandlordErrorCode.PHOTOS_LIMIT ->
+                "Alcanzaste el límite de fotos para este cuarto."
+            exception.code == LandlordErrorCode.STORAGE_LIMIT ->
+                "No hay espacio disponible para subir este archivo."
+            exception.code == LandlordErrorCode.UNSUPPORTED_MEDIA ->
+                "El tipo de archivo no es compatible."
+            exception.code == LandlordErrorCode.IMAGE_TOO_LARGE ->
+                "La imagen supera el tamaño permitido."
+            exception.code == LandlordErrorCode.PAYLOAD_TOO_LARGE ->
+                "El archivo es demasiado grande para subirlo."
             exception.code == LandlordErrorCode.VALIDATION ->
                 "Revisa los datos: hay campos inválidos o incompletos."
             exception.code == LandlordErrorCode.LANDLORD_EXISTS ->

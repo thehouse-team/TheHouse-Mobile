@@ -1,6 +1,7 @@
 package com.thehouse.app.domain.repository
 
 import com.thehouse.app.domain.model.Building
+import com.thehouse.app.domain.model.BuildingDocuments
 import com.thehouse.app.domain.model.BuildingPatch
 import com.thehouse.app.domain.model.AllowedTenants
 import com.thehouse.app.domain.model.BuildingAddress
@@ -9,12 +10,14 @@ import com.thehouse.app.domain.model.BuildingType
 import com.thehouse.app.domain.model.Service
 import com.thehouse.app.domain.model.LandlordProfile
 import com.thehouse.app.domain.model.PagedBuildings
+import com.thehouse.app.domain.model.PagedLandlordRoomStats
 import com.thehouse.app.domain.model.PagedRooms
 import com.thehouse.app.domain.model.PublicationStatus
 import com.thehouse.app.domain.model.RentalMode
 import com.thehouse.app.domain.model.Room
 import com.thehouse.app.domain.model.RoomBase
 import com.thehouse.app.domain.model.RoomPatch
+import java.io.File
 
 /** Contrato de dominio del arrendador (D12). La Data lo implementa. */
 interface LandlordRepository {
@@ -74,4 +77,21 @@ interface LandlordRepository {
 
     /** 202 = enviado a revisión; el Backend indica el estado real. */
     suspend fun publishBuilding(id: String): Result<Building>
+
+    suspend fun uploadBuildingPhoto(buildingId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun deleteBuildingPhoto(buildingId: String): Result<Unit>
+    suspend fun uploadRoomPhoto(roomId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun deleteRoomPhoto(roomId: String, photoId: String): Result<Unit>
+    suspend fun uploadIneDocument(buildingId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun uploadPropertyProofDocument(buildingId: String, file: File, mimeType: String): Result<Unit>
+    suspend fun getBuildingDocuments(buildingId: String): Result<BuildingDocuments>
+
+    /** Estadísticas de cuartos del arrendador (GET /api/v1/landlord/stats/rooms). */
+    suspend fun getLandlordStatsRooms(
+        from: String,
+        to: String,
+        buildingId: String? = null,
+        page: Int = 1,
+        pageSize: Int = 50,
+    ): Result<PagedLandlordRoomStats>
 }

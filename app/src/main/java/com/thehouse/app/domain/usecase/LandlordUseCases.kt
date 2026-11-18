@@ -120,3 +120,49 @@ class GetPublicationStatusUseCase(private val repository: LandlordRepository) {
 class PublishBuildingUseCase(private val repository: LandlordRepository) {
     suspend operator fun invoke(id: String): Result<Building> = repository.publishBuilding(id)
 }
+
+class UploadBuildingPhotoUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(buildingId: String, file: java.io.File, mimeType: String): Result<Unit> =
+        repository.uploadBuildingPhoto(buildingId, file, mimeType)
+}
+
+class DeleteBuildingPhotoUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(buildingId: String): Result<Unit> =
+        repository.deleteBuildingPhoto(buildingId)
+}
+
+class UploadRoomPhotoUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(roomId: String, file: java.io.File, mimeType: String): Result<Unit> =
+        repository.uploadRoomPhoto(roomId, file, mimeType)
+}
+
+class DeleteRoomPhotoUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(roomId: String, photoId: String): Result<Unit> =
+        repository.deleteRoomPhoto(roomId, photoId)
+}
+
+class UploadIneDocumentUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(buildingId: String, file: java.io.File, mimeType: String): Result<Unit> =
+        repository.uploadIneDocument(buildingId, file, mimeType)
+}
+
+class UploadPropertyProofDocumentUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(buildingId: String, file: java.io.File, mimeType: String): Result<Unit> =
+        repository.uploadPropertyProofDocument(buildingId, file, mimeType)
+}
+
+class GetBuildingDocumentsUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(buildingId: String): Result<com.thehouse.app.domain.model.BuildingDocuments> =
+        repository.getBuildingDocuments(buildingId)
+}
+
+class GetLandlordStatsRoomsUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(
+        from: String,
+        to: String,
+        buildingId: String? = null,
+        page: Int = 1,
+        pageSize: Int = 50,
+    ): Result<com.thehouse.app.domain.model.PagedLandlordRoomStats> =
+        repository.getLandlordStatsRooms(from, to, buildingId, page, pageSize)
+}

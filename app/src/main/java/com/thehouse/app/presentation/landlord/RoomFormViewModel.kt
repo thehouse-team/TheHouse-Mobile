@@ -4,17 +4,21 @@ import com.thehouse.app.domain.error.LandlordErrorCode
 import com.thehouse.app.domain.error.LandlordException
 import com.thehouse.app.domain.model.BathroomType
 import com.thehouse.app.domain.model.Furniture
+import com.thehouse.app.domain.model.MediaItem
 import com.thehouse.app.domain.model.MinContract
 import com.thehouse.app.domain.model.Room
 import com.thehouse.app.domain.model.RoomBase
 import com.thehouse.app.domain.model.RoomPatch
 import com.thehouse.app.domain.model.RoomType
+import com.thehouse.app.domain.usecase.DeleteRoomPhotoUseCase
 import com.thehouse.app.domain.usecase.DeleteRoomUseCase
 import com.thehouse.app.domain.usecase.GenerateRoomsUseCase
 import com.thehouse.app.domain.usecase.GetLandlordRoomsUseCase
 import com.thehouse.app.domain.usecase.UpdateRoomUseCase
+import com.thehouse.app.domain.usecase.UploadRoomPhotoUseCase
 import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEvent
+import java.io.File
 
 /**
  * Formulario de cuartos:
@@ -25,6 +29,7 @@ data class RoomFormUiState(
     val isEdit: Boolean = false,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val isUploadingPhoto: Boolean = false,
     val floors: String = "1",
     val roomsPerFloor: String = "1",
     val price: String = "",
@@ -38,6 +43,8 @@ data class RoomFormUiState(
     val floor: String = "",
     val version: Int = 0,
     val status: com.thehouse.app.domain.model.RoomStatus? = null,
+    val photos: List<MediaItem> = emptyList(),
+    val infoMessage: String? = null,
     val versionConflict: Boolean = false,
     val errorCode: LandlordErrorCode? = null,
     val errorMessage: String? = null,
@@ -77,6 +84,8 @@ sealed interface RoomFormEvent : UiEvent {
     data class FloorChanged(val value: String) : RoomFormEvent
     data object Submit : RoomFormEvent
     data object Delete : RoomFormEvent
+    data class UploadPhoto(val file: File, val mimeType: String) : RoomFormEvent
+    data class DeletePhoto(val photoId: String) : RoomFormEvent
 }
 
 sealed interface RoomFormEffect : com.thehouse.app.presentation.common.UiEffect {
@@ -91,6 +100,8 @@ class RoomFormViewModel(
     private val updateRoom: UpdateRoomUseCase,
     private val deleteRoom: DeleteRoomUseCase,
     private val getRooms: GetLandlordRoomsUseCase,
+    private val uploadRoomPhoto: UploadRoomPhotoUseCase,
+    private val deleteRoomPhoto: DeleteRoomPhotoUseCase,
 ) : BaseViewModel<RoomFormUiState, RoomFormEvent, RoomFormEffect>(RoomFormUiState()) {
 
     init {
@@ -121,6 +132,8 @@ class RoomFormViewModel(
             is RoomFormEvent.FloorChanged -> updateState { it.copy(floor = event.value) }
             RoomFormEvent.Submit -> submit()
             RoomFormEvent.Delete -> delete()
+            is RoomFormEvent.UploadPhoto -> uploadPhoto(event.file, event.mimeType)
+            is RoomFormEvent.DeletePhoto -> removePhoto(event.photoId)
         }
     }
 
@@ -176,6 +189,67 @@ class RoomFormViewModel(
                 furniture = room.furniture.toSet(),
                 availableFrom = room.availableFrom,
                 minContract = room.minContract,
+                photos = room.photos,
+            )
+        }
+    }
+
+    private fun uploadPhoto(file: File, mimeType: String) {
+        val currentRoomId = roomId ?: return
+        if (uiState.value.isUploadingPhoto || uiState.value.photos.size >= 4) {
+            file.delete()
+            if (uiState.value.photos.size >= 4) {
+                updateState { it.copy(errorCode = LandlordErrorCode.PHOTOS_LIMIT, errorMessage = LandlordErrorMessages.map(LandlordException(com.thehouse.app.domain.error.DomainError.Conflict, LandlordErrorCode.PHOTOS_LIMIT))) }
+            }
+            return
+        }
+        updateState { it.copy(isUploadingPhoto = true, errorCode = null, errorMessage = null, infoMessage = null) }
+        launch {
+            val result = uploadRoomPhoto(currentRoomId, file, mimeType)
+            file.delete()
+            result.fold(
+                onSuccess = {
+                    refreshRoom("Foto del cuarto actualizada.")
+                    updateState { it.copy(isUploadingPhoto = false) }
+                },
+                onFailure = { throwable ->
+                    updateState { it.copy(isUploadingPhoto = false) }
+                    handleFailure(throwable)
+                },
+            )
+        }
+    }
+
+    private fun removePhoto(photoId: String) {
+        val currentRoomId = roomId ?: return
+        if (uiState.value.isUploadingPhoto) return
+        updateState { it.copy(isUploadingPhoto = true, errorCode = null, errorMessage = null, infoMessage = null) }
+        launch {
+            deleteRoomPhoto(currentRoomId, photoId).fold(
+                onSuccess = {
+                    refreshRoom("Foto eliminada.")
+                    updateState { it.copy(isUploadingPhoto = false) }
+                },
+                onFailure = { throwable ->
+                    updateState { it.copy(isUploadingPhoto = false) }
+                    handleFailure(throwable)
+                },
+            )
+        }
+    }
+
+    private fun refreshRoom(info: String) {
+        val currentRoomId = roomId ?: return
+        launch {
+            getRooms(buildingId).fold(
+                onSuccess = { page ->
+                    val room = page.items.firstOrNull { it.id == currentRoomId }
+                    if (room != null) {
+                        applyRoom(room)
+                        updateState { it.copy(infoMessage = info) }
+                    }
+                },
+                onFailure = { throwable -> handleFailure(throwable) },
             )
         }
     }

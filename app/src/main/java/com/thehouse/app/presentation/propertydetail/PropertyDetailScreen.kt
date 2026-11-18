@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -38,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import com.thehouse.app.domain.auth.ProtectedAction
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.presentation.common.UiError
@@ -176,7 +181,7 @@ fun PropertyDetailScreen(
                     )
                 }
                 is PropertyDetailUiState.Content -> {
-                    item { PropertyImagePlaceholder() }
+                    item { PropertyPhotos(state.property) }
                     item { PropertyInformation(state.property) }
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -220,20 +225,40 @@ private fun DetailFailure(message: String, onRetry: () -> Unit, tag: String) {
 }
 
 @Composable
-private fun PropertyImagePlaceholder() {
-    // PropertyDetailResponse NO tiene URLs de imágenes. No hay requests a un CDN
-    // ni imágenes demo: placeholder local hasta que exista un contrato autorizado.
-    Box(
-        modifier = Modifier.fillMaxWidth().height(180.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
-            .testTag("property_image_placeholder"),
-        contentAlignment = Alignment.Center,
+private fun PropertyPhotos(property: Property) {
+    val photos = property.photos
+    if (photos.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
+                .testTag("property_image_placeholder"),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "Sin imágenes disponibles",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        return
+    }
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(
-            "Sin imágenes disponibles",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        items(photos, key = { it.id }) { photo ->
+            AsyncImage(
+                model = photo.url.ifBlank { photo.thumbUrl },
+                contentDescription = "Foto de ${property.title}",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .height(180.dp)
+                    .fillMaxWidth(0.85f)
+                    .clip(RoundedCornerShape(16.dp)),
+            )
+        }
     }
 }
 

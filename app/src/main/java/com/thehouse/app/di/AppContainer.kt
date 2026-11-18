@@ -417,6 +417,38 @@ class AppContainer(context: Context) {
         com.thehouse.app.domain.usecase.PublishBuildingUseCase(landlordRepository)
     }
 
+    val uploadBuildingPhoto: com.thehouse.app.domain.usecase.UploadBuildingPhotoUseCase by lazy {
+        com.thehouse.app.domain.usecase.UploadBuildingPhotoUseCase(landlordRepository)
+    }
+
+    val deleteBuildingPhoto: com.thehouse.app.domain.usecase.DeleteBuildingPhotoUseCase by lazy {
+        com.thehouse.app.domain.usecase.DeleteBuildingPhotoUseCase(landlordRepository)
+    }
+
+    val uploadRoomPhoto: com.thehouse.app.domain.usecase.UploadRoomPhotoUseCase by lazy {
+        com.thehouse.app.domain.usecase.UploadRoomPhotoUseCase(landlordRepository)
+    }
+
+    val deleteRoomPhoto: com.thehouse.app.domain.usecase.DeleteRoomPhotoUseCase by lazy {
+        com.thehouse.app.domain.usecase.DeleteRoomPhotoUseCase(landlordRepository)
+    }
+
+    val uploadIneDocument: com.thehouse.app.domain.usecase.UploadIneDocumentUseCase by lazy {
+        com.thehouse.app.domain.usecase.UploadIneDocumentUseCase(landlordRepository)
+    }
+
+    val uploadPropertyProofDocument: com.thehouse.app.domain.usecase.UploadPropertyProofDocumentUseCase by lazy {
+        com.thehouse.app.domain.usecase.UploadPropertyProofDocumentUseCase(landlordRepository)
+    }
+
+    val getBuildingDocuments: com.thehouse.app.domain.usecase.GetBuildingDocumentsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetBuildingDocumentsUseCase(landlordRepository)
+    }
+
+    val getLandlordStatsRooms: com.thehouse.app.domain.usecase.GetLandlordStatsRoomsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordStatsRoomsUseCase(landlordRepository)
+    }
+
     // ===== D13 Reportes / verificación (NV-21, reutiliza Retrofit/HttpClient D3) =====
 
     val reportsApi: com.thehouse.app.data.remote.api.ReportsApi by lazy {

@@ -19,6 +19,7 @@ import com.thehouse.app.domain.model.RoomPatch
 import com.thehouse.app.domain.model.RoomStatus
 import com.thehouse.app.domain.model.RoomType
 import com.thehouse.app.domain.model.Service
+import java.io.File
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
@@ -29,10 +30,13 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -41,6 +45,9 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
  * MockWebServer; sin endpoints inventados.
  */
 class LandlordRepositoryIntegrationTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     private lateinit var server: MockWebServer
     private lateinit var repository: LandlordRepositoryImpl
@@ -418,5 +425,177 @@ class LandlordRepositoryIntegrationTest {
         server.enqueue(jsonResponse(503, problem("service_unavailable", 503)))
         val failure = repository.getBuildings().exceptionOrNull() as LandlordException
         assertEquals(DomainError.Server, failure.domainError)
+    }
+
+    // ===== MULTIMEDIA REAL =====
+
+    private fun tempFile(name: String, bytes: ByteArray = byteArrayOf(1, 2, 3, 4)): File =
+        tempFolder.newFile(name).apply { writeBytes(bytes) }
+
+    @Test
+    fun `building with photo maps url and thumbUrl as-is`() = runTest {
+        val body = buildingJson.trimEnd('}') + """,
+          "photo":{"id":"m1","url":"https://cdn.example/building.jpg","thumbUrl":"/api/v1/media/m1/private?size=thumb","width":800,"height":600,"bytes":1234,"createdAt":"2026-11-17T10:00:00Z"}
+        }"""
+        server.enqueue(jsonResponse(200, body))
+        val building = repository.getBuilding("b1").getOrThrow()
+        assertNotNull(building.photo)
+        assertEquals("https://cdn.example/building.jpg", building.photo?.url)
+        assertEquals("/api/v1/media/m1/private?size=thumb", building.photo?.thumbUrl)
+    }
+
+    @Test
+    fun `room with photos maps and preserves backend order`() = runTest {
+        val body = """{"items":[${roomJson.trimEnd('}')},"photos":[
+          {"id":"p1","url":"https://cdn.example/1.jpg","thumbUrl":"https://cdn.example/1t.jpg","width":100,"height":100,"bytes":10,"createdAt":"2026-01-01T00:00:00Z"},
+          {"id":"p2","url":"/api/v1/media/p2/private","thumbUrl":"/api/v1/media/p2/private?size=thumb","width":100,"height":100,"bytes":10,"createdAt":"2026-01-02T00:00:00Z"}
+        ]}],"page":1,"pageSize":50,"totalItems":1,"totalPages":1}"""
+        server.enqueue(jsonResponse(200, body))
+        val page = repository.getRooms("b1").getOrThrow()
+        val photos = page.items.first().photos
+        assertEquals(2, photos.size)
+        assertEquals("p1", photos[0].id)
+        assertEquals("https://cdn.example/1t.jpg", photos[0].thumbUrl)
+        assertEquals("/api/v1/media/p2/private?size=thumb", photos[1].thumbUrl)
+    }
+
+    @Test
+    fun `upload building photo sends PUT multipart with file field`() = runTest {
+        server.enqueue(jsonResponse(200, buildingJson))
+        val file = tempFile("building.jpg")
+        val result = repository.uploadBuildingPhoto("b1", file, "image/jpeg")
+        assertTrue(result.isSuccess)
+        val recorded = server.takeRequest()
+        assertEquals("PUT", recorded.method)
+        assertEquals("/api/v1/landlord/buildings/b1/photo", recorded.url.encodedPath)
+        val body = recorded.body?.utf8().orEmpty()
+        assertTrue(body.contains("name=\"file\""))
+    }
+
+    @Test
+    fun `delete building photo calls endpoint`() = runTest {
+        server.enqueue(MockResponse.Builder().code(204).build())
+        val result = repository.deleteBuildingPhoto("b1")
+        assertTrue(result.isSuccess)
+        val recorded = server.takeRequest()
+        assertEquals("DELETE", recorded.method)
+        assertEquals("/api/v1/landlord/buildings/b1/photo", recorded.url.encodedPath)
+    }
+
+    @Test
+    fun `upload room photo sends POST multipart`() = runTest {
+        server.enqueue(jsonResponse(200, roomJson))
+        val file = tempFile("room.png")
+        val result = repository.uploadRoomPhoto("r1", file, "image/png")
+        assertTrue(result.isSuccess)
+        val recorded = server.takeRequest()
+        assertEquals("POST", recorded.method)
+        assertEquals("/api/v1/landlord/rooms/r1/photos", recorded.url.encodedPath)
+        assertTrue(recorded.body?.utf8().orEmpty().contains("name=\"file\""))
+    }
+
+    @Test
+    fun `delete room photo calls endpoint with photoId`() = runTest {
+        server.enqueue(MockResponse.Builder().code(204).build())
+        val result = repository.deleteRoomPhoto("r1", "p9")
+        assertTrue(result.isSuccess)
+        val recorded = server.takeRequest()
+        assertEquals("DELETE", recorded.method)
+        assertEquals("/api/v1/landlord/rooms/r1/photos/p9", recorded.url.encodedPath)
+    }
+
+    @Test
+    fun `upload ine and property proof send PUT multipart and get documents maps metadata`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).build())
+        assertTrue(repository.uploadIneDocument("b1", tempFile("ine.pdf"), "application/pdf").isSuccess)
+        val ineReq = server.takeRequest()
+        assertEquals("PUT", ineReq.method)
+        assertEquals("/api/v1/landlord/buildings/b1/documents/ine", ineReq.url.encodedPath)
+        assertTrue(ineReq.body?.utf8().orEmpty().contains("name=\"file\""))
+
+        server.enqueue(MockResponse.Builder().code(200).build())
+        assertTrue(repository.uploadPropertyProofDocument("b1", tempFile("proof.jpg"), "image/jpeg").isSuccess)
+        val proofReq = server.takeRequest()
+        assertEquals("PUT", proofReq.method)
+        assertEquals("/api/v1/landlord/buildings/b1/documents/property_proof", proofReq.url.encodedPath)
+
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"items":[{"type":"ine","id":"d1","fileName":"ine.pdf"},{"type":"property_proof","id":"d2","fileName":"proof.jpg"}]}""",
+            ),
+        )
+        val docs = repository.getBuildingDocuments("b1").getOrThrow()
+        assertEquals("ine", docs.ine?.type)
+        assertEquals("property_proof", docs.propertyProof?.type)
+    }
+
+    @Test
+    fun `multimedia conflict and limit errors map correctly`() = runTest {
+        server.enqueue(jsonResponse(409, problem("photos_limit", 409)))
+        assertEquals(
+            LandlordErrorCode.PHOTOS_LIMIT,
+            (repository.uploadRoomPhoto("r1", tempFile("r.jpg"), "image/jpeg").exceptionOrNull() as LandlordException).code,
+        )
+
+        server.enqueue(jsonResponse(409, problem("storage_limit", 409)))
+        assertEquals(
+            LandlordErrorCode.STORAGE_LIMIT,
+            (repository.uploadBuildingPhoto("b1", tempFile("b.jpg"), "image/jpeg").exceptionOrNull() as LandlordException).code,
+        )
+
+        server.enqueue(jsonResponse(409, problem("building_in_review", 409)))
+        assertEquals(
+            LandlordErrorCode.BUILDING_IN_REVIEW,
+            (repository.deleteBuildingPhoto("b1").exceptionOrNull() as LandlordException).code,
+        )
+
+        server.enqueue(jsonResponse(409, problem("building_state", 409)))
+        assertEquals(
+            LandlordErrorCode.BUILDING_STATE,
+            (repository.uploadIneDocument("b1", tempFile("ine.pdf"), "application/pdf").exceptionOrNull() as LandlordException).code,
+        )
+    }
+
+    @Test
+    fun `413 415 and 400 image_too_large map correctly`() = runTest {
+        server.enqueue(MockResponse.Builder().code(413).body(problem("payload_too_large", 413)).addHeader("Content-Type", "application/json").build())
+        assertEquals(
+            LandlordErrorCode.PAYLOAD_TOO_LARGE,
+            (repository.uploadBuildingPhoto("b1", tempFile("b.jpg"), "image/jpeg").exceptionOrNull() as LandlordException).code,
+        )
+
+        server.enqueue(jsonResponse(415, problem("unsupported_media", 415)))
+        assertEquals(
+            LandlordErrorCode.UNSUPPORTED_MEDIA,
+            (repository.uploadPropertyProofDocument("b1", tempFile("x.bin"), "application/octet-stream").exceptionOrNull() as LandlordException).code,
+        )
+
+        server.enqueue(jsonResponse(400, problem("image_too_large", 400)))
+        assertEquals(
+            LandlordErrorCode.IMAGE_TOO_LARGE,
+            (repository.uploadRoomPhoto("r1", tempFile("r.jpg"), "image/jpeg").exceptionOrNull() as LandlordException).code,
+        )
+    }
+
+    @Test
+    fun `publication steps include building_photo and documents`() = runTest {
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"canPublish":false,"steps":[
+                  {"id":"building_data","done":true},
+                  {"id":"location","done":true},
+                  {"id":"services","done":true},
+                  {"id":"room_ready","done":true},
+                  {"id":"building_photo","done":false},
+                  {"id":"documents","done":false}
+                ]}""",
+            ),
+        )
+        val publication = repository.getPublication("b1").getOrThrow()
+        assertEquals(6, publication.steps.size)
+        assertEquals("building_photo", publication.steps[4].id)
+        assertEquals("documents", publication.steps[5].id)
     }
 }

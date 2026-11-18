@@ -108,6 +108,7 @@ data class Building(
     val version: Int,
     val createdAt: String?,
     val updatedAt: String?,
+    val photo: MediaItem? = null,
 )
 
 /** Tablero RF-22: únicamente datos reales del Backend. */
@@ -206,6 +207,7 @@ data class Room(
     val version: Int,
     val createdAt: String?,
     val updatedAt: String?,
+    val photos: List<MediaItem> = emptyList(),
 )
 
 data class PagedRooms(
@@ -235,6 +237,7 @@ data class PublicationStep(
         const val STEP_LOCATION = "location"
         const val STEP_SERVICES = "services"
         const val STEP_ROOM_READY = "room_ready"
+        const val STEP_BUILDING_PHOTO = "building_photo"
         const val STEP_DOCUMENTS = "documents"
     }
 }
@@ -267,4 +270,30 @@ data class RoomPatch(
     val furniture: List<Furniture>? = null,
     val availableFrom: String? = null,
     val minContract: MinContract? = null,
+)
+
+/** Media real devuelta por Backend (fotos edificio/cuarto). */
+data class MediaItem(
+    val id: String,
+    val url: String,
+    val thumbUrl: String,
+    val width: Int? = null,
+    val height: Int? = null,
+    val bytes: Long? = null,
+    val createdAt: String? = null,
+)
+
+/** Metadatos de documento de edificio (INE/comprobante). Solo metadatos, sin contenido descargable. */
+data class BuildingDocument(
+    val type: String,
+    val id: String? = null,
+    val fileName: String? = null,
+    val status: String? = null,
+    val createdAt: String? = null,
+)
+
+data class BuildingDocuments(
+    val ine: BuildingDocument? = null,
+    val propertyProof: BuildingDocument? = null,
+    val raw: List<BuildingDocument> = emptyList(),
 )

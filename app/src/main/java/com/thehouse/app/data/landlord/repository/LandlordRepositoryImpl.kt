@@ -15,12 +15,14 @@ import com.thehouse.app.domain.error.LandlordException
 import com.thehouse.app.domain.model.AllowedTenants
 import com.thehouse.app.domain.model.Building
 import com.thehouse.app.domain.model.BuildingAddress
+import com.thehouse.app.domain.model.BuildingDocuments
 import com.thehouse.app.domain.model.BuildingLocation
 import com.thehouse.app.domain.model.BuildingPatch
 import com.thehouse.app.domain.model.BuildingType
 import com.thehouse.app.domain.model.Furniture
 import com.thehouse.app.domain.model.LandlordProfile
 import com.thehouse.app.domain.model.PagedBuildings
+import com.thehouse.app.domain.model.PagedLandlordRoomStats
 import com.thehouse.app.domain.model.PagedRooms
 import com.thehouse.app.domain.model.PublicationStatus
 import com.thehouse.app.domain.model.RentalMode
@@ -28,6 +30,7 @@ import com.thehouse.app.domain.model.Room
 import com.thehouse.app.domain.model.RoomBase
 import com.thehouse.app.domain.model.RoomPatch
 import com.thehouse.app.domain.repository.LandlordRepository
+import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.CancellationException
@@ -37,6 +40,9 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.Response
 
 class LandlordRepositoryImpl(
@@ -279,6 +285,98 @@ class LandlordRepositoryImpl(
         finish(api.publishBuilding(id)) { it.toDomain() }
     }
 
+    override suspend fun uploadBuildingPhoto(
+        buildingId: String,
+        file: File,
+        mimeType: String,
+    ): Result<Unit> = safeCall {
+        val response = api.uploadBuildingPhoto(buildingId, file.toMultipart(mimeType))
+        if (response.isSuccessful) Result.success(Unit) else Result.failure(errorFor(response))
+    }
+
+    override suspend fun deleteBuildingPhoto(buildingId: String): Result<Unit> = safeCall {
+        val response = api.deleteBuildingPhoto(buildingId)
+        if (response.isSuccessful) Result.success(Unit) else Result.failure(errorFor(response))
+    }
+
+    override suspend fun uploadRoomPhoto(
+        roomId: String,
+        file: File,
+        mimeType: String,
+    ): Result<Unit> = safeCall {
+        val response = api.uploadRoomPhoto(roomId, file.toMultipart(mimeType))
+        if (response.isSuccessful) Result.success(Unit) else Result.failure(errorFor(response))
+    }
+
+    override suspend fun deleteRoomPhoto(roomId: String, photoId: String): Result<Unit> = safeCall {
+        val response = api.deleteRoomPhoto(roomId, photoId)
+        if (response.isSuccessful) Result.success(Unit) else Result.failure(errorFor(response))
+    }
+
+    override suspend fun uploadIneDocument(
+        buildingId: String,
+        file: File,
+        mimeType: String,
+    ): Result<Unit> = safeCall {
+        val response = api.uploadIneDocument(buildingId, file.toMultipart(mimeType))
+        if (response.isSuccessful) Result.success(Unit) else Result.failure(errorFor(response))
+    }
+
+    override suspend fun uploadPropertyProofDocument(
+        buildingId: String,
+        file: File,
+        mimeType: String,
+    ): Result<Unit> = safeCall {
+        val response = api.uploadPropertyProofDocument(buildingId, file.toMultipart(mimeType))
+        if (response.isSuccessful) Result.success(Unit) else Result.failure(errorFor(response))
+    }
+
+    override suspend fun getBuildingDocuments(buildingId: String): Result<BuildingDocuments> = safeCall {
+        val response = api.getBuildingDocuments(buildingId)
+        val body = response.body()
+        if (response.isSuccessful && body != null) {
+            Result.success(body.toDomain())
+        } else {
+            Result.failure(errorFor(response))
+        }
+    }
+
+    override suspend fun getLandlordStatsRooms(
+        from: String,
+        to: String,
+        buildingId: String?,
+        page: Int,
+        pageSize: Int,
+    ): Result<PagedLandlordRoomStats> = safeCall {
+        val response = api.getLandlordStatsRooms(
+            from = from,
+            to = to,
+            buildingId = buildingId,
+            page = page,
+            pageSize = pageSize,
+        )
+        val body = response.body()
+        if (response.isSuccessful && body != null) {
+            Result.success(
+                PagedLandlordRoomStats(
+                    items = body.items.map { it.toDomain() },
+                    page = body.page,
+                    pageSize = body.pageSize,
+                    totalItems = body.totalItems,
+                    totalPages = body.totalPages,
+                ),
+            )
+        } else {
+            Result.failure(errorFor(response))
+        }
+    }
+
+    private fun File.toMultipart(mimeType: String): MultipartBody.Part {
+        val body = asRequestBody(mimeType.toMediaTypeOrNull())
+        val safeName = name.ifBlank { "upload" }
+        return MultipartBody.Part.createFormData("file", safeName, body)
+    }
+
     private fun RoomBase.toDto(): RoomBaseDto = RoomBaseDto(
         price = price,
         sizeM2 = sizeM2,
@@ -300,7 +398,7 @@ class LandlordRepositoryImpl(
 
     private fun errorFor(response: Response<*>): LandlordException {
         val rawCode = response.readProblemCode(json)
-        val code = LandlordErrorCode.fromApi(rawCode)
+        val mappedCode = LandlordErrorCode.fromApi(rawCode)
         val domainError = when {
             // Contrato NV-21: cuenta suspendida → 403 account_suspended.
             response.code() == 403 && rawCode == "account_suspended" ->
@@ -310,13 +408,18 @@ class LandlordRepositoryImpl(
             response.code() == 404 -> DomainError.NotFound
             response.code() == 409 -> DomainError.Conflict
             response.code() == 408 -> DomainError.Timeout
+            response.code() == 413 -> DomainError.Unknown
+            response.code() == 415 -> DomainError.Unknown
             response.code() == 429 -> DomainError.RateLimited
             response.code() in 500..599 -> DomainError.Server
             else -> DomainError.Unknown
         }
-        val businessCode = when (response.code()) {
-            400 -> LandlordErrorCode.VALIDATION
-            else -> code
+        val businessCode = when {
+            response.code() == 413 -> LandlordErrorCode.PAYLOAD_TOO_LARGE
+            response.code() == 415 -> LandlordErrorCode.UNSUPPORTED_MEDIA
+            response.code() == 400 && mappedCode != LandlordErrorCode.UNKNOWN -> mappedCode
+            response.code() == 400 -> LandlordErrorCode.VALIDATION
+            else -> mappedCode
         }
         val retryAfter = response.headers()["Retry-After"]?.toLongOrNull()
         return LandlordException(domainError, businessCode, retryAfter)
