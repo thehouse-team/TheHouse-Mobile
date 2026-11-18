@@ -445,6 +445,10 @@ class AppContainer(context: Context) {
         com.thehouse.app.domain.usecase.GetBuildingDocumentsUseCase(landlordRepository)
     }
 
+    val getLandlordStatsRooms: com.thehouse.app.domain.usecase.GetLandlordStatsRoomsUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetLandlordStatsRoomsUseCase(landlordRepository)
+    }
+
     // ===== D13 Reportes / verificación (NV-21, reutiliza Retrofit/HttpClient D3) =====
 
     val reportsApi: com.thehouse.app.data.remote.api.ReportsApi by lazy {

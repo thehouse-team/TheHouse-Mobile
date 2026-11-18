@@ -8,6 +8,7 @@ import com.thehouse.app.data.remote.dto.landlord.CreateBuildingDto
 import com.thehouse.app.data.remote.dto.landlord.CreateLandlordProfileDto
 import com.thehouse.app.data.remote.dto.landlord.GenerateRoomsDto
 import com.thehouse.app.data.remote.dto.landlord.LandlordProfileDto
+import com.thehouse.app.data.remote.dto.landlord.LandlordStatsRoomsResponseDto
 import com.thehouse.app.data.remote.dto.landlord.PublicationStatusDto
 import com.thehouse.app.data.remote.dto.landlord.RoomDto
 import com.thehouse.app.data.remote.dto.landlord.RoomsListResponseDto
@@ -126,4 +127,13 @@ interface LandlordApi {
 
     @GET("api/v1/landlord/buildings/{id}/documents")
     suspend fun getBuildingDocuments(@Path("id") id: String): Response<BuildingDocumentsResponseDto>
+
+    @GET("api/v1/landlord/stats/rooms")
+    suspend fun getLandlordStatsRooms(
+        @Query("from") from: String,
+        @Query("to") to: String,
+        @Query("buildingId") buildingId: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 50,
+    ): Response<LandlordStatsRoomsResponseDto>
 }

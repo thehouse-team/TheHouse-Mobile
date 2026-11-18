@@ -195,6 +195,38 @@ data class PublicationStatusDto(
 )
 
 @Serializable
+data class LandlordRoomStatsDto(
+    val roomId: String,
+    val buildingId: String,
+    val buildingName: String,
+    val number: String,
+    val status: String,
+    val price: Int,
+    val views: Int,
+    val favorites: Int,
+    val requests: Int,
+    val visits: Int,
+    val agreements: Int,
+    val conversion: Double,
+    val rating: LandlordRatingDto? = null,
+)
+
+@Serializable
+data class LandlordRatingDto(
+    val average: Double,
+    val count: Int,
+)
+
+@Serializable
+data class LandlordStatsRoomsResponseDto(
+    val items: List<LandlordRoomStatsDto> = emptyList(),
+    val page: Int = 1,
+    val pageSize: Int = 50,
+    val totalItems: Long = 0,
+    val totalPages: Int = 0,
+)
+
+@Serializable
 data class ProblemDetailsDto(
     val type: String? = null,
     val title: String? = null,

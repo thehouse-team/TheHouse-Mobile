@@ -8,6 +8,8 @@ import com.thehouse.app.data.remote.dto.landlord.BuildingLocationDto
 import com.thehouse.app.data.remote.dto.landlord.DashboardSummaryDto
 import com.thehouse.app.data.remote.dto.landlord.LandlordProfileDto
 import com.thehouse.app.data.remote.dto.landlord.MediaItemDto
+import com.thehouse.app.data.remote.dto.landlord.LandlordRatingDto
+import com.thehouse.app.data.remote.dto.landlord.LandlordRoomStatsDto
 import com.thehouse.app.data.remote.dto.landlord.PublicationStatusDto
 import com.thehouse.app.data.remote.dto.landlord.RoomDto
 import com.thehouse.app.domain.model.AllowedTenants
@@ -30,6 +32,8 @@ import com.thehouse.app.domain.model.RentalMode
 import com.thehouse.app.domain.model.Room
 import com.thehouse.app.domain.model.RoomStatus
 import com.thehouse.app.domain.model.RoomType
+import com.thehouse.app.domain.model.LandlordRating
+import com.thehouse.app.domain.model.LandlordRoomStats
 import com.thehouse.app.domain.model.Service
 
 /** Mapeo DTO → dominio. Enums EXACTOS; valor desconocido cae al default documentado. */
@@ -136,4 +140,25 @@ fun BuildingDocumentsResponseDto.toDomain(): BuildingDocuments {
 fun PublicationStatusDto.toDomain(): PublicationStatus = PublicationStatus(
     canPublish = canPublish,
     steps = steps.map { com.thehouse.app.domain.model.PublicationStep(id = it.id, done = it.done) },
+)
+
+fun LandlordRoomStatsDto.toDomain(): LandlordRoomStats = LandlordRoomStats(
+    roomId = roomId,
+    buildingId = buildingId,
+    buildingName = buildingName,
+    number = number,
+    status = status,
+    price = price,
+    views = views,
+    favorites = favorites,
+    requests = requests,
+    visits = visits,
+    agreements = agreements,
+    conversion = conversion,
+    rating = rating?.toDomain(),
+)
+
+fun LandlordRatingDto.toDomain(): LandlordRating = LandlordRating(
+    average = average,
+    count = count,
 )

@@ -155,3 +155,14 @@ class GetBuildingDocumentsUseCase(private val repository: LandlordRepository) {
     suspend operator fun invoke(buildingId: String): Result<com.thehouse.app.domain.model.BuildingDocuments> =
         repository.getBuildingDocuments(buildingId)
 }
+
+class GetLandlordStatsRoomsUseCase(private val repository: LandlordRepository) {
+    suspend operator fun invoke(
+        from: String,
+        to: String,
+        buildingId: String? = null,
+        page: Int = 1,
+        pageSize: Int = 50,
+    ): Result<com.thehouse.app.domain.model.PagedLandlordRoomStats> =
+        repository.getLandlordStatsRooms(from, to, buildingId, page, pageSize)
+}

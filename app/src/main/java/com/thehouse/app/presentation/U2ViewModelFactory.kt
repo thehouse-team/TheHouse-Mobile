@@ -293,6 +293,7 @@ class U2ViewModelFactory(
             com.thehouse.app.presentation.landlord.LandlordDashboardViewModel(
                 getProfile = container.getLandlordProfile,
                 getBuildings = container.getLandlordBuildings,
+                getLandlordStatsRooms = container.getLandlordStatsRooms,
             ) as T
 
         modelClass.isAssignableFrom(com.thehouse.app.presentation.landlord.LandlordAgreementsViewModel::class.java) ->

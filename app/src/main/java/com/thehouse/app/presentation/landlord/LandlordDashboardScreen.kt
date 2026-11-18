@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.thehouse.app.domain.model.LandlordRoomStats
 import com.thehouse.app.domain.model.RentalMode
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
@@ -129,54 +131,74 @@ fun LandlordDashboardScreen(
                     message = "Cargando alojamientos…",
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
-                state.buildingCount == 0 -> EmptyStateView(
-                    title = "Sin edificios",
-                    message = "Registra tu primer edificio y agrega cuartos para publicar.",
-                    ctaLabel = "Crear edificio",
-                    onCtaClick = onCreateBuilding,
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                )
                 state.errorMessage != null -> ErrorStateView(
                     title = "No se pudieron cargar",
                     message = state.errorMessage,
                     onRetry = onRetry,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
-                else -> LazyColumn(
+                else -> Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    items(state.buildings, key = { it.id }) { building ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onBuildingClick(building.id) }
-                                .heightIn(min = 48.dp)
-                                .semantics {
-                                    contentDescription =
-                                        "Edificio ${building.name}, ${LandlordErrorMessages.statusLabel(building.status.api)}"
-                                },
-                        ) {
-                            Text(
-                                building.name,
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Text(
-                                "${LandlordErrorMessages.statusLabel(building.status.api)} · " +
-                                    "${building.roomsAvailable}/${building.roomsTotal} disponibles",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                    if (state.roomStats.isNotEmpty()) {
+                        Text(
+                            "Estadísticas por cuarto",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.semantics { heading() },
+                        )
+                        RoomsStatsGrid(
+                            rooms = state.roomStats,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
-                    item {
-                        OutlinedButton(
-                            onClick = onOpenLandlordRequests,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = Heights.button),
+
+                    if (state.buildingCount == 0) {
+                        EmptyStateView(
+                            title = "Sin edificios",
+                            message = "Registra tu primer edificio y agrega cuartos para publicar.",
+                            ctaLabel = "Crear edificio",
+                            onCtaClick = onCreateBuilding,
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            Text("Solicitudes recibidas")
+                            items(state.buildings, key = { it.id }) { building ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onBuildingClick(building.id) }
+                                        .heightIn(min = 48.dp)
+                                        .semantics {
+                                            contentDescription =
+                                                "Edificio ${building.name}, ${LandlordErrorMessages.statusLabel(building.status.api)}"
+                                        },
+                                ) {
+                                    Text(
+                                        building.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                    Text(
+                                        "${LandlordErrorMessages.statusLabel(building.status.api)} · " +
+                                            "${building.roomsAvailable}/${building.roomsTotal} disponibles",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            item {
+                                OutlinedButton(
+                                    onClick = onOpenLandlordRequests,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = Heights.button),
+                                ) {
+                                    Text("Solicitudes recibidas")
+                                }
+                            }
                         }
                     }
                 }
@@ -199,6 +221,57 @@ private fun SummaryItem(label: String, value: String) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+fun RoomsStatsGrid(
+    rooms: List<LandlordRoomStats>,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        rooms.forEach { room ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription =
+                            "Cuarto ${room.number}, ${room.buildingName}, estado ${room.status}"
+                    },
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    Text(
+                        text = "${room.buildingName} · Cuarto ${room.number}",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = "Estado: ${room.status} · Precio: ${room.price}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Vistas: ${room.views} · Favoritos: ${room.favorites} · Solicitudes: ${room.requests}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = "Visitas: ${room.visits} · Acuerdos: ${room.agreements} · Conversión: ${room.conversion}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    val ratingText = room.rating?.let { "Calificación: ${it.average} (${it.count})" } ?: "Calificación: sin datos"
+                    Text(
+                        text = ratingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 

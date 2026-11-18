@@ -4,10 +4,15 @@ import com.thehouse.app.domain.error.LandlordErrorCode
 import com.thehouse.app.domain.error.LandlordException
 import com.thehouse.app.domain.model.Building
 import com.thehouse.app.domain.model.DashboardSummary
+import com.thehouse.app.domain.model.LandlordRoomStats
 import com.thehouse.app.domain.model.RentalMode
-import com.thehouse.app.domain.usecase.ActivateLandlordUseCase
 import com.thehouse.app.domain.usecase.GetLandlordBuildingsUseCase
 import com.thehouse.app.domain.usecase.GetLandlordProfileUseCase
+import com.thehouse.app.domain.usecase.GetLandlordStatsRoomsUseCase
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEvent
 
@@ -18,6 +23,7 @@ data class LandlordDashboardUiState(
     val buildingCount: Int = 0,
     val buildings: List<Building> = emptyList(),
     val summary: DashboardSummary? = null,
+    val roomStats: List<LandlordRoomStats> = emptyList(),
     val errorCode: LandlordErrorCode? = null,
     val errorMessage: String? = null,
 )
@@ -34,6 +40,7 @@ sealed interface LandlordDashboardEffect : com.thehouse.app.presentation.common.
 class LandlordDashboardViewModel(
     private val getProfile: GetLandlordProfileUseCase,
     private val getBuildings: GetLandlordBuildingsUseCase,
+    private val getLandlordStatsRooms: GetLandlordStatsRoomsUseCase,
 ) : BaseViewModel<LandlordDashboardUiState, LandlordDashboardEvent, LandlordDashboardEffect>(
     LandlordDashboardUiState(),
 ) {
@@ -60,29 +67,44 @@ class LandlordDashboardViewModel(
                         updateState { it.copy(isLoading = false, notLandlord = true) }
                         return@launch
                     }
-                    loadBuildings()
+                    loadDashboardData()
                 },
                 onFailure = { throwable -> handleFailure(throwable) },
             )
         }
     }
 
-    private fun loadBuildings() {
+    private fun loadDashboardData() {
         launch {
-            getBuildings().fold(
+            val (buildingsResult, roomStatsResult) = coroutineScope {
+                val buildingsDeferred = async { getBuildings() }
+                val statsDeferred = async { loadRoomStats() }
+                buildingsDeferred.await() to statsDeferred.await()
+            }
+
+            buildingsResult.fold(
                 onSuccess = { page ->
+                    val roomStats = roomStatsResult.getOrDefault(emptyList())
                     updateState {
                         it.copy(
                             isLoading = false,
                             buildingCount = page.totalItems.toInt(),
                             buildings = page.items,
                             summary = page.summary,
+                            roomStats = roomStats,
                         )
                     }
                 },
                 onFailure = { throwable -> handleFailure(throwable) },
             )
         }
+    }
+
+    private suspend fun loadRoomStats(): Result<List<LandlordRoomStats>> {
+        val today = LocalDate.now()
+        val from = today.minusDays(30).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val to = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        return getLandlordStatsRooms(from = from, to = to).map { it.items }
     }
 
     private fun handleFailure(throwable: Throwable) {

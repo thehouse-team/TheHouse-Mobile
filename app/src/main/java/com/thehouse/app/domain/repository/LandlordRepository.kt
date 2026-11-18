@@ -10,6 +10,7 @@ import com.thehouse.app.domain.model.BuildingType
 import com.thehouse.app.domain.model.Service
 import com.thehouse.app.domain.model.LandlordProfile
 import com.thehouse.app.domain.model.PagedBuildings
+import com.thehouse.app.domain.model.PagedLandlordRoomStats
 import com.thehouse.app.domain.model.PagedRooms
 import com.thehouse.app.domain.model.PublicationStatus
 import com.thehouse.app.domain.model.RentalMode
@@ -84,4 +85,13 @@ interface LandlordRepository {
     suspend fun uploadIneDocument(buildingId: String, file: File, mimeType: String): Result<Unit>
     suspend fun uploadPropertyProofDocument(buildingId: String, file: File, mimeType: String): Result<Unit>
     suspend fun getBuildingDocuments(buildingId: String): Result<BuildingDocuments>
+
+    /** Estadísticas de cuartos del arrendador (GET /api/v1/landlord/stats/rooms). */
+    suspend fun getLandlordStatsRooms(
+        from: String,
+        to: String,
+        buildingId: String? = null,
+        page: Int = 1,
+        pageSize: Int = 50,
+    ): Result<PagedLandlordRoomStats>
 }

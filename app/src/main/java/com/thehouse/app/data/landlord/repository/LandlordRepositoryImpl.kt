@@ -22,6 +22,7 @@ import com.thehouse.app.domain.model.BuildingType
 import com.thehouse.app.domain.model.Furniture
 import com.thehouse.app.domain.model.LandlordProfile
 import com.thehouse.app.domain.model.PagedBuildings
+import com.thehouse.app.domain.model.PagedLandlordRoomStats
 import com.thehouse.app.domain.model.PagedRooms
 import com.thehouse.app.domain.model.PublicationStatus
 import com.thehouse.app.domain.model.RentalMode
@@ -335,6 +336,36 @@ class LandlordRepositoryImpl(
         val body = response.body()
         if (response.isSuccessful && body != null) {
             Result.success(body.toDomain())
+        } else {
+            Result.failure(errorFor(response))
+        }
+    }
+
+    override suspend fun getLandlordStatsRooms(
+        from: String,
+        to: String,
+        buildingId: String?,
+        page: Int,
+        pageSize: Int,
+    ): Result<PagedLandlordRoomStats> = safeCall {
+        val response = api.getLandlordStatsRooms(
+            from = from,
+            to = to,
+            buildingId = buildingId,
+            page = page,
+            pageSize = pageSize,
+        )
+        val body = response.body()
+        if (response.isSuccessful && body != null) {
+            Result.success(
+                PagedLandlordRoomStats(
+                    items = body.items.map { it.toDomain() },
+                    page = body.page,
+                    pageSize = body.pageSize,
+                    totalItems = body.totalItems,
+                    totalPages = body.totalPages,
+                ),
+            )
         } else {
             Result.failure(errorFor(response))
         }
