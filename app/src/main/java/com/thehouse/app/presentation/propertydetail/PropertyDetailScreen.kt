@@ -42,6 +42,7 @@ import com.thehouse.app.domain.auth.ProtectedAction
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiErrorMessages
+import com.thehouse.app.presentation.components.OfflineStatusBanner
 
 @Composable
 fun PropertyDetailDestination(
@@ -60,6 +61,7 @@ fun PropertyDetailDestination(
         factory = factory,
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val snackbarState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel, onRequireLogin) {
@@ -87,6 +89,7 @@ fun PropertyDetailDestination(
         onVisitClick = { viewModel.onEvent(PropertyDetailEvent.VisitClicked) },
         onOpenVisits = onOpenVisits,
         onOpenRequests = onOpenRequests,
+        isOnline = isOnline,
         snackbarHost = { SnackbarHost(snackbarState) },
     )
 }
@@ -102,6 +105,7 @@ fun PropertyDetailScreen(
     onVisitClick: () -> Unit,
     onOpenVisits: () -> Unit = {},
     onOpenRequests: () -> Unit = {},
+    isOnline: Boolean = true,
     modifier: Modifier = Modifier,
     snackbarHost: @Composable () -> Unit = {},
 ) {
@@ -142,6 +146,17 @@ fun PropertyDetailScreen(
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.semantics { heading() },
                 )
+            }
+            if (!isOnline) {
+                item {
+                    OfflineStatusBanner(
+                        text = if (state is PropertyDetailUiState.Content) {
+                            "Sin conexión · Mostrando información guardada"
+                        } else {
+                            "Sin conexión"
+                        }
+                    )
+                }
             }
             when (state) {
                 PropertyDetailUiState.Loading -> item {

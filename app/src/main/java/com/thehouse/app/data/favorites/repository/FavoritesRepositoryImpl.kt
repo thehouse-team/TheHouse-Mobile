@@ -1,9 +1,11 @@
 package com.thehouse.app.data.favorites.repository
 
+import com.thehouse.app.data.cache.OfflineCacheStore
 import com.thehouse.app.data.error.DataError
 import com.thehouse.app.data.error.toDomainError
 import com.thehouse.app.data.favorites.mapper.toDomain
 import com.thehouse.app.data.remote.api.FavoritesApi
+import com.thehouse.app.data.remote.dto.favorites.FavoriteIdsResponseDto
 import com.thehouse.app.data.remote.dto.favorites.FavoritesListResponseDto
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.DomainException
@@ -16,53 +18,59 @@ import kotlinx.coroutines.CancellationException
 
 class FavoritesRepositoryImpl(
     private val api: FavoritesApi,
+    private val cache: OfflineCacheStore? = null,
+    private val currentUserId: () -> String? = { null },
 ) : FavoritesRepository {
 
     override suspend fun getFavorites(page: Int, pageSize: Int): Result<PagedResult<Favorite>> {
+        val cacheKey = if (page == 1) currentUserId()?.let { OfflineCacheStore.Keys.favorites(it) } else null
         return try {
             val response = api.getFavorites(page, pageSize)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                Result.success(
-                    PagedResult(
-                        items = body.items.map { it.toDomain() },
-                        page = body.page,
-                        pageSize = body.pageSize,
-                        totalItems = body.totalItems.toLong(),
-                        totalPages = body.totalPages,
-                    ),
-                )
+                if (cacheKey != null) cache?.put(cacheKey, body, FavoritesListResponseDto.serializer(), userScope = currentUserId())
+                Result.success(body.toDomainPaged())
             } else {
-                Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
+                val httpError = DomainException(DataError.Http(response.code()).toDomainError())
+                cacheKey?.let { readCachedFavorites(it) }?.let { Result.success(it) } ?: Result.failure(httpError)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (timeout: SocketTimeoutException) {
-            Result.failure(DomainException(DomainError.Timeout))
+            cacheKey?.let { readCachedFavorites(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
-            Result.failure(DomainException(DomainError.Network))
+            cacheKey?.let { readCachedFavorites(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Network))
         } catch (unexpected: Exception) {
-            Result.failure(DomainException(DomainError.Unknown))
+            cacheKey?.let { readCachedFavorites(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Unknown))
         }
     }
 
     override suspend fun getFavoriteIds(): Result<Set<String>> {
+        val cacheKey = currentUserId()?.let { OfflineCacheStore.Keys.favoriteIds(it) }
         return try {
             val response = api.getFavoriteIds()
             val body = response.body()
             if (response.isSuccessful && body != null) {
+                if (cacheKey != null) cache?.put(cacheKey, body, FavoriteIdsResponseDto.serializer(), userScope = currentUserId())
                 Result.success(body.propertyIds.toSet())
             } else {
-                Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
+                val httpError = DomainException(DataError.Http(response.code()).toDomainError())
+                cacheKey?.let { readCachedFavoriteIds(it) }?.let { Result.success(it) } ?: Result.failure(httpError)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (timeout: SocketTimeoutException) {
-            Result.failure(DomainException(DomainError.Timeout))
+            cacheKey?.let { readCachedFavoriteIds(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
-            Result.failure(DomainException(DomainError.Network))
+            cacheKey?.let { readCachedFavoriteIds(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Network))
         } catch (unexpected: Exception) {
-            Result.failure(DomainException(DomainError.Unknown))
+            cacheKey?.let { readCachedFavoriteIds(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Unknown))
         }
     }
 
@@ -70,6 +78,7 @@ class FavoritesRepositoryImpl(
         return try {
             val response = api.addFavorite(propertyId)
             if (response.isSuccessful) {
+                // refrescar cache ids/list si existe en siguiente lectura; invalidación simple
                 Result.success(Unit)
             } else {
                 Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
@@ -103,4 +112,22 @@ class FavoritesRepositoryImpl(
             Result.failure(DomainException(DomainError.Unknown))
         }
     }
+
+    private suspend fun readCachedFavorites(key: String): PagedResult<Favorite>? {
+        val cached = cache?.get(key, FavoritesListResponseDto.serializer()) ?: return null
+        return cached.payload.toDomainPaged()
+    }
+
+    private suspend fun readCachedFavoriteIds(key: String): Set<String>? {
+        val cached = cache?.get(key, FavoriteIdsResponseDto.serializer()) ?: return null
+        return cached.payload.propertyIds.toSet()
+    }
 }
+
+private fun FavoritesListResponseDto.toDomainPaged(): PagedResult<Favorite> = PagedResult(
+    items = items.map { it.toDomain() },
+    page = page,
+    pageSize = pageSize,
+    totalItems = totalItems.toLong(),
+    totalPages = totalPages,
+)

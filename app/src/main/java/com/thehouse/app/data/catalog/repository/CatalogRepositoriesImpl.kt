@@ -1,10 +1,15 @@
 package com.thehouse.app.data.catalog.repository
 
+import com.thehouse.app.data.cache.OfflineCacheStore
 import com.thehouse.app.data.catalog.mapper.CatalogMappers.toDomain
 import com.thehouse.app.data.error.DataError
 import com.thehouse.app.data.error.toDomainError
+import com.thehouse.app.data.preferences.PreferencesStore
 import com.thehouse.app.data.remote.api.PropertyApi
 import com.thehouse.app.data.remote.api.UniversityApi
+import com.thehouse.app.data.remote.dto.catalog.PropertyDetailDto
+import com.thehouse.app.data.remote.dto.catalog.PropertyListResponseDto
+import com.thehouse.app.data.remote.dto.catalog.UniversityListResponseDto
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.PagedResult
@@ -13,7 +18,6 @@ import com.thehouse.app.domain.model.University
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
-import com.thehouse.app.data.preferences.PreferencesStore
 import java.io.IOException
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.CancellationException
@@ -22,45 +26,39 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 
-/**
- * Implementación Data de universidades (NV-06).
- * Reutiliza el Retrofit/HttpClient existente (incl. D3 Bearer/authenticator);
- * no crea segundo cliente. La API es AllowAnonymous: no se limpian credenciales.
- */
 class UniversityRepositoryImpl(
     private val api: UniversityApi,
+    private val cache: OfflineCacheStore? = null,
 ) : UniversityRepository {
 
     override suspend fun getUniversities(
         page: Int,
         pageSize: Int,
     ): Result<PagedResult<University>> {
+        val cacheKey = if (page == CatalogPagination.DEFAULT_PAGE) OfflineCacheStore.Keys.UNIVERSITIES_PAGE_1 else null
         return try {
             val response = api.getUniversities(page, pageSize)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                Result.success(
-                    PagedResult(
-                        items = body.items.map { it.toDomain() },
-                        page = body.page,
-                        pageSize = body.pageSize,
-                        totalItems = body.totalItems,
-                        totalPages = body.totalPages,
-                    ),
-                )
+                if (cacheKey != null) {
+                    cache?.put(cacheKey, body, UniversityListResponseDto.serializer())
+                }
+                Result.success(body.toDomainPaged())
             } else {
-                Result.failure(
-                    DomainException(DataError.Http(response.code()).toDomainError()),
-                )
+                val httpError = DomainException(DataError.Http(response.code()).toDomainError())
+                cacheKey?.let { readCachedUniversities(it) }?.let { Result.success(it) } ?: Result.failure(httpError)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (timeout: SocketTimeoutException) {
-            Result.failure(DomainException(DomainError.Timeout))
+            cacheKey?.let { readCachedUniversities(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
-            Result.failure(DomainException(DomainError.Network))
+            cacheKey?.let { readCachedUniversities(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Network))
         } catch (unexpected: Exception) {
-            Result.failure(DomainException(DomainError.Unknown))
+            cacheKey?.let { readCachedUniversities(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Unknown))
         }
     }
 
@@ -71,9 +69,7 @@ class UniversityRepositoryImpl(
             if (response.isSuccessful && body != null) {
                 Result.success(body.toDomain())
             } else {
-                Result.failure(
-                    DomainException(DataError.Http(response.code()).toDomainError()),
-                )
+                Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -85,86 +81,108 @@ class UniversityRepositoryImpl(
             Result.failure(DomainException(DomainError.Unknown))
         }
     }
+
+    private suspend fun readCachedUniversities(key: String): PagedResult<University>? {
+        val cached = cache?.get(key, UniversityListResponseDto.serializer()) ?: return null
+        return cached.payload.toDomainPaged()
+    }
 }
 
-/**
- * Implementación Data de propiedades (NV-07).
- */
+private fun UniversityListResponseDto.toDomainPaged(): PagedResult<University> = PagedResult(
+    items = items.map { it.toDomain() },
+    page = page,
+    pageSize = pageSize,
+    totalItems = totalItems,
+    totalPages = totalPages,
+)
+
 class PropertyRepositoryImpl(
     private val api: PropertyApi,
+    private val cache: OfflineCacheStore? = null,
 ) : PropertyRepository {
 
     override suspend fun getProperties(
         page: Int,
         pageSize: Int,
     ): Result<PagedResult<Property>> {
+        val cacheKey = if (page == CatalogPagination.DEFAULT_PAGE) OfflineCacheStore.Keys.PROPERTIES_PAGE_1 else null
         return try {
             val response = api.getProperties(page, pageSize)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                Result.success(
-                    PagedResult(
-                        items = body.items.map { it.toDomain() },
-                        page = body.page,
-                        pageSize = body.pageSize,
-                        totalItems = body.totalItems,
-                        totalPages = body.totalPages,
-                    ),
-                )
+                if (cacheKey != null) {
+                    cache?.put(cacheKey, body, PropertyListResponseDto.serializer())
+                }
+                Result.success(body.toDomainPaged())
             } else {
-                Result.failure(
-                    DomainException(DataError.Http(response.code()).toDomainError()),
-                )
+                val httpError = DomainException(DataError.Http(response.code()).toDomainError())
+                cacheKey?.let { readCachedProperties(it) }?.let { Result.success(it) } ?: Result.failure(httpError)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (timeout: SocketTimeoutException) {
-            Result.failure(DomainException(DomainError.Timeout))
+            cacheKey?.let { readCachedProperties(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
-            Result.failure(DomainException(DomainError.Network))
+            cacheKey?.let { readCachedProperties(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Network))
         } catch (unexpected: Exception) {
-            Result.failure(DomainException(DomainError.Unknown))
+            cacheKey?.let { readCachedProperties(it) }?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Unknown))
         }
     }
 
     override suspend fun getPropertyById(id: String): Result<Property> {
+        val cacheKey = OfflineCacheStore.Keys.propertyDetail(id)
         return try {
             val response = api.getPropertyById(id)
             val body = response.body()
             if (response.isSuccessful && body != null) {
+                cache?.put(cacheKey, body, PropertyDetailDto.serializer())
                 Result.success(body.toDomain())
             } else {
-                Result.failure(
-                    DomainException(DataError.Http(response.code()).toDomainError()),
-                )
+                val httpError = DomainException(DataError.Http(response.code()).toDomainError())
+                readCachedProperty(cacheKey)?.let { Result.success(it) } ?: Result.failure(httpError)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (timeout: SocketTimeoutException) {
-            Result.failure(DomainException(DomainError.Timeout))
+            readCachedProperty(cacheKey)?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Timeout))
         } catch (network: IOException) {
-            Result.failure(DomainException(DomainError.Network))
+            readCachedProperty(cacheKey)?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Network))
         } catch (unexpected: Exception) {
-            Result.failure(DomainException(DomainError.Unknown))
+            readCachedProperty(cacheKey)?.let { Result.success(it) }
+                ?: Result.failure(DomainException(DomainError.Unknown))
         }
+    }
+
+    private suspend fun readCachedProperties(key: String): PagedResult<Property>? {
+        val cached = cache?.get(key, PropertyListResponseDto.serializer()) ?: return null
+        return cached.payload.toDomainPaged()
+    }
+
+    private suspend fun readCachedProperty(key: String): Property? {
+        val cached = cache?.get(key, PropertyDetailDto.serializer()) ?: return null
+        return cached.payload.toDomain()
     }
 }
 
-/**
- * Totales reales de paginación (paginación solo si contrato la define).
- */
+private fun PropertyListResponseDto.toDomainPaged(): PagedResult<Property> = PagedResult(
+    items = items.map { it.toDomain() },
+    page = page,
+    pageSize = pageSize,
+    totalItems = totalItems,
+    totalPages = totalPages,
+)
+
 object CatalogPagination {
     const val DEFAULT_PAGE = 1
     const val DEFAULT_PAGE_SIZE = 20
     const val MAX_PAGE_SIZE = 50
 }
 
-/**
- * Selección persistente (dato no sensible en DataStore existente).
- * No es secreto: clave fija "selected_university_id".
- * Si el backend no devuelve universidades, la selección sigue nula
- * (sin UTTT hardcodeada como dato productivo).
- */
 class SelectedUniversityRepositoryImpl(
     private val preferences: PreferencesStore,
 ) : SelectedUniversityRepository {

@@ -26,6 +26,7 @@ import com.thehouse.app.presentation.catalog.errorMessage
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.OfflineStatusBanner
 import com.thehouse.app.presentation.components.PropertyCard
 
 /**
@@ -50,6 +51,7 @@ fun ExploreScreen(
         null
     }
     val state = viewModel?.uiState?.collectAsState()?.value
+    val isOnline = viewModel?.isOnline?.collectAsState()?.value ?: true
     val properties = state?.properties ?: CatalogLoadState.Empty
     val query = state?.query ?: ""
     val isLoading = properties is CatalogLoadState.Loading
@@ -72,6 +74,15 @@ fun ExploreScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (!isOnline) {
+                OfflineStatusBanner(
+                    text = if (properties is CatalogLoadState.Success) {
+                        "Sin conexión · Mostrando información guardada"
+                    } else {
+                        "Sin conexión"
+                    }
+                )
+            }
             OutlinedTextField(
                 value = query,
                 onValueChange = { viewModel?.onEvent(ExploreEvent.QueryChanged(it)) },

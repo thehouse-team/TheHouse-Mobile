@@ -1,6 +1,7 @@
 package com.thehouse.app.presentation.favorites
 
 import com.thehouse.app.data.favorites.state.FavoriteIdsStore
+import com.thehouse.app.domain.connectivity.ConnectivityObserver
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.Favorite
@@ -12,6 +13,7 @@ import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiEvent
 import com.thehouse.app.presentation.common.toUiError
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 
@@ -36,7 +38,10 @@ class FavoritesViewModel(
     private val removeFavorite: RemoveFavoriteUseCase,
     private val favoriteIdsStore: FavoriteIdsStore,
     private val sessionState: StateFlow<SessionState>,
+    connectivityObserver: ConnectivityObserver? = null,
 ) : BaseViewModel<FavoritesUiState, FavoritesEvent, FavoritesEffect>(FavoritesUiState()) {
+
+    val isOnline: StateFlow<Boolean> = connectivityObserver?.isOnline ?: MutableStateFlow(true)
 
     init {
         load()
