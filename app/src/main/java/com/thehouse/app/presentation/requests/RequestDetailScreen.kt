@@ -2,31 +2,35 @@ package com.thehouse.app.presentation.requests
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.thehouse.app.domain.model.RequestStatus
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InfoRow
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.StatusChip
+import com.thehouse.app.presentation.components.StatusTone
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.ui.theme.Spacing
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -75,18 +79,19 @@ fun RequestDetailScreen(
     onReportBuilding: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = "Detalle de solicitud",
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Volver")
-            }
             when {
                 state.isLoading -> LoadingView(
                     message = "Cargando solicitud…",
@@ -100,85 +105,146 @@ fun RequestDetailScreen(
                 state.request == null -> Unit
                 else -> {
                     val request = state.request ?: return@Column
-                    Text(
-                        request.room.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Text(
-                        "${request.room.city} · ${RequestErrorMessages.statusLabel(request.status)}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = request.room.title,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .semantics { heading() },
+                                )
+                                StatusChip(
+                                    label = RequestErrorMessages.statusLabel(request.status),
+                                    tone = requestTone(request.status),
+                                )
+                            }
+                            Text(
+                                text = request.room.city,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
                     request.message?.takeIf { it.isNotBlank() }?.let { message ->
-                        Text("Mensaje", style = MaterialTheme.typography.titleMedium)
-                        Text(message, style = MaterialTheme.typography.bodyLarge)
-                    }
-                    if (request.quickQuestions.isNotEmpty()) {
-                        Text("Preguntas", style = MaterialTheme.typography.titleMedium)
-                        request.quickQuestions.forEach { question ->
-                            Text("· ${question.api}", style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                    request.landlord?.let { landlord ->
-                        Text("Arrendador: ${landlord.name}", style = MaterialTheme.typography.bodyLarge)
-                    }
-                    request.student?.let { student ->
-                        Text("Estudiante: ${student.name}", style = MaterialTheme.typography.bodyLarge)
-                        student.university?.let { university ->
-                            Text("Universidad: $university", style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                    request.visit?.let { visit ->
-                        Text(
-                            "Visita: ${formatInstant(visit.scheduledAt)} (${visit.status})",
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
-                    request.rejection?.let { rejection ->
-                        Text("Motivo: ${rejection.reason}", style = MaterialTheme.typography.bodyLarge)
-                        rejection.note?.takeIf { it.isNotBlank() }?.let { note ->
-                            Text("Nota: $note", style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                    request.conversationId?.takeIf { it.isNotBlank() }?.let { conversationId ->
-                        Button(
-                            onClick = { onOpenConversation(conversationId) },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        ) {
-                            Text("Abrir conversación")
-                        }
-                    }
-                    Text("Reportar", style = MaterialTheme.typography.titleMedium)
-                    OutlinedButton(
-                        onClick = { onReportRoom(request.room.id) },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    ) {
-                        Text("Reportar cuarto")
-                    }
-                    OutlinedButton(
-                        onClick = { onReportBuilding(request.room.buildingId) },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    ) {
-                        Text("Reportar edificio")
-                    }
-                    if (request.status == com.thehouse.app.domain.model.RequestStatus.PENDING) {
-                        OutlinedButton(
-                            onClick = onCancel,
-                            enabled = !state.isCancelling,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        ) {
-                            if (state.isCancelling) {
-                                CircularProgressIndicator(modifier = Modifier.heightIn(max = 18.dp))
-                            } else {
-                                Text("Cancelar solicitud")
+                        TheHouseCard {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                Text(
+                                    text = "Mensaje",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
+                    }
+
+                    if (request.quickQuestions.isNotEmpty()) {
+                        TheHouseCard {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                Text(
+                                    text = "Preguntas",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                request.quickQuestions.forEach { question ->
+                                    Text(
+                                        text = "· ${question.api}",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            Text(
+                                text = "Detalles",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            request.landlord?.let { landlord ->
+                                InfoRow("Arrendador", landlord.name)
+                            }
+                            request.student?.let { student ->
+                                InfoRow("Estudiante", student.name)
+                                student.university?.let { university ->
+                                    InfoRow("Universidad", university)
+                                }
+                            }
+                            request.visit?.let { visit ->
+                                InfoRow(
+                                    "Visita",
+                                    "${formatInstant(visit.scheduledAt)} (${visit.status})",
+                                )
+                            }
+                            request.rejection?.let { rejection ->
+                                InfoRow("Motivo", rejection.reason)
+                                rejection.note?.takeIf { it.isNotBlank() }?.let { note ->
+                                    InfoRow("Nota", note)
+                                }
+                            }
+                        }
+                    }
+
+                    request.conversationId?.takeIf { it.isNotBlank() }?.let { conversationId ->
+                        TheHousePrimaryButton(
+                            text = "Abrir conversación",
+                            onClick = { onOpenConversation(conversationId) },
+                        )
+                    }
+
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            Text(
+                                text = "Reportar",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            TheHouseSecondaryButton(
+                                text = "Reportar cuarto",
+                                onClick = { onReportRoom(request.room.id) },
+                            )
+                            TheHouseSecondaryButton(
+                                text = "Reportar edificio",
+                                onClick = { onReportBuilding(request.room.buildingId) },
+                            )
+                        }
+                    }
+
+                    if (request.status == RequestStatus.PENDING) {
+                        TheHouseSecondaryButton(
+                            text = if (state.isCancelling) "Cancelando…" else "Cancelar solicitud",
+                            onClick = onCancel,
+                            enabled = !state.isCancelling,
+                            loading = state.isCancelling,
+                            contentColor = MaterialTheme.colorScheme.error,
+                        )
                     }
                 }
             }
         }
     }
+}
+
+private fun requestTone(status: RequestStatus): StatusTone = when (status) {
+    RequestStatus.PENDING -> StatusTone.Warning
+    RequestStatus.ACCEPTED -> StatusTone.Success
+    RequestStatus.REJECTED -> StatusTone.Error
+    RequestStatus.CANCELLED -> StatusTone.Neutral
 }
 
 private fun formatInstant(instant: java.time.Instant): String =

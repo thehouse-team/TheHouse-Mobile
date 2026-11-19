@@ -2,29 +2,21 @@ package com.thehouse.app.presentation.landlord
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,8 +24,12 @@ import com.thehouse.app.domain.model.AllowedTenants
 import com.thehouse.app.domain.model.BuildingType
 import com.thehouse.app.domain.model.Service
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InlineMessage
 import com.thehouse.app.presentation.components.LoadingView
-import com.thehouse.app.ui.theme.Heights
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.ui.theme.Spacing
 
 @Composable
@@ -67,24 +63,20 @@ fun BuildingFormScreen(
     onReload: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = if (state.isEdit) "Editar edificio" else "Nuevo edificio",
+        subtitle = "Datos, ubicación y servicios",
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = Heights.button)) {
-                Text("Volver")
-            }
-            Text(
-                if (state.isEdit) "Editar edificio" else "Nuevo edificio",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.semantics { heading() },
-            )
-
             when {
                 state.isLoading -> LoadingView(
                     message = "Cargando edificio…",
@@ -101,147 +93,160 @@ fun BuildingFormScreen(
                     retryLabel = "Recargar datos",
                     onRetry = onReload,
                 )
-                state.errorMessage != null && !state.isEdit && state.errorCode != null -> ErrorStateView(
-                    title = "No se pudo cargar",
-                    message = state.errorMessage,
-                    onRetry = onReload,
-                )
-                else -> {
-                    OutlinedTextField(
-                        value = state.name,
-                        onValueChange = { onEvent(BuildingFormEvent.NameChanged(it)) },
-                        label = { Text("Nombre") },
-                        isError = state.nameError != null,
-                        supportingText = { state.nameError?.let { Text(it) } },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = Heights.input),
-                        singleLine = true,
+                state.errorMessage != null && !state.isEdit && state.errorCode != null ->
+                    ErrorStateView(
+                        title = "No se pudo cargar",
+                        message = state.errorMessage,
+                        onRetry = onReload,
                     )
-
-                    Text("Tipo", style = MaterialTheme.typography.labelLarge)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    ) {
-                        BuildingType.entries.forEach { type ->
-                            FilterChip(
-                                selected = state.type == type,
-                                onClick = { onEvent(BuildingFormEvent.TypeChanged(type)) },
-                                label = { Text(type.label) },
-                            )
+                else -> {
+                    FormSection(title = "Datos generales") {
+                        TheHouseTextField(
+                            value = state.name,
+                            onValueChange = { onEvent(BuildingFormEvent.NameChanged(it)) },
+                            label = "Nombre",
+                            isError = state.nameError != null,
+                            errorMessage = state.nameError,
+                        )
+                        Text(
+                            text = "Tipo",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        BuildingType.entries.chunked(2).forEach { rowTypes ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                rowTypes.forEach { type ->
+                                    FilterChip(
+                                        selected = state.type == type,
+                                        onClick = { onEvent(BuildingFormEvent.TypeChanged(type)) },
+                                        label = { Text(type.label) },
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    GroupLabel("Dirección")
-                    OutlinedTextField(
-                        value = state.street,
-                        onValueChange = { onEvent(BuildingFormEvent.StreetChanged(it)) },
-                        label = { Text("Calle") },
-                        isError = state.streetError != null,
-                        supportingText = { state.streetError?.let { Text(it) } },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = Heights.input),
-                        singleLine = true,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        OutlinedTextField(
-                            value = state.number,
-                            onValueChange = { onEvent(BuildingFormEvent.NumberChanged(it)) },
-                            label = { Text("Número") },
-                            modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                            singleLine = true,
+                    FormSection(title = "Dirección") {
+                        TheHouseTextField(
+                            value = state.street,
+                            onValueChange = { onEvent(BuildingFormEvent.StreetChanged(it)) },
+                            label = "Calle",
+                            isError = state.streetError != null,
+                            errorMessage = state.streetError,
                         )
-                        OutlinedTextField(
-                            value = state.neighborhood,
-                            onValueChange = { onEvent(BuildingFormEvent.NeighborhoodChanged(it)) },
-                            label = { Text("Colonia") },
-                            modifier = Modifier.weight(2f).heightIn(min = Heights.input),
-                            singleLine = true,
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        OutlinedTextField(
-                            value = state.city,
-                            onValueChange = { onEvent(BuildingFormEvent.CityChanged(it)) },
-                            label = { Text("Ciudad") },
-                            isError = state.cityError != null,
-                            supportingText = { state.cityError?.let { Text(it) } },
-                            modifier = Modifier.weight(2f).heightIn(min = Heights.input),
-                            singleLine = true,
-                        )
-                        OutlinedTextField(
-                            value = state.state,
-                            onValueChange = { onEvent(BuildingFormEvent.StateChanged(it)) },
-                            label = { Text("Estado") },
-                            isError = state.stateError != null,
-                            supportingText = { state.stateError?.let { Text(it) } },
-                            modifier = Modifier.weight(2f).heightIn(min = Heights.input),
-                            singleLine = true,
-                        )
-                        OutlinedTextField(
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            TheHouseTextField(
+                                value = state.number,
+                                onValueChange = { onEvent(BuildingFormEvent.NumberChanged(it)) },
+                                label = "Número",
+                                modifier = Modifier.weight(1f),
+                            )
+                            TheHouseTextField(
+                                value = state.neighborhood,
+                                onValueChange = {
+                                    onEvent(BuildingFormEvent.NeighborhoodChanged(it))
+                                },
+                                label = "Colonia",
+                                modifier = Modifier.weight(2f),
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            TheHouseTextField(
+                                value = state.city,
+                                onValueChange = { onEvent(BuildingFormEvent.CityChanged(it)) },
+                                label = "Ciudad",
+                                isError = state.cityError != null,
+                                errorMessage = state.cityError,
+                                modifier = Modifier.weight(2f),
+                            )
+                            TheHouseTextField(
+                                value = state.state,
+                                onValueChange = { onEvent(BuildingFormEvent.StateChanged(it)) },
+                                label = "Estado",
+                                isError = state.stateError != null,
+                                errorMessage = state.stateError,
+                                modifier = Modifier.weight(2f),
+                            )
+                        }
+                        TheHouseTextField(
                             value = state.postalCode,
                             onValueChange = { onEvent(BuildingFormEvent.PostalCodeChanged(it)) },
-                            label = { Text("C.P.") },
+                            label = "C.P.",
                             isError = state.postalCodeError != null,
-                            supportingText = { state.postalCodeError?.let { Text(it) } },
-                            modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                            singleLine = true,
+                            errorMessage = state.postalCodeError,
                         )
                     }
 
-                    GroupLabel("Ubicación")
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        OutlinedTextField(
-                            value = state.lat,
-                            onValueChange = { onEvent(BuildingFormEvent.LatChanged(it)) },
-                            label = { Text("Latitud") },
-                            isError = state.latError != null,
-                            supportingText = { state.latError?.let { Text(it) } },
-                            modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                            singleLine = true,
+                    FormSection(title = "Ubicación") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            TheHouseTextField(
+                                value = state.lat,
+                                onValueChange = { onEvent(BuildingFormEvent.LatChanged(it)) },
+                                label = "Latitud",
+                                isError = state.latError != null,
+                                errorMessage = state.latError,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TheHouseTextField(
+                                value = state.lng,
+                                onValueChange = { onEvent(BuildingFormEvent.LngChanged(it)) },
+                                label = "Longitud",
+                                isError = state.lngError != null,
+                                errorMessage = state.lngError,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        Text(
+                            text = "Universidad más cercana",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
-                        OutlinedTextField(
-                            value = state.lng,
-                            onValueChange = { onEvent(BuildingFormEvent.LngChanged(it)) },
-                            label = { Text("Longitud") },
-                            isError = state.lngError != null,
-                            supportingText = { state.lngError?.let { Text(it) } },
-                            modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                            singleLine = true,
-                        )
-                    }
-
-                    Text("Universidad más cercana", style = MaterialTheme.typography.labelLarge)
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                         state.universities.forEach { university ->
                             FilterChip(
                                 selected = state.universityId == university.id,
-                                onClick = { onEvent(BuildingFormEvent.UniversityChanged(university.id)) },
+                                onClick = {
+                                    onEvent(BuildingFormEvent.UniversityChanged(university.id))
+                                },
                                 label = { Text(university.name) },
                             )
                         }
                         state.universityError?.let {
-                            Text(it, color = MaterialTheme.colorScheme.error)
+                            InlineMessage(text = it, tone = com.thehouse.app.presentation.components.StatusTone.Warning)
                         }
                     }
 
-                    Text("Quién puede rentar", style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        AllowedTenants.entries.forEach { tenants ->
-                            FilterChip(
-                                selected = state.allowedTenants == tenants,
-                                onClick = { onEvent(BuildingFormEvent.TenantsChanged(tenants)) },
-                                label = { Text(tenants.label) },
-                            )
+                    FormSection(title = "Preferencias y servicios") {
+                        Text(
+                            text = "Quién puede rentar",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        AllowedTenants.entries.chunked(2).forEach { rowTenants ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                rowTenants.forEach { tenants ->
+                                    FilterChip(
+                                        selected = state.allowedTenants == tenants,
+                                        onClick = {
+                                            onEvent(BuildingFormEvent.TenantsChanged(tenants))
+                                        },
+                                        label = { Text(tenants.label) },
+                                    )
+                                }
+                            }
                         }
-                    }
-
-                    Text("Servicios", style = MaterialTheme.typography.labelLarge)
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Text(
+                            text = "Servicios",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Service.entries.chunked(2).forEach { rowServices ->
                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                                 rowServices.forEach { service ->
                                     FilterChip(
                                         selected = service in state.selectedServices,
-                                        onClick = { onEvent(BuildingFormEvent.ServiceToggled(service)) },
+                                        onClick = {
+                                            onEvent(BuildingFormEvent.ServiceToggled(service))
+                                        },
                                         label = { Text(service.label) },
                                     )
                                 }
@@ -249,43 +254,31 @@ fun BuildingFormScreen(
                         }
                     }
 
-                    OutlinedTextField(
-                        value = state.rules,
-                        onValueChange = { onEvent(BuildingFormEvent.RulesChanged(it)) },
-                        label = { Text("Reglas (opcional, máx. 2000)") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 120.dp),
-                    )
-                    Text(
-                        "${state.rules.length}/2000",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    state.errorMessage?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
+                    FormSection(title = "Reglas") {
+                        TheHouseTextField(
+                            value = state.rules,
+                            onValueChange = { onEvent(BuildingFormEvent.RulesChanged(it)) },
+                            label = "Reglas (opcional, máx. 2000)",
+                            supportingText = "${state.rules.length}/2000",
+                            singleLine = false,
+                            minLines = 4,
                         )
                     }
 
-                    Button(
+                    state.errorMessage?.let { message ->
+                        InlineMessage(text = message)
+                    }
+
+                    TheHousePrimaryButton(
+                        text = when {
+                            state.isSaving -> "Guardando…"
+                            state.isEdit -> "Guardar cambios"
+                            else -> "Crear edificio"
+                        },
                         onClick = { onEvent(BuildingFormEvent.Submit) },
-                        enabled = !state.isSaving && !state.isLoading && state.isValid,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = Heights.button),
-                    ) {
-                        Text(
-                            when {
-                                state.isSaving -> "Guardando…"
-                                state.isEdit -> "Guardar cambios"
-                                else -> "Crear edificio"
-                            },
-                        )
-                    }
+                        enabled = !state.isLoading && state.isValid,
+                        loading = state.isSaving,
+                    )
                 }
             }
         }
@@ -293,8 +286,20 @@ fun BuildingFormScreen(
 }
 
 @Composable
-private fun GroupLabel(label: String) {
-    Text(label, style = MaterialTheme.typography.titleSmall)
+private fun FormSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            content()
+        }
+    }
 }
 
 private val BuildingType.label: String

@@ -1,33 +1,24 @@
 package com.thehouse.app.presentation.notifications
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,11 +42,16 @@ import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.presentation.components.TheHouseTextAction
+import com.thehouse.app.ui.theme.Spacing
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun NotificationsDestination(
@@ -138,7 +134,6 @@ private fun handleTarget(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
     state: NotificationsUiState,
@@ -165,24 +160,17 @@ fun NotificationsScreen(
             }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Notificaciones") },
-                navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text("Volver")
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = onMarkAllRead,
-                        enabled = !state.markingAll,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(if (state.markingAll) "Marcando..." else "Marcar todo")
-                    }
-                },
+    TheHouseScreen(
+        title = "Notificaciones",
+        subtitle = state.unreadCount?.let { count ->
+            if (count.unread == 1) "1 sin leer" else "${count.unread} sin leer"
+        },
+        onBack = onBack,
+        actions = {
+            TheHouseTextAction(
+                text = if (state.markingAll) "Marcando…" else "Marcar todo",
+                onClick = onMarkAllRead,
+                enabled = !state.markingAll,
             )
         },
         modifier = modifier,
@@ -196,54 +184,63 @@ fun NotificationsScreen(
                 status = permissionStatus,
                 onEnable = onEnableNotifications,
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                contentPadding = PaddingValues(
+                    horizontal = Spacing.xl,
+                    vertical = Spacing.sm,
+                ),
             ) {
-                NotificationFilter.entries.forEach { filter ->
-                    AssistChip(
+                items(NotificationFilter.entries) { filter ->
+                    FilterChip(
+                        selected = state.filter == filter,
                         onClick = { onFilterChanged(filter) },
                         label = { Text(filter.label) },
-                        modifier = Modifier.heightIn(min = 48.dp),
-                        leadingIcon = if (state.filter == filter) {
-                            {
-                                Box(
-                                    Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary),
-                                )
-                            }
-                        } else null,
                     )
                 }
             }
 
             when {
                 state.isLoading && state.items.isEmpty() -> {
-                    LoadingView("Cargando notificaciones", modifier = Modifier.padding(24.dp))
+                    LoadingView(
+                        message = "Cargando notificaciones…",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                    )
                 }
                 state.errorMessage != null && state.items.isEmpty() -> {
                     ErrorStateView(
                         title = "No se pudieron cargar las notificaciones",
                         message = state.errorMessage,
                         onRetry = onRetry,
-                        modifier = Modifier.padding(24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     )
                 }
                 state.items.isEmpty() -> {
                     EmptyStateView(
                         title = "Sin notificaciones",
                         message = "No tienes notificaciones por ahora.",
-                        modifier = Modifier.padding(24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     )
                 }
                 else -> {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        contentPadding = PaddingValues(
+                            start = Spacing.xl,
+                            end = Spacing.xl,
+                            top = Spacing.xs,
+                            bottom = Spacing.lg,
+                        ),
                     ) {
                         items(state.items, key = { it.id }) { notification ->
                             NotificationRow(
@@ -257,20 +254,19 @@ fun NotificationsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
+                                        .padding(Spacing.lg),
                                     horizontalArrangement = Arrangement.Center,
-                                ) { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
                             }
                         }
                         if (state.page < state.totalPages && !state.isLoading) {
                             item {
-                                OutlinedButton(
+                                TheHouseSecondaryButton(
+                                    text = "Cargar más",
                                     onClick = onLoadMore,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                        .heightIn(min = 48.dp),
-                                ) { Text("Cargar más") }
+                                )
                             }
                         }
                     }
@@ -287,67 +283,91 @@ private fun NotificationRow(
     onClick: () -> Unit,
 ) {
     val statusText = if (notification.read) "Leída" else "No leída"
-    val countText = if (notification.count > 1) ", ${notification.count} mensajes agrupados" else ""
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = !marking, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .heightIn(min = 48.dp)
-            .semantics {
-                contentDescription =
-                    "$statusText. ${notification.title}. ${notification.body}$countText"
-            },
-        verticalAlignment = Alignment.Top,
+    val countText = if (notification.count > 1) {
+        ", ${notification.count} mensajes agrupados"
+    } else {
+        ""
+    }
+    TheHouseCard(
+        modifier = Modifier.semantics {
+            contentDescription = "$statusText. ${notification.title}. " +
+                "${notification.body}$countText"
+        },
+        onClick = { if (!marking) onClick() },
+        contentPadding = PaddingValues(Spacing.md),
+        containerColor = if (notification.read) {
+            MaterialTheme.colorScheme.surfaceContainerLowest
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
     ) {
-        Box(
-            modifier = Modifier
-                .padding(top = 6.dp)
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(
-                    if (notification.read) MaterialTheme.colorScheme.outlineVariant
-                    else MaterialTheme.colorScheme.primary,
-                ),
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = notification.title.ifBlank { "Notificación" },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (notification.read) FontWeight.Normal else FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                if (notification.count > 1) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (notification.read) {
+                            MaterialTheme.colorScheme.outlineVariant
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    ),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = notification.count.toString(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        text = notification.title.ifBlank { "Notificación" },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (notification.read) {
+                            FontWeight.Normal
+                        } else {
+                            FontWeight.SemiBold
+                        },
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (notification.count > 1) {
+                        Text(
+                            text = notification.count.toString(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                if (notification.body.isNotBlank()) {
+                    Text(
+                        text = notification.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (notification.read) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
                     )
                 }
-            }
-            if (notification.body.isNotBlank()) {
-                Text(
-                    text = notification.body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (notification.read) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            val dateText = notification.createdAt?.let {
-                runCatching {
-                    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
-                        .withZone(ZoneId.systemDefault())
-                        .format(it)
-                }.getOrNull()
-            }
-            if (!dateText.isNullOrBlank()) {
-                Text(
-                    text = dateText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                val dateText = notification.createdAt?.let {
+                    runCatching {
+                        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
+                            .withZone(ZoneId.systemDefault())
+                            .format(it)
+                    }.getOrNull()
+                }
+                if (!dateText.isNullOrBlank()) {
+                    Text(
+                        text = dateText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
@@ -371,39 +391,36 @@ private fun NotificationPermissionCard(
         "Activa las notificaciones"
     }
     val message = if (permanentlyDenied) {
-        "Puedes habilitarlas desde los ajustes del sistema para recibir avisos de solicitudes, visitas y novedades."
+        "Puedes habilitarlas desde los ajustes del sistema para recibir avisos de " +
+            "solicitudes, visitas y novedades."
     } else {
-        "Recibe avisos de solicitudes, visitas y novedades. Puedes seguir usando la app sin activarlas."
+        "Recibe avisos de solicitudes, visitas y novedades. Puedes seguir usando la app " +
+            "sin activarlas."
     }
     val action = if (permanentlyDenied) "Abrir ajustes" else "Activar"
 
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.medium,
+    TheHouseCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = Spacing.xl, vertical = Spacing.sm),
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
-            TextButton(
+            TheHouseTextAction(
+                text = action,
                 onClick = onEnable,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(action)
-            }
+            )
         }
     }
 }

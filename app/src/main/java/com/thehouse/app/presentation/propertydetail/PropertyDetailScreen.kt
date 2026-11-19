@@ -4,25 +4,27 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.rounded.Roofing
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -47,7 +50,16 @@ import com.thehouse.app.domain.auth.ProtectedAction
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiErrorMessages
+import com.thehouse.app.presentation.components.InfoChip
+import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.OfflineStatusBanner
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.ui.theme.IconSizes
+import com.thehouse.app.ui.theme.Spacing
+import com.thehouse.app.ui.theme.TheHouseTheme
 
 @Composable
 fun PropertyDetailDestination(
@@ -60,14 +72,13 @@ fun PropertyDetailDestination(
     onOpenRequests: () -> Unit = {},
     onMakeRequest: (String) -> Unit = {},
 ) {
-    // onOpenVisits se usa en la barra superior de la pantalla stateless.
     val viewModel: PropertyDetailViewModel = viewModel(
         key = "property-detail:$propertyId",
         factory = factory,
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
-    val snackbarState = remember { SnackbarHostState() }
+    val snackbarState = remember { androidx.compose.material3.SnackbarHostState() }
 
     LaunchedEffect(viewModel, onRequireLogin) {
         viewModel.effects.collect { effect ->
@@ -77,8 +88,10 @@ fun PropertyDetailDestination(
                 PropertyDetailEffect.MakeRequest -> onMakeRequest(propertyId)
                 is PropertyDetailEffect.ActionUnavailable -> snackbarState.showSnackbar(
                     when (effect.action) {
-                        ProtectedAction.SaveFavorite -> "Favoritos aún no disponible. No se ha guardado la propiedad."
-                        else -> "Contacto aún no disponible. No se ha enviado ningún mensaje."
+                        ProtectedAction.SaveFavorite ->
+                            "Favoritos aún no disponible. No se ha guardado la propiedad."
+                        else ->
+                            "Contacto aún no disponible. No se ha enviado ningún mensaje."
                     },
                 )
             }
@@ -95,7 +108,7 @@ fun PropertyDetailDestination(
         onOpenVisits = onOpenVisits,
         onOpenRequests = onOpenRequests,
         isOnline = isOnline,
-        snackbarHost = { SnackbarHost(snackbarState) },
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarState) },
     )
 }
 
@@ -108,50 +121,46 @@ fun PropertyDetailScreen(
     onFavoriteClick: () -> Unit,
     onContactClick: () -> Unit,
     onVisitClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onOpenVisits: () -> Unit = {},
     onOpenRequests: () -> Unit = {},
     isOnline: Boolean = true,
-    modifier: Modifier = Modifier,
     snackbarHost: @Composable () -> Unit = {},
 ) {
-    Scaffold(
+    TheHouseScreen(
+        title = "Detalle de la propiedad",
+        onBack = onBack,
         modifier = modifier,
         snackbarHost = snackbarHost,
-        topBar = {
-            Row {
-                TextButton(
-                    onClick = onBack,
-                    modifier = Modifier.padding(horizontal = 16.dp).heightIn(min = 48.dp),
-                ) {
-                    Text("Volver")
-                }
-                TextButton(
-                    onClick = onOpenVisits,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text("Mis visitas")
-                }
-                TextButton(
-                    onClick = onOpenRequests,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text("Mis solicitudes")
-                }
+        actions = {
+            IconButton(onClick = onOpenVisits) {
+                Icon(
+                    imageVector = Icons.Outlined.EventAvailable,
+                    contentDescription = "Mis visitas",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onOpenRequests) {
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = "Mis solicitudes",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(
+                start = Spacing.xl,
+                end = Spacing.xl,
+                top = Spacing.md,
+                bottom = Spacing.xxl,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            item {
-                Text(
-                    "Detalle de la propiedad",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { heading() },
-                )
-            }
             if (!isOnline) {
                 item {
                     OfflineStatusBanner(
@@ -159,51 +168,43 @@ fun PropertyDetailScreen(
                             "Sin conexión · Mostrando información guardada"
                         } else {
                             "Sin conexión"
-                        }
+                        },
                     )
                 }
             }
             when (state) {
                 PropertyDetailUiState.Loading -> item {
-                    CircularProgressIndicator(
-                        modifier = Modifier.testTag("property_detail_loading")
-                            .semantics { contentDescription = "Cargando propiedad" },
+                    LoadingView(
+                        message = "Cargando propiedad",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = Spacing.xxxl)
+                            .testTag("property_detail_loading"),
                     )
                 }
                 PropertyDetailUiState.NotFound -> item {
-                    DetailFailure("Propiedad no encontrada.", onRetry, "property_detail_not_found")
+                    DetailFailure(
+                        message = "Propiedad no encontrada.",
+                        onRetry = onRetry,
+                        tag = "property_detail_not_found",
+                    )
                 }
                 is PropertyDetailUiState.Error -> item {
                     DetailFailure(
-                        UiErrorMessages.map(state.error),
-                        onRetry,
-                        "property_detail_error",
+                        message = UiErrorMessages.map(state.error),
+                        onRetry = onRetry,
+                        tag = "property_detail_error",
                     )
                 }
                 is PropertyDetailUiState.Content -> {
                     item { PropertyPhotos(state.property) }
                     item { PropertyInformation(state.property) }
                     item {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = onFavoriteClick,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                            ) {
-                                Text("Guardar favorito")
-                            }
-                            Button(
-                                onClick = onContactClick,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                            ) {
-                                Text("Solicitar este cuarto")
-                            }
-                            OutlinedButton(
-                                onClick = onVisitClick,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                            ) {
-                                Text("Agendar visita")
-                            }
-                        }
+                        DetailActions(
+                            onContactClick = onContactClick,
+                            onVisitClick = onVisitClick,
+                            onFavoriteClick = onFavoriteClick,
+                        )
                     }
                 }
             }
@@ -213,13 +214,22 @@ fun PropertyDetailScreen(
 
 @Composable
 private fun DetailFailure(message: String, onRetry: () -> Unit, tag: String) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.testTag(tag).semantics { liveRegion = LiveRegionMode.Polite },
+    TheHouseCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(tag)
+            .semantics { liveRegion = LiveRegionMode.Polite },
     ) {
-        Text(message, style = MaterialTheme.typography.bodyLarge)
-        OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Reintentar")
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
+            TheHouseSecondaryButton(
+                text = "Reintentar",
+                onClick = onRetry,
+            )
         }
     }
 }
@@ -231,21 +241,40 @@ private fun PropertyPhotos(property: Property) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
+                .height(220.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                    ),
+                )
                 .testTag("property_image_placeholder"),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                "Sin imágenes disponibles",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Roofing,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(IconSizes.hero),
+                )
+                Text(
+                    text = "Sin imágenes disponibles",
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
         return
     }
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         modifier = Modifier.fillMaxWidth(),
     ) {
         items(photos, key = { it.id }) { photo ->
@@ -254,9 +283,9 @@ private fun PropertyPhotos(property: Property) {
                 contentDescription = "Foto de ${property.title}",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .height(180.dp)
-                    .fillMaxWidth(0.85f)
-                    .clip(RoundedCornerShape(16.dp)),
+                    .height(240.dp)
+                    .fillMaxWidth(0.9f)
+                    .clip(RoundedCornerShape(20.dp)),
             )
         }
     }
@@ -264,41 +293,122 @@ private fun PropertyPhotos(property: Property) {
 
 @Composable
 private fun PropertyInformation(property: Property) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.testTag("property_detail_content"),
+    TheHouseCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("property_detail_content"),
     ) {
-        if (property.title.isNotBlank()) {
-            Text(
-                property.title,
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            if (property.title.isNotBlank()) {
+                Text(
+                    text = property.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.semantics { heading() },
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    text = "${property.price} ${property.currency}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "por mes",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = Spacing.xs),
+                )
+            }
+            if (property.city.isNotBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(IconSizes.sm),
+                    )
+                    Text(
+                        text = property.city,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            property.description?.takeIf { it.isNotBlank() }?.let { description ->
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Text(
+                    text = "Descripción",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            val amenities = property.amenities.filter { it.isNotBlank() }
+            if (amenities.isNotEmpty()) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Text(
+                    text = "Amenidades",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                amenities.chunked(2).forEach { rowAmenities ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        rowAmenities.forEach { amenity ->
+                            InfoChip(
+                                label = amenity,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (rowAmenities.size == 1) {
+                            androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
         }
-        Text(
-            "${property.price} ${property.currency}",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary,
+    }
+}
+
+@Composable
+private fun DetailActions(
+    onContactClick: () -> Unit,
+    onVisitClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        TheHousePrimaryButton(
+            text = "Solicitar este cuarto",
+            onClick = onContactClick,
         )
-        if (property.city.isNotBlank()) {
-            Text(property.city, style = MaterialTheme.typography.bodyLarge)
-        }
-        property.description?.takeIf { it.isNotBlank() }?.let { description ->
-            Text("Descripción", style = MaterialTheme.typography.titleMedium)
-            Text(description, style = MaterialTheme.typography.bodyLarge)
-        }
-        val amenities = property.amenities.filter { it.isNotBlank() }
-        if (amenities.isNotEmpty()) {
-            Text("Amenidades", style = MaterialTheme.typography.titleMedium)
-            amenities.forEach { Text(it, style = MaterialTheme.typography.bodyLarge) }
-        }
+        TheHouseSecondaryButton(
+            text = "Agendar visita",
+            onClick = onVisitClick,
+        )
+        TheHouseSecondaryButton(
+            text = "Guardar favorito",
+            onClick = onFavoriteClick,
+        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun DetailLoadingPreview() {
-    MaterialTheme {
+    TheHouseTheme {
         PropertyDetailScreen(PropertyDetailUiState.Loading, {}, {}, {}, {}, {})
     }
 }
@@ -306,7 +416,7 @@ private fun DetailLoadingPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun DetailNotFoundPreview() {
-    MaterialTheme {
+    TheHouseTheme {
         PropertyDetailScreen(PropertyDetailUiState.NotFound, {}, {}, {}, {}, {})
     }
 }
@@ -314,7 +424,7 @@ private fun DetailNotFoundPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun DetailErrorPreview() {
-    MaterialTheme {
+    TheHouseTheme {
         PropertyDetailScreen(PropertyDetailUiState.Error(UiError.Network), {}, {}, {}, {}, {})
     }
 }

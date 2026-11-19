@@ -6,23 +6,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,8 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,9 +41,15 @@ import com.thehouse.app.domain.model.Furniture
 import com.thehouse.app.domain.model.MinContract
 import com.thehouse.app.domain.model.RoomType
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InlineMessage
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.StatusTone
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.presentation.multimedia.MultimediaContracts
-import com.thehouse.app.ui.theme.Heights
 import com.thehouse.app.ui.theme.Spacing
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -116,24 +114,20 @@ fun RoomFormScreen(
     onPickPhoto: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = if (state.isEdit) "Editar cuarto" else "Agregar cuartos",
+        subtitle = "Configura precio, tipo y servicios",
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = Heights.button)) {
-                Text("Volver")
-            }
-            Text(
-                if (state.isEdit) "Editar cuarto" else "Agregar cuartos",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.semantics { heading() },
-            )
-
             when {
                 state.isLoading -> LoadingView(
                     message = "Cargando cuarto…",
@@ -149,94 +143,108 @@ fun RoomFormScreen(
                 )
                 else -> {
                     if (!state.isEdit) {
-                        Text(
-                            "Los cuartos se generan por piso con numeración automática " +
-                                "(101, 102, 201…).",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                            OutlinedTextField(
-                                value = state.floors,
-                                onValueChange = { onEvent(RoomFormEvent.FloorsChanged(it)) },
-                                label = { Text("Pisos") },
-                                isError = state.floorsError != null,
-                                supportingText = { state.floorsError?.let { Text(it) } },
-                                modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                                singleLine = true,
+                        FormSection(title = "Generación automática") {
+                            Text(
+                                text = "Los cuartos se generan por piso con numeración " +
+                                    "automática (101, 102, 201…).",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            OutlinedTextField(
-                                value = state.roomsPerFloor,
-                                onValueChange = { onEvent(RoomFormEvent.RoomsPerFloorChanged(it)) },
-                                label = { Text("Cuartos por piso") },
-                                isError = state.roomsPerFloorError != null,
-                                supportingText = { state.roomsPerFloorError?.let { Text(it) } },
-                                modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                                singleLine = true,
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                TheHouseTextField(
+                                    value = state.floors,
+                                    onValueChange = { onEvent(RoomFormEvent.FloorsChanged(it)) },
+                                    label = "Pisos",
+                                    isError = state.floorsError != null,
+                                    errorMessage = state.floorsError,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                TheHouseTextField(
+                                    value = state.roomsPerFloor,
+                                    onValueChange = {
+                                        onEvent(RoomFormEvent.RoomsPerFloorChanged(it))
+                                    },
+                                    label = "Cuartos por piso",
+                                    isError = state.roomsPerFloorError != null,
+                                    errorMessage = state.roomsPerFloorError,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                            OutlinedTextField(
-                                value = state.number,
-                                onValueChange = { onEvent(RoomFormEvent.NumberChanged(it)) },
-                                label = { Text("Número") },
-                                modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                                singleLine = true,
-                            )
-                            OutlinedTextField(
-                                value = state.floor,
-                                onValueChange = { onEvent(RoomFormEvent.FloorChanged(it)) },
-                                label = { Text("Piso") },
-                                modifier = Modifier.weight(1f).heightIn(min = Heights.input),
-                                singleLine = true,
-                            )
+                        FormSection(title = "Identificación") {
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                TheHouseTextField(
+                                    value = state.number,
+                                    onValueChange = { onEvent(RoomFormEvent.NumberChanged(it)) },
+                                    label = "Número",
+                                    modifier = Modifier.weight(1f),
+                                )
+                                TheHouseTextField(
+                                    value = state.floor,
+                                    onValueChange = { onEvent(RoomFormEvent.FloorChanged(it)) },
+                                    label = "Piso",
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
 
-                    OutlinedTextField(
-                        value = state.price,
-                        onValueChange = { onEvent(RoomFormEvent.PriceChanged(it)) },
-                        label = { Text("Renta mensual (MXN)") },
-                        isError = state.priceError != null,
-                        supportingText = { state.priceError?.let { Text(it) } },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = Heights.input),
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = state.sizeM2,
-                        onValueChange = { onEvent(RoomFormEvent.SizeChanged(it)) },
-                        label = { Text("Tamaño (m²)") },
-                        isError = state.sizeError != null,
-                        supportingText = { state.sizeError?.let { Text(it) } },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = Heights.input),
-                        singleLine = true,
-                    )
-
-                    Text("Tipo de cuarto", style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        RoomType.entries.forEach { type ->
-                            FilterChip(
-                                selected = state.type == type,
-                                onClick = { onEvent(RoomFormEvent.TypeChanged(type)) },
-                                label = { Text(typeLabel(type)) },
-                            )
-                        }
+                    FormSection(title = "Precio y tamaño") {
+                        TheHouseTextField(
+                            value = state.price,
+                            onValueChange = { onEvent(RoomFormEvent.PriceChanged(it)) },
+                            label = "Renta mensual (MXN)",
+                            isError = state.priceError != null,
+                            errorMessage = state.priceError,
+                        )
+                        TheHouseTextField(
+                            value = state.sizeM2,
+                            onValueChange = { onEvent(RoomFormEvent.SizeChanged(it)) },
+                            label = "Tamaño (m²)",
+                            isError = state.sizeError != null,
+                            errorMessage = state.sizeError,
+                        )
                     }
 
-                    Text("Baño", style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        BathroomType.entries.forEach { bath ->
-                            FilterChip(
-                                selected = state.bathroom == bath,
-                                onClick = { onEvent(RoomFormEvent.BathroomChanged(bath)) },
-                                label = { Text(if (bath == BathroomType.PRIVATE) "Privado" else "Compartido") },
-                            )
+                    FormSection(title = "Características") {
+                        Text(
+                            text = "Tipo de cuarto",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            RoomType.entries.forEach { type ->
+                                FilterChip(
+                                    selected = state.type == type,
+                                    onClick = { onEvent(RoomFormEvent.TypeChanged(type)) },
+                                    label = { Text(typeLabel(type)) },
+                                )
+                            }
                         }
-                    }
-
-                    Text("Muebles", style = MaterialTheme.typography.labelLarge)
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Text(
+                            text = "Baño",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            BathroomType.entries.forEach { bath ->
+                                FilterChip(
+                                    selected = state.bathroom == bath,
+                                    onClick = { onEvent(RoomFormEvent.BathroomChanged(bath)) },
+                                    label = {
+                                        Text(
+                                            if (bath == BathroomType.PRIVATE) "Privado" else "Compartido",
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Muebles",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Furniture.entries.chunked(2).forEach { rowItems ->
                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                                 rowItems.forEach { item ->
@@ -250,116 +258,123 @@ fun RoomFormScreen(
                         }
                     }
 
-                    OutlinedTextField(
-                        value = state.availableFrom,
-                        onValueChange = { onEvent(RoomFormEvent.AvailableFromChanged(it)) },
-                        label = { Text("Disponible desde (YYYY-MM-DD)") },
-                        isError = state.availableFromError != null,
-                        supportingText = { state.availableFromError?.let { Text(it) } },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = Heights.input),
-                        singleLine = true,
-                    )
-
-                    Text("Contrato mínimo", style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        MinContract.entries.forEach { contract ->
-                            FilterChip(
-                                selected = state.minContract == contract,
-                                onClick = { onEvent(RoomFormEvent.MinContractChanged(contract)) },
-                                label = { Text(contractLabel(contract)) },
-                            )
-                        }
-                    }
-
-                    if (state.isEdit) {
-                        Text("Fotos del cuarto", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Máximo 4 fotos. La primera es la principal; si no hay fotos se usa la del edificio.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    FormSection(title = "Disponibilidad") {
+                        TheHouseTextField(
+                            value = state.availableFrom,
+                            onValueChange = {
+                                onEvent(RoomFormEvent.AvailableFromChanged(it))
+                            },
+                            label = "Disponible desde (YYYY-MM-DD)",
+                            isError = state.availableFromError != null,
+                            errorMessage = state.availableFromError,
                         )
-                        state.photos.forEach { photo ->
-                            AsyncImage(
-                                model = photo.thumbUrl.ifBlank { photo.url },
-                                contentDescription = "Foto del cuarto ${state.number}",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(160.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
-                            )
-                            OutlinedButton(
-                                onClick = { onEvent(RoomFormEvent.DeletePhoto(photo.id)) },
-                                enabled = !state.isUploadingPhoto,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = Heights.button),
-                            ) { Text(if (state.isUploadingPhoto) "…" else "Eliminar esta foto") }
-                        }
-                        OutlinedButton(
-                            onClick = onPickPhoto,
-                            enabled = !state.isUploadingPhoto && state.photos.size < 4,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = Heights.button),
-                        ) {
-                            Text(
-                                when {
-                                    state.isUploadingPhoto -> "Subiendo…"
-                                    state.photos.size >= 4 -> "Límite de 4 fotos alcanzado"
-                                    else -> "Agregar foto"
-                                },
-                            )
-                        }
-                    }
-
-                    localMessage?.let {
                         Text(
-                            it,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "Contrato mínimo",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
-                    }
-                    state.infoMessage?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    state.errorMessage?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        Button(
-                            onClick = { onEvent(RoomFormEvent.Submit) },
-                            enabled = !state.isSaving && !state.isLoading && state.isValid,
-                            modifier = Modifier.weight(2f).heightIn(min = Heights.button),
-                        ) {
-                            Text(
-                                when {
-                                    state.isSaving -> "Guardando…"
-                                    state.isEdit -> "Guardar cambios"
-                                    else -> "Generar cuartos"
-                                },
-                            )
-                        }
-                        if (state.isEdit) {
-                            OutlinedButton(
-                                onClick = { onEvent(RoomFormEvent.Delete) },
-                                enabled = !state.isSaving,
-                                modifier = Modifier.weight(1f).heightIn(min = Heights.button),
-                            ) {
-                                Text(
-                                    if (state.isSaving) "…" else "Eliminar",
-                                    color = MaterialTheme.colorScheme.error,
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            MinContract.entries.forEach { contract ->
+                                FilterChip(
+                                    selected = state.minContract == contract,
+                                    onClick = {
+                                        onEvent(RoomFormEvent.MinContractChanged(contract))
+                                    },
+                                    label = { Text(contractLabel(contract)) },
                                 )
                             }
                         }
                     }
+
+                    if (state.isEdit) {
+                        FormSection(title = "Fotos del cuarto") {
+                            Text(
+                                text = "Máximo 4 fotos. La primera es la principal; si no hay " +
+                                    "fotos se usa la del edificio.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            state.photos.forEach { photo ->
+                                AsyncImage(
+                                    model = photo.thumbUrl.ifBlank { photo.url },
+                                    contentDescription = "Foto del cuarto ${state.number}",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(160.dp)
+                                        .clip(MaterialTheme.shapes.medium),
+                                )
+                                TheHouseSecondaryButton(
+                                    text = if (state.isUploadingPhoto) {
+                                        "…"
+                                    } else {
+                                        "Eliminar esta foto"
+                                    },
+                                    onClick = { onEvent(RoomFormEvent.DeletePhoto(photo.id)) },
+                                    enabled = !state.isUploadingPhoto,
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                            TheHouseSecondaryButton(
+                                text = when {
+                                    state.isUploadingPhoto -> "Subiendo…"
+                                    state.photos.size >= 4 -> "Límite de 4 fotos alcanzado"
+                                    else -> "Agregar foto"
+                                },
+                                onClick = onPickPhoto,
+                                enabled = !state.isUploadingPhoto && state.photos.size < 4,
+                                loading = state.isUploadingPhoto,
+                            )
+                        }
+                    }
+
+                    localMessage?.let { message ->
+                        InlineMessage(text = message)
+                    }
+                    state.infoMessage?.let { message ->
+                        InlineMessage(text = message, tone = StatusTone.Success)
+                    }
+                    state.errorMessage?.let { message ->
+                        InlineMessage(text = message)
+                    }
+
+                    TheHousePrimaryButton(
+                        text = when {
+                            state.isSaving -> "Guardando…"
+                            state.isEdit -> "Guardar cambios"
+                            else -> "Generar cuartos"
+                        },
+                        onClick = { onEvent(RoomFormEvent.Submit) },
+                        enabled = !state.isLoading && state.isValid,
+                        loading = state.isSaving,
+                    )
+                    if (state.isEdit) {
+                        TheHouseSecondaryButton(
+                            text = if (state.isSaving) "…" else "Eliminar cuarto",
+                            onClick = { onEvent(RoomFormEvent.Delete) },
+                            enabled = !state.isSaving,
+                            contentColor = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FormSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            content()
         }
     }
 }

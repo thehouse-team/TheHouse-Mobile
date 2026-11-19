@@ -4,24 +4,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InlineMessage
+import com.thehouse.app.presentation.components.InfoRow
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.StatusChip
+import com.thehouse.app.presentation.components.StatusTone
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.ui.theme.Spacing
 
 @Composable
 fun MyRentalDestination(
@@ -48,53 +53,123 @@ fun MyRentalScreen(
     onOpenConversation: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = "Mi renta",
+        subtitle = "Tu contrato activo",
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp)
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) { Text("Volver") }
-            Text("Mi renta", style = MaterialTheme.typography.headlineSmall)
             when {
-                state.isLoading -> LoadingView("Cargando renta…", modifier = Modifier.fillMaxWidth())
-                state.emptyMessage != null -> Text(state.emptyMessage, style = MaterialTheme.typography.bodyLarge)
+                state.isLoading -> LoadingView(
+                    message = "Cargando renta…",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                state.emptyMessage != null -> EmptyStateView(
+                    title = "Sin renta activa",
+                    message = state.emptyMessage,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 state.errorMessage != null -> ErrorStateView(
                     title = "No se pudo cargar",
                     message = state.errorMessage,
                     onRetry = onRetry,
                 )
                 state.rental != null -> {
-                    val r = state.rental
-                    Text("${r.room.title} · ${r.room.city}", style = MaterialTheme.typography.titleMedium)
-                    Text("Edificio: ${r.building.name}")
-                    Text("Arrendador: ${r.landlord.name}")
-                    Text("Renta: ${r.terms.monthlyRent} ${r.terms.currency} · Depósito: ${r.terms.deposit} ${r.terms.currency}")
-                    Text("Inicio: ${r.terms.startDate} · Fin: ${r.terms.endDate} · Día de pago: ${r.terms.paymentDay}")
-                    r.activatedAt?.let { Text("Activado: $it") }
-                    Text(
-                        "Dirección: ${r.address.street} ${r.address.number}, ${r.address.neighborhood}, ${r.address.city}, ${r.address.state} ${r.address.postalCode}",
+                    val rental = state.rental ?: return@Column
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            StatusChip(label = "Activo", tone = StatusTone.Success)
+                            Text(
+                                text = rental.room.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = rental.room.city,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            Text(
+                                text = "Condiciones",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            InfoRow("Edificio", rental.building.name)
+                            InfoRow("Arrendador", rental.landlord.name)
+                            InfoRow(
+                                "Renta",
+                                "${rental.terms.monthlyRent} ${rental.terms.currency}",
+                            )
+                            InfoRow(
+                                "Depósito",
+                                "${rental.terms.deposit} ${rental.terms.currency}",
+                            )
+                            InfoRow("Inicio", rental.terms.startDate)
+                            InfoRow("Fin", rental.terms.endDate)
+                            InfoRow("Día de pago", rental.terms.paymentDay.toString())
+                            rental.activatedAt?.let { activatedAt ->
+                                InfoRow("Activado", activatedAt)
+                            }
+                        }
+                    }
+
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            Text(
+                                text = "Dirección",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = "${rental.address.street} ${rental.address.number}, " +
+                                    "${rental.address.neighborhood}, ${rental.address.city}, " +
+                                    "${rental.address.state} ${rental.address.postalCode}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    rental.nextPayment?.let { nextPayment ->
+                        TheHouseCard {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                Text(
+                                    text = "Próximo pago (informativo)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                InfoRow("Fecha", nextPayment.dueDate)
+                                InfoRow(
+                                    "Monto",
+                                    "${nextPayment.amount} ${rental.terms.currency}",
+                                )
+                                InlineMessage(
+                                    text = "Pago no disponible desde la aplicación.",
+                                    tone = StatusTone.Neutral,
+                                )
+                            }
+                        }
+                    }
+
+                    TheHousePrimaryButton(
+                        text = "Hablar con arrendador",
+                        onClick = { onOpenConversation(rental.conversationId) },
                     )
-                    r.nextPayment?.let { np ->
-                        Text(
-                            "Próximo pago (informativo): ${np.dueDate} · ${np.amount} ${r.terms.currency}",
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            "Pago no disponible desde la aplicación.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Button(
-                        onClick = { onOpenConversation(r.conversationId) },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    ) {
-                        Text("Hablar con arrendador")
-                    }
                 }
             }
         }

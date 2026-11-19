@@ -4,24 +4,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.thehouse.app.presentation.components.InlineMessage
+import com.thehouse.app.presentation.components.StatusChip
+import com.thehouse.app.presentation.components.StatusTone
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseTextField
+import com.thehouse.app.ui.theme.Spacing
 
 @Composable
 fun CreateAgreementDestination(
@@ -57,44 +58,111 @@ fun CreateAgreementScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = "Crear acuerdo",
+        subtitle = "Define las condiciones de renta",
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp)
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) { Text("Volver") }
-            Text("Crear acuerdo", style = MaterialTheme.typography.headlineSmall)
             val created = state.created
             if (created != null) {
-                Text("Acuerdo creado correctamente.", style = MaterialTheme.typography.titleMedium)
-                Text("Estado: ${created.status.api}")
+                TheHouseCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        Text(
+                            text = "Acuerdo creado correctamente",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        StatusChip(
+                            label = agreementStatusLabel(created.status),
+                            tone = agreementStatusTone(created.status),
+                        )
+                    }
+                }
+
                 created.closingCode?.let { code ->
-                    Text("Código de respaldo: ${code.backupCode}", style = MaterialTheme.typography.titleMedium)
-                    Text("Expira: ${code.expiresAt}")
-                    Text("Comparte este código con el estudiante. No se volverá a mostrar en el detalle.")
+                    TheHouseCard(containerColor = MaterialTheme.colorScheme.primaryContainer) {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            Text(
+                                text = "Código de respaldo",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Text(
+                                text = code.backupCode,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Text(
+                                text = "Expira: ${code.expiresAt}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Text(
+                                text = "Comparte este código con el estudiante. " +
+                                    "No se volverá a mostrar en el detalle.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
                 }
-                Button(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text("Continuar")
-                }
+
+                TheHousePrimaryButton(
+                    text = "Continuar",
+                    onClick = onDone,
+                )
             } else {
-                OutlinedTextField(state.monthlyRent, onMonthlyRentChanged, label = { Text("Renta mensual (MXN)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(state.deposit, onDepositChanged, label = { Text("Depósito (MXN)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(state.startDate, onStartDateChanged, label = { Text("Fecha inicio (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(state.durationMonths, onDurationChanged, label = { Text("Duración (meses)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(state.paymentDay, onPaymentDayChanged, label = { Text("Día de pago (1-28)") }, modifier = Modifier.fillMaxWidth())
-                state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Button(
+                Text(
+                    text = "Ingresa las condiciones que acordaste con el estudiante.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                TheHouseTextField(
+                    value = state.monthlyRent,
+                    onValueChange = onMonthlyRentChanged,
+                    label = "Renta mensual (MXN)",
+                )
+                TheHouseTextField(
+                    value = state.deposit,
+                    onValueChange = onDepositChanged,
+                    label = "Depósito (MXN)",
+                )
+                TheHouseTextField(
+                    value = state.startDate,
+                    onValueChange = onStartDateChanged,
+                    label = "Fecha inicio (YYYY-MM-DD)",
+                )
+                TheHouseTextField(
+                    value = state.durationMonths,
+                    onValueChange = onDurationChanged,
+                    label = "Duración (meses)",
+                )
+                TheHouseTextField(
+                    value = state.paymentDay,
+                    onValueChange = onPaymentDayChanged,
+                    label = "Día de pago (1-28)",
+                )
+
+                state.errorMessage?.let { message ->
+                    InlineMessage(text = message)
+                }
+
+                TheHousePrimaryButton(
+                    text = "Crear acuerdo",
                     onClick = onSubmit,
                     enabled = !state.isSubmitting,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) {
-                    if (state.isSubmitting) CircularProgressIndicator(modifier = Modifier.heightIn(max = 18.dp))
-                    else Text("Crear acuerdo")
-                }
+                    loading = state.isSubmitting,
+                )
             }
         }
     }

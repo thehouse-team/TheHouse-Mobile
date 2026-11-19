@@ -1,39 +1,58 @@
 package com.thehouse.app.presentation.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apartment
+import androidx.compose.material.icons.outlined.Bathtub
+import androidx.compose.material.icons.outlined.Bed
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.SquareFoot
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Roofing
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.thehouse.app.domain.model.Property
-import com.thehouse.app.presentation.demo.PrototypeProperty
 import com.thehouse.app.presentation.demo.PrototypeProperties
+import com.thehouse.app.presentation.demo.PrototypeProperty
+import com.thehouse.app.ui.theme.Elevations
+import com.thehouse.app.ui.theme.IconSizes
+import com.thehouse.app.ui.theme.Spacing
 
 /**
  * Tarjeta de renta REAL (D5, NV-06/NV-07).
- * - Reutiliza el lenguaje visual D4 (card 16dp, botones 48dp).
+ * - Lenguaje visual TheHouse: imagen 168dp, radio 16, precio destacado.
  * - Muestra SOLO campos del contrato (título, precio+moneda, ciudad,
- *   recámaras/baños/área, universidad si aplica).
+ *   recámaras/baños/área, foto real si existe).
  * - NUNCA Match, verificación, distancia ni filtros inventados.
- * - Acciones de contacto/favorito son eventos de UI (sin backend).
  */
 @Composable
 fun PropertyCard(
@@ -44,86 +63,144 @@ fun PropertyCard(
     isFavorite: Boolean = false,
     onPropertyClick: () -> Unit,
 ) {
-    Card(
+    Surface(
         onClick = onPropertyClick,
         modifier = modifier
             .fillMaxWidth()
             .semantics { contentDescription = "Renta ${property.title}" },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        shadowElevation = Elevations.card,
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            val thumb = property.thumbnailUrl
-            if (!thumb.isNullOrBlank()) {
-                AsyncImage(
-                    model = thumb,
-                    contentDescription = "Foto de ${property.title}",
-                    contentScale = ContentScale.Crop,
+        Column {
+            Box {
+                val thumb = property.thumbnailUrl
+                if (!thumb.isNullOrBlank()) {
+                    AsyncImage(
+                        model = thumb,
+                        contentDescription = "Foto de ${property.title}",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(168.dp),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(168.dp)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.secondaryContainer,
+                                    ),
+                                ),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Roofing,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                            modifier = Modifier.size(44.dp),
+                        )
+                    }
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.94f),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                )
-            } else {
-                Box(
+                        .align(Alignment.TopEnd)
+                        .padding(Spacing.sm),
+                ) {
+                    IconButton(
+                        onClick = onFavoriteClick,
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Quitar favorito" else "Guardar favorito",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(IconSizes.md),
+                        )
+                    }
+                }
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.94f),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
+                        .align(Alignment.BottomStart)
+                        .padding(Spacing.sm),
                 ) {
                     Text(
-                        text = "Sin foto disponible",
+                        text = "$" + formatPrice(property.price) + " " + property.currency,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    text = property.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(IconSizes.sm),
+                    )
+                    Text(
+                        text = property.city,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-            Text(
-                text = property.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = property.city,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "$" + property.price.toString() + " " + property.currency + "/mes",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "${property.bedrooms} recámaras · ${property.bathrooms} baños · ${property.areaM2} m²",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = onFavoriteClick,
-                    modifier = Modifier
-                        .height(48.dp)
-                        .weight(1f),
-                ) {
-                    Text(if (isFavorite) "Quitar favorito" else "Guardar favorito")
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    InfoChip("${property.bedrooms} rec.", icon = Icons.Outlined.Bed)
+                    InfoChip("${property.bathrooms} baños", icon = Icons.Outlined.Bathtub)
+                    InfoChip("${formatArea(property.areaM2)} m²", icon = Icons.Outlined.SquareFoot)
                 }
-                OutlinedButton(
-                    onClick = onContactClick,
-                    modifier = Modifier
-                        .height(48.dp)
-                        .weight(1f),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Contactar")
+                    Column {
+                        Text(
+                            text = "$" + formatPrice(property.price) + " " + property.currency,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = "por mes",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = onContactClick,
+                        shape = MaterialTheme.shapes.small,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        contentPadding = PaddingValues(horizontal = Spacing.md),
+                        modifier = Modifier.height(40.dp),
+                    ) {
+                        Text("Contactar", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }
@@ -132,10 +209,8 @@ fun PropertyCard(
 
 /**
  * Tarjeta de renta del prototipo (D4, NV-05).
- * - Reutilizable: muestra universidad/sector, renta destacada, precio,
- *   distancia al campus, indicador Match y verificado.
+ * - Datos de prototipo etiquetados como demo, nunca como backend.
  * - Acciones de contacto/favorito son eventos de UI (sin tocar backend).
- * - Datos de prototipo se etiquetan como demo, nunca como backend.
  */
 @Composable
 fun PropertyCard(
@@ -145,77 +220,113 @@ fun PropertyCard(
     modifier: Modifier = Modifier,
     isFavorite: Boolean = false,
 ) {
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .semantics { contentDescription = "Renta ${property.title}" },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        shadowElevation = Elevations.card,
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.secondaryContainer,
+                            ),
+                        ),
+                    ),
             ) {
-                MatchBadge(matchPercent = property.matchPercent)
-                if (property.verified) VerifiedBadge()
+                Icon(
+                    imageVector = Icons.Rounded.Roofing,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(44.dp),
+                )
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(Spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    MatchBadge(matchPercent = property.matchPercent)
+                    if (property.verified) VerifiedBadge()
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.94f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(Spacing.sm),
+                ) {
+                    IconButton(onClick = onFavoriteClick, modifier = Modifier.size(40.dp)) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Quitar favorito" else "Guardar favorito",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(IconSizes.md),
+                        )
+                    }
+                }
             }
-            Text(
-                text = property.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = distanceText(property),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "$" + property.priceMxn.toString() + " MXN/mes",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = property.services.joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (property.isDemo) {
+            Column(
+                modifier = Modifier.padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
                 Text(
-                    text = "Demo del prototipo",
-                    style = MaterialTheme.typography.labelSmall,
+                    text = property.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = distanceText(property),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = onFavoriteClick,
-                    modifier = Modifier
-                        .height(48.dp)
-                        .weight(1f),
-                ) {
-                    Text(if (isFavorite) "Quitar favorito" else "Guardar favorito")
+                Text(
+                    text = "$" + formatPrice(property.priceMxn.toDouble()) + " MXN/mes",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = property.services.joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (property.isDemo) {
+                    StatusChip(label = "Demo del prototipo", tone = StatusTone.Neutral)
                 }
-                OutlinedButton(
+                TheHouseSecondaryButton(
+                    text = "Contactar",
                     onClick = onContactClick,
-                    modifier = Modifier
-                        .height(48.dp)
-                        .weight(1f),
-                ) {
-                    Text("Contactar")
-                }
+                )
             }
         }
     }
+}
+
+private fun formatPrice(value: Double): String {
+    val longValue = value.toLong()
+    return if (value == longValue.toDouble()) {
+        java.text.NumberFormat.getIntegerInstance(java.util.Locale.US).format(longValue)
+    } else {
+        String.format(java.util.Locale.US, "%,.2f", value)
+    }
+}
+
+private fun formatArea(value: Double): String {
+    val longValue = value.toLong()
+    return if (value == longValue.toDouble()) longValue.toString() else String.format(java.util.Locale.US, "%.1f", value)
 }
 
 private fun distanceText(property: PrototypeProperty): String {
