@@ -58,7 +58,10 @@ import com.thehouse.app.presentation.navigation.BottomTab
 import com.thehouse.app.presentation.navigation.TabNavigationState
 import com.thehouse.app.presentation.notifications.NotificationsDestination
 import com.thehouse.app.presentation.onboarding.OnboardingScreen
+import com.thehouse.app.presentation.preferences.PreferencesDestination
 import com.thehouse.app.presentation.privacy.PrivacyDestination
+import com.thehouse.app.presentation.profile.ProfileDestination
+import com.thehouse.app.presentation.quicksetup.QuickSetupDestination
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailDestination
 import com.thehouse.app.presentation.smartmatch.SmartMatchScreen
@@ -271,6 +274,15 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onOpenPrivacy = {
                             navController.navigate(AppRoutes.privacy.route) { launchSingleTop = true }
                         },
+                        onOpenProfile = {
+                            navController.navigate(AppRoutes.profile.route) { launchSingleTop = true }
+                        },
+                        onOpenPreferences = {
+                            navController.navigate(AppRoutes.preferences.route) { launchSingleTop = true }
+                        },
+                        onOpenQuickSetup = {
+                            navController.navigate(AppRoutes.quickSetup.route) { launchSingleTop = true }
+                        },
                     )
                 }
                 composable(AppRoutes.explore.route) {
@@ -341,8 +353,11 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                         },
                         onConfigurePreferences = {
-                            // D11 Preferences UI no expuesta como ruta en este punto; CTA requerido por estado NoPreferences.
-                            navController.navigate(AppRoutes.home.route) { launchSingleTop = true }
+                            if (!isAuthenticated) {
+                                navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            } else {
+                                navController.navigate(AppRoutes.preferences.route) { launchSingleTop = true }
+                            }
                         },
                         onPropertyClick = { id ->
                             navController.navigate(PropertyDetailRoute(id).route) { launchSingleTop = true }
@@ -806,6 +821,57 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             }
                         },
                     )
+                }
+                composable(AppRoutes.profile.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        ProfileDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onOpenPreferences = {
+                                navController.navigate(AppRoutes.preferences.route) { launchSingleTop = true }
+                            },
+                            onOpenQuickSetup = {
+                                navController.navigate(AppRoutes.quickSetup.route) { launchSingleTop = true }
+                            },
+                        )
+                    }
+                }
+                composable(AppRoutes.preferences.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        PreferencesDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(AppRoutes.quickSetup.route) {
+                    if (!isAuthenticated) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                        }
+                    } else {
+                        QuickSetupDestination(
+                            factory = factory,
+                            onBack = { navController.popBackStack() },
+                            onContinue = {
+                                navController.navigate(AppRoutes.home.route) {
+                                    popUpTo(AppRoutes.home.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            },
+                            onOpenPreferences = {
+                                navController.navigate(AppRoutes.preferences.route) { launchSingleTop = true }
+                            },
+                        )
+                    }
                 }
                 composable(
                     route = CreateRequestRoute.PATTERN,

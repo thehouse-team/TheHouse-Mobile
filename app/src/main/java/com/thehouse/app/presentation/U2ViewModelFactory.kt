@@ -12,6 +12,9 @@ import com.thehouse.app.presentation.explore.ExploreViewModel
 import com.thehouse.app.presentation.favorites.FavoritesViewModel
 import com.thehouse.app.presentation.home.HomeViewModel
 import com.thehouse.app.presentation.onboarding.OnboardingViewModel
+import com.thehouse.app.presentation.preferences.PreferencesViewModel
+import com.thehouse.app.presentation.profile.ProfileViewModel
+import com.thehouse.app.presentation.quicksetup.QuickSetupViewModel
 import com.thehouse.app.presentation.root.RootViewModel
 import com.thehouse.app.presentation.propertydetail.PropertyDetailViewModel
 import com.thehouse.app.presentation.visits.ScheduleVisitViewModel
@@ -322,6 +325,32 @@ class U2ViewModelFactory(
                 markNotificationRead = container.markNotificationRead,
                 markAllNotificationsRead = container.markAllNotificationsRead,
                 pushRefreshSignals = container.pushRefreshSignals,
+            ) as T
+
+        modelClass.isAssignableFrom(ProfileViewModel::class.java) ->
+            ProfileViewModel(
+                profileRepository = container.profileRepository,
+                getProfile = container.getProfile,
+                updateProfile = container.updateProfile,
+                selectUserUniversity = container.selectUserUniversity,
+                getUniversities = container.getUniversities,
+                sessionState = container.sessionStore.state,
+            ) as T
+
+        modelClass.isAssignableFrom(PreferencesViewModel::class.java) ->
+            PreferencesViewModel(
+                preferenceRepository = container.preferencesRepository,
+                getPreferences = container.getPreferences,
+                savePreferences = container.savePreferences,
+            ) as T
+
+        modelClass.isAssignableFrom(QuickSetupViewModel::class.java) ->
+            QuickSetupViewModel(
+                profileRepository = container.profileRepository,
+                getProfile = container.getProfile,
+                updateProfile = container.updateProfile,
+                selectUserUniversity = container.selectUserUniversity,
+                getUniversities = container.getUniversities,
             ) as T
 
         else -> throw IllegalArgumentException("ViewModel no soportado: ${modelClass.canonicalName}")

@@ -77,3 +77,48 @@
 - `.\gradlew.bat testDebugUnitTest lintDebug assembleDebug` → **BUILD SUCCESSFUL (1m 46s)**, 99 tests 0 fallos.
 - QA runtime: **NO EJECUTADO** — sin emulador/adb disponible en el entorno (requisito condicional "si hay emulador").
 - Commit: `style: polish mobile ui and unify design system`; push a `origin/feature/profile-preferences-ui-polish`.
+
+## FASE C — UI real Profile / Preferences / Quick Setup (2026-11-19)
+
+### Gobernanza y precheck
+- Rama base: `feature/ui-redesign` (`6dd926c`). Rama de trabajo creada: `feature/profile-preferences-ui`.
+- Working tree preservado: `specs/nv-13-reviews/*` modificados y `app/google-services.json` untracked (no incluidos en esta tarea).
+- Alcance respetado: sin Backend, sin contratos inventados, sin Map/Roommate/Reviews, sin cambios en lógica de negocio innecesaria.
+
+### Implementación (capas existentes + presentación nueva)
+- `presentation/common/ThrowableToUiError.kt`: mapeo seguro de errores a mensajes UI (sin exponer detalles crudos).
+- `presentation/profile/`: `ProfileViewModel` + `ProfileScreen`/`ProfileDestination`.
+  - Datos reales: nombre y universidad (`GetProfileUseCase`/`ProfileRepository`), correo de sesión activa, estado Quick Setup.
+  - Edición de nombre: `UpdateProfileUseCase` con loading/success/error.
+  - Selección de universidad: `GetUniversitiesUseCase` + `SelectUserUniversityUseCase`.
+  - Estados Loading/Content/Error/Retry; sin tokens/IDs técnicos.
+- `presentation/preferences/`: `PreferencesViewModel` + `PreferencesScreen`/`PreferencesDestination`.
+  - `GetPreferencesUseCase`/`SavePreferencesUseCase`/`PreferenceRepository` para load-save real.
+  - Campos reales: presupuesto (min/max/moneda), distancia, transporte, convivencia, tipo de lugar, mascotas, servicios esenciales, tipos de propiedad.
+  - Validación UI de números inválidos; Smart Match sigue consumiendo las mismas preferencias (sin duplicación).
+- `presentation/quicksetup/`: `QuickSetupViewModel` + `QuickSetupScreen`/`QuickSetupDestination`.
+  - Flujo breve con nombre/universidad soportados y acceso a Preferencias.
+  - `GetQuickSetupUseCase`/perfil: `quickSetupCompleted` tratado como flag de solo lectura (no se fuerza ni se inventa completitud).
+- Navegación/DI:
+  - `AppRoutes`: `profile`, `preferences`, `quickSetup`.
+  - `U2ViewModelFactory`: creación de Profile/Preferences/QuickSetup ViewModels con dependencias existentes.
+  - `MainActivity`: destinos autenticados y rutas reales; Smart Match `NoPreferences` navega a Preferencias.
+  - `HomeScreen`: accesos "Mi perfil", "Preferencias", "Configuración inicial" en cuenta autenticada.
+
+### Tests añadidos
+- `presentation/profile/ProfileViewModelTest.kt`: load success/error, actualización de nombre, selección de universidad.
+- `presentation/preferences/PreferencesViewModelTest.kt`: load, save, validación numérica, error.
+- `presentation/quicksetup/QuickSetupViewModelTest.kt`: completed/not completed, save, error/state.
+
+### Gates (ejecutados)
+- `.\gradlew.bat testDebugUnitTest` → **BUILD SUCCESSFUL** (47s, 28 tareas: 7 ejecutadas, 21 up-to-date, configuration cache reutilizada).
+- `.\gradlew.bat lintDebug` → **BUILD SUCCESSFUL** (2m 3s, reportes generados en `app/build/reports/lint-results-debug.html` y `.sarif`).
+- `.\gradlew.bat assembleDebug` → **BUILD SUCCESSFUL** (20s).
+
+### Runtime (parcial)
+- `emulator-5554` detectado (`adb devices`: device). APK debug instalado y app iniciada (`com.thehouse.app/.MainActivity` resumida) sin crash observado.
+- Estado de UI detectado: pantalla no autenticada ("¿Ya tienes cuenta? Inicia sesión"). Sin credenciales/sesión autenticada disponible, no fue posible ejercer end-to-end los flujos protegidos de Profile, Preferences y Quick Setup (rutas autenticadas) ni validar carga/guardado contra backend.
+- Resultado: **runtime parcial** (arranque/instalación OK; validación funcional autenticada pendiente de credenciales/sesión).
+
+### Git (pendiente de commit en este paso)
+- `git diff --check` sin errores en archivos de esta tarea. Se excluirán `specs/nv-13-reviews/*` y `app/google-services.json` del commit. Push previsto a `origin feature/profile-preferences-ui`, sin merge.

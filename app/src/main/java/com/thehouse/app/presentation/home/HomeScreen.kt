@@ -19,8 +19,10 @@ import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Receipt
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.LocationOn
@@ -95,6 +97,9 @@ fun HomeScreen(
     onOpenLandlordAgreements: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    onOpenPreferences: () -> Unit = {},
+    onOpenQuickSetup: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
@@ -242,6 +247,9 @@ fun HomeScreen(
                 AccountActionsCard(
                     unreadNotifications = state.unreadNotifications,
                     isLoggingOut = state.isLoggingOut,
+                    onOpenProfile = onOpenProfile,
+                    onOpenPreferences = onOpenPreferences,
+                    onOpenQuickSetup = onOpenQuickSetup,
                     onOpenNotifications = onOpenNotifications,
                     onOpenRequests = onOpenRequests,
                     onOpenConversations = onOpenConversations,
@@ -387,6 +395,9 @@ private fun SmartMatchPromo() {
 private fun AccountActionsCard(
     unreadNotifications: Int,
     isLoggingOut: Boolean,
+    onOpenProfile: () -> Unit,
+    onOpenPreferences: () -> Unit,
+    onOpenQuickSetup: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenRequests: () -> Unit,
     onOpenConversations: () -> Unit,
@@ -403,6 +414,21 @@ private fun AccountActionsCard(
                 text = "Tu cuenta",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+            AccountActionRow(
+                icon = Icons.Outlined.Person,
+                label = "Mi perfil",
+                onClick = onOpenProfile,
+            )
+            AccountActionRow(
+                icon = Icons.Outlined.Tune,
+                label = "Preferencias",
+                onClick = onOpenPreferences,
+            )
+            AccountActionRow(
+                icon = Icons.Outlined.Home,
+                label = "Configuración inicial",
+                onClick = onOpenQuickSetup,
             )
             AccountActionRow(
                 icon = Icons.Outlined.Notifications,
