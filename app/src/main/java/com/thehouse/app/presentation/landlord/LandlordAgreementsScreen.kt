@@ -1,31 +1,40 @@
 ﻿package com.thehouse.app.presentation.landlord
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.domain.model.AgreementStatus
+import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.StatusChip
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.ui.theme.Spacing
+
+private val filterOptions: List<Pair<AgreementStatus?, String>> = listOf(
+    null to "Todos",
+    AgreementStatus.PENDING to "Pendientes",
+    AgreementStatus.ACTIVE to "Activos",
+)
 
 @Composable
 fun LandlordAgreementsDestination(
@@ -57,44 +66,121 @@ fun LandlordAgreementsScreen(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = "Mis acuerdos",
+        subtitle = "Acuerdos de renta con estudiantes",
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = Spacing.xl, vertical = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) { Text("Volver") }
-            Text("Mis acuerdos", style = MaterialTheme.typography.headlineSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { onFilterChanged(null) }) { Text("Todos") }
-                OutlinedButton(onClick = { onFilterChanged(AgreementStatus.PENDING) }) { Text("Pendientes") }
-                OutlinedButton(onClick = { onFilterChanged(AgreementStatus.ACTIVE) }) { Text("Activos") }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                filterOptions.forEach { (status, label) ->
+                    FilterChip(
+                        selected = state.selectedStatus == status,
+                        onClick = { onFilterChanged(status) },
+                        label = { Text(label) },
+                    )
+                }
             }
+
             when {
-                state.isLoading -> LoadingView("Cargando acuerdos…", modifier = Modifier.fillMaxWidth())
-                state.errorMessage != null -> ErrorStateView("No se pudo cargar", state.errorMessage, onRetry = onRetry)
-                state.items.isEmpty() -> Text("No hay acuerdos para mostrar.", style = MaterialTheme.typography.bodyLarge)
+                state.isLoading -> LoadingView(
+                    message = "Cargando acuerdos…",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                )
+                state.errorMessage != null -> ErrorStateView(
+                    title = "No se pudo cargar",
+                    message = state.errorMessage,
+                    onRetry = onRetry,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                )
+                state.items.isEmpty() -> EmptyStateView(
+                    title = "Sin acuerdos",
+                    message = "No hay acuerdos para mostrar.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                )
                 else -> {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f, fill = false)) {
-                        items(state.items, key = { it.id }) { a ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onOpenDetail(a.id) }
-                                    .padding(vertical = 8.dp),
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                        contentPadding = PaddingValues(bottom = Spacing.md),
+                    ) {
+                        items(state.items, key = { it.id }) { agreement ->
+                            TheHouseCard(
+                                onClick = { onOpenDetail(agreement.id) },
+                                contentPadding = PaddingValues(Spacing.md),
                             ) {
-                                Text("${a.room.title} · ${a.status.api}", style = MaterialTheme.typography.titleMedium)
-                                Text("${a.terms.monthlyRent} ${a.terms.currency} · Inicio ${a.terms.startDate}")
-                                a.student?.name?.let { Text("Estudiante: $it") }
+                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = agreement.room.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        StatusChip(
+                                            label = agreementStatusLabel(agreement.status),
+                                            tone = agreementStatusTone(agreement.status),
+                                        )
+                                    }
+                                    Text(
+                                        text = "${agreement.terms.monthlyRent} " +
+                                            "${agreement.terms.currency} · Inicio " +
+                                            agreement.terms.startDate,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    agreement.student?.name?.let { studentName ->
+                                        Text(
+                                            text = "Estudiante: $studentName",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onPrev, enabled = state.page > 1) { Text("Anterior") }
-                        Text("Página ${state.page}")
-                        OutlinedButton(onClick = onNext, enabled = state.totalPages > 0 && state.page < state.totalPages) { Text("Siguiente") }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TheHouseSecondaryButton(
+                            text = "Anterior",
+                            onClick = onPrev,
+                            enabled = state.page > 1,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = "Página ${state.page}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TheHouseSecondaryButton(
+                            text = "Siguiente",
+                            onClick = onNext,
+                            enabled = state.totalPages > 0 && state.page < state.totalPages,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }

@@ -4,28 +4,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.thehouse.app.presentation.components.ErrorStateView
-import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.InlineMessage
+import com.thehouse.app.presentation.components.StatusTone
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.presentation.landlord.AgreementErrorMessages
+import com.thehouse.app.ui.theme.Spacing
 
 @Composable
 fun RentalCodeDestination(
@@ -58,46 +55,52 @@ fun RentalCodeScreen(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = "Introducir código de renta",
+        subtitle = "Vincula tu acuerdo de renta",
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp)
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) { Text("Volver") }
-            Text("Introducir código de renta", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Ingresa el código de respaldo (ej. k7pm-2qxa).",
+                text = "Ingresa el código de respaldo que te compartió el arrendador " +
+                    "(ej. k7pm-2qxa).",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedTextField(
+
+            TheHouseTextField(
                 value = state.code,
                 onValueChange = onCodeChanged,
-                label = { Text("Código") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                label = "Código",
+                placeholder = "k7pm-2qxa",
             )
-            state.retryAfterSeconds?.let { sec ->
-                Text(
-                    AgreementErrorMessages.retryHint(sec) ?: "Espera e intenta de nuevo.",
-                    style = MaterialTheme.typography.bodyMedium,
+
+            state.retryAfterSeconds?.let { seconds ->
+                InlineMessage(
+                    text = AgreementErrorMessages.retryHint(seconds)
+                        ?: "Espera e intenta de nuevo.",
+                    tone = StatusTone.Warning,
                 )
             }
-            state.errorMessage?.let { msg ->
-                Text(msg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+
+            state.errorMessage?.let { message ->
+                InlineMessage(text = message)
             }
-            Button(
+
+            TheHousePrimaryButton(
+                text = "Continuar",
                 onClick = onSubmit,
-                enabled = !state.isLoading && state.retryAfterSeconds == null,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                if (state.isLoading) CircularProgressIndicator(modifier = Modifier.heightIn(max = 18.dp))
-                else Text("Continuar")
-            }
+                enabled = state.retryAfterSeconds == null,
+                loading = state.isLoading,
+            )
         }
     }
 }

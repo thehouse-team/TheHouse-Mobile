@@ -12,6 +12,27 @@ import androidx.compose.ui.unit.sp
  * manteniendo tamaños/línea/pesos del prototipo).
  */
 val Typography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 40.sp,
+        lineHeight = 48.sp,
+        letterSpacing = (-0.5).sp,
+    ),
+    displayMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 36.sp,
+        lineHeight = 44.sp,
+        letterSpacing = (-0.5).sp,
+    ),
+    displaySmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 32.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-0.4).sp,
+    ),
     headlineLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.ExtraBold,

@@ -2,19 +2,12 @@ package com.thehouse.app.presentation.visits
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,11 +15,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.domain.model.Visit
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseTextField
+import com.thehouse.app.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -74,72 +71,65 @@ fun ScheduleVisitScreen(
     modifier: Modifier = Modifier,
 ) {
     var dateText by remember { mutableStateOf(state.date?.toString().orEmpty()) }
-    var timeText by remember { mutableStateOf(state.time?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty()) }
-    Scaffold(
+    var timeText by remember {
+        mutableStateOf(state.time?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty())
+    }
+    TheHouseScreen(
+        title = "Agendar visita",
+        onBack = onBack,
         modifier = modifier,
-        topBar = {
-            TextButton(onClick = onBack, modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text("Volver")
-            }
-        },
     ) { padding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            Text("Agendar visita", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Horario de atención: 08:00–20:00 (America/Mexico_City).",
+                text = "Horario de atención: 08:00–20:00 (America/Mexico_City).",
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedTextField(
-                value = dateText,
-                onValueChange = {
-                    dateText = it
-                    onDateChanged(it)
-                },
-                label = { Text("Fecha (AAAA-MM-DD)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = timeText,
-                onValueChange = {
-                    timeText = it
-                    onTimeChanged(it)
-                },
-                label = { Text("Hora (HH:mm)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.message,
-                onValueChange = onMessageChanged,
-                label = { Text("Mensaje (opcional, máx. 300)") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-            )
-            if (state.errorCode != null || state.domainError != null) {
-                Text(
-                    text = VisitErrorMessages.map(state.errorCode, state.domainError),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-            Button(
-                onClick = onSubmit,
-                enabled = state.status != ScheduleVisitStatus.SUBMITTING,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                if (state.status == ScheduleVisitStatus.SUBMITTING) {
-                    CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                    Text("Enviando...")
-                } else {
-                    Text("Confirmar visita")
+            TheHouseCard {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                    TheHouseTextField(
+                        value = dateText,
+                        onValueChange = {
+                            dateText = it
+                            onDateChanged(it)
+                        },
+                        label = "Fecha (AAAA-MM-DD)",
+                    )
+                    TheHouseTextField(
+                        value = timeText,
+                        onValueChange = {
+                            timeText = it
+                            onTimeChanged(it)
+                        },
+                        label = "Hora (HH:mm)",
+                    )
+                    TheHouseTextField(
+                        value = state.message,
+                        onValueChange = onMessageChanged,
+                        label = "Mensaje (opcional, máx. 300)",
+                        singleLine = false,
+                        minLines = 3,
+                    )
+                    if (state.errorCode != null || state.domainError != null) {
+                        Text(
+                            text = VisitErrorMessages.map(state.errorCode, state.domainError),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    TheHousePrimaryButton(
+                        text = "Confirmar visita",
+                        onClick = onSubmit,
+                        enabled = state.status != ScheduleVisitStatus.SUBMITTING,
+                        loading = state.status == ScheduleVisitStatus.SUBMITTING,
+                    )
                 }
             }
         }

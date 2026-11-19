@@ -5,29 +5,32 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InlineMessage
+import com.thehouse.app.presentation.components.InfoRow
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.StatusTone
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
 import com.thehouse.app.presentation.landlord.AgreementErrorMessages
+import com.thehouse.app.ui.theme.Spacing
 
 @Composable
 fun AgreementPreviewDestination(
@@ -62,58 +65,135 @@ fun AgreementPreviewScreen(
     onAccept: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = "Revisar acuerdo",
+        subtitle = state.preview?.room?.title,
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp)
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) { Text("Volver") }
-            Text("Revisar acuerdo", style = MaterialTheme.typography.headlineSmall)
             when {
-                state.isLoading -> LoadingView("Cargando acuerdo…", modifier = Modifier.fillMaxWidth())
+                state.isLoading -> LoadingView(
+                    message = "Cargando acuerdo…",
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 state.errorMessage != null && state.preview == null -> ErrorStateView(
                     title = "No se pudo cargar",
                     message = state.errorMessage,
                     onRetry = onRetry,
                 )
                 state.preview != null -> {
-                    val p = state.preview
-                    Text("${p.room.title} · ${p.room.city}", style = MaterialTheme.typography.titleMedium)
-                    Text("Edificio: ${p.building.name}", style = MaterialTheme.typography.bodyLarge)
-                    p.building.rules?.takeIf { it.isNotBlank() }?.let { Text("Reglas: $it") }
-                    Text("Arrendador: ${p.landlord.name}", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        "Renta mensual: ${p.terms.monthlyRent} ${p.terms.currency} · Depósito: ${p.terms.deposit} ${p.terms.currency}",
-                        style = MaterialTheme.typography.bodyLarge,
+                    val preview = state.preview ?: return@Column
+
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            Text(
+                                text = preview.room.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = preview.room.city,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            InfoRow("Edificio", preview.building.name)
+                            InfoRow("Arrendador", preview.landlord.name)
+                        }
+                    }
+
+                    preview.building.rules?.takeIf { it.isNotBlank() }?.let { rules ->
+                        TheHouseCard {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                Text(
+                                    text = "Reglas",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = rules,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            Text(
+                                text = "Condiciones",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            InfoRow(
+                                "Renta mensual",
+                                "${preview.terms.monthlyRent} ${preview.terms.currency}",
+                            )
+                            InfoRow(
+                                "Depósito",
+                                "${preview.terms.deposit} ${preview.terms.currency}",
+                            )
+                            InfoRow("Inicio", preview.terms.startDate)
+                            InfoRow("Duración", "${preview.terms.durationMonths} meses")
+                            InfoRow("Fin", preview.terms.endDate)
+                            InfoRow("Día de pago", preview.terms.paymentDay.toString())
+                        }
+                    }
+
+                    InlineMessage(
+                        text = "Código expira: ${preview.codeExpiresAt}",
+                        tone = StatusTone.Neutral,
                     )
-                    Text(
-                        "Inicio: ${p.terms.startDate} · Duración: ${p.terms.durationMonths} meses · Fin: ${p.terms.endDate}",
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text("Día de pago: ${p.terms.paymentDay}", style = MaterialTheme.typography.bodyLarge)
-                    Text("Código expira: ${p.codeExpiresAt}", style = MaterialTheme.typography.bodyMedium)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = state.acceptedTerms, onCheckedChange = onAcceptedTermsChanged)
-                        Text("Acepto los términos del acuerdo")
-                    }
-                    state.retryAfterSeconds?.let { sec ->
-                        Text(AgreementErrorMessages.retryHint(sec) ?: "Espera e intenta de nuevo.")
-                    }
-                    state.errorMessage?.let { msg ->
-                        Text(msg, color = MaterialTheme.colorScheme.error)
-                    }
-                    Button(
-                        onClick = onAccept,
-                        enabled = state.acceptedTerms && !state.isAccepting && state.retryAfterSeconds == null,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = state.acceptedTerms,
+                                role = Role.Checkbox,
+                                onValueChange = onAcceptedTermsChanged,
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        if (state.isAccepting) CircularProgressIndicator(modifier = Modifier.heightIn(max = 18.dp))
-                        else Text("Aceptar acuerdo")
+                        Checkbox(
+                            checked = state.acceptedTerms,
+                            onCheckedChange = null,
+                        )
+                        Text(
+                            text = "Acepto los términos del acuerdo",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
+
+                    state.retryAfterSeconds?.let { seconds ->
+                        InlineMessage(
+                            text = AgreementErrorMessages.retryHint(seconds)
+                                ?: "Espera e intenta de nuevo.",
+                            tone = StatusTone.Warning,
+                        )
+                    }
+
+                    state.errorMessage?.let { message ->
+                        InlineMessage(text = message)
+                    }
+
+                    TheHousePrimaryButton(
+                        text = "Aceptar acuerdo",
+                        onClick = onAccept,
+                        enabled = state.acceptedTerms && state.retryAfterSeconds == null,
+                        loading = state.isAccepting,
+                    )
                 }
             }
         }

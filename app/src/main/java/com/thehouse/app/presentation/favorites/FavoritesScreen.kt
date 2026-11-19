@@ -5,12 +5,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,8 +29,13 @@ import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InfoChip
 import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.OfflineStatusBanner
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHouseHeader
+import com.thehouse.app.ui.theme.IconSizes
+import com.thehouse.app.ui.theme.Spacing
 
 @Composable
 fun FavoritesScreen(
@@ -36,21 +48,23 @@ fun FavoritesScreen(
     onExploreClick: () -> Unit,
     onRemove: (String) -> Unit,
     onRetry: () -> Unit,
-    isOnline: Boolean = true,
     modifier: Modifier = Modifier,
+    isOnline: Boolean = true,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    Scaffold(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            Text(
-                text = "Favoritos",
-                style = MaterialTheme.typography.headlineMedium,
+            TheHouseHeader(
+                title = "Favoritos",
+                subtitle = "Las rentas que guardaste para comparar.",
                 modifier = Modifier.semantics { contentDescription = "Título Favoritos" },
             )
             if (!isOnline) {
@@ -59,56 +73,122 @@ fun FavoritesScreen(
                         "Sin conexión · Mostrando información guardada"
                     } else {
                         "Sin conexión"
-                    }
+                    },
                 )
             }
-            if (!isAuthenticated) {
-                EmptyStateView(
+            when {
+                !isAuthenticated -> EmptyStateView(
                     title = "Inicia sesión",
                     message = "Necesitas iniciar sesión para ver tus favoritos.",
                     modifier = Modifier.weight(1f),
                     ctaLabel = "Iniciar sesión",
                     onCtaClick = onLoginClick,
+                    icon = Icons.Outlined.FavoriteBorder,
                 )
-            } else if (isLoading) {
-                LoadingView(
+                isLoading -> LoadingView(
                     message = "Cargando tus favoritos…",
                     modifier = Modifier.weight(1f),
                 )
-            } else if (error != null) {
-                ErrorStateView(
+                error != null -> ErrorStateView(
                     title = "Algo salió mal",
-                    message = error?.let { UiErrorMessages.map(it) }
-                        ?: "No pudimos cargar tus favoritos. Inténtalo de nuevo.",
+                    message = UiErrorMessages.map(error),
                     modifier = Modifier.weight(1f),
                     onRetry = onRetry,
                 )
-            } else if (items.isEmpty()) {
-                EmptyStateView(
+                items.isEmpty() -> EmptyStateView(
                     title = "Aún no tienes favoritos",
                     message = "Explora propiedades y guarda las que te interesen.",
                     modifier = Modifier.weight(1f),
                     ctaLabel = "Explorar propiedades",
                     onCtaClick = onExploreClick,
+                    icon = Icons.Outlined.FavoriteBorder,
                 )
-            } else {
-                items.forEach { fav ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = fav.title, style = MaterialTheme.typography.titleMedium)
-                            Text(text = fav.city ?: "", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Button(
-                            onClick = { onRemove(fav.propertyId) },
-                            enabled = removingId != fav.propertyId,
+                else -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    items(items, key = { it.propertyId }) { favorite ->
+                        FavoriteCard(
+                            favorite = favorite,
+                            removing = removingId == favorite.propertyId,
+                            onRemove = { onRemove(favorite.propertyId) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteCard(
+    favorite: Favorite,
+    removing: Boolean,
+    onRemove: () -> Unit,
+) {
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = favorite.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    favorite.city?.takeIf { it.isNotBlank() }?.let { city ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
-                            Text(if (removingId == fav.propertyId) "..." else "Quitar")
+                            Icon(
+                                imageVector = Icons.Outlined.LocationOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(IconSizes.sm),
+                            )
+                            Text(
+                                text = city,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
+                }
+                favorite.price?.let { price ->
+                    Text(
+                        text = "$price ${favorite.currency.orEmpty()}".trim(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            if (favorite.bedrooms != null || favorite.bathrooms != null || favorite.areaM2 != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    favorite.bedrooms?.let { InfoChip("$it rec.") }
+                    favorite.bathrooms?.let { InfoChip("$it baños") }
+                    favorite.areaM2?.let { InfoChip("$it m²") }
+                }
+            }
+            TextButton(
+                onClick = onRemove,
+                enabled = !removing,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                if (removing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(IconSizes.sm),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(
+                        text = "Quitar de favoritos",
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             }
         }

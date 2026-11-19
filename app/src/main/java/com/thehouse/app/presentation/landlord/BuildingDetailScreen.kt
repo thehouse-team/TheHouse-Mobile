@@ -7,20 +7,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,8 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,13 +39,21 @@ import com.thehouse.app.data.multimedia.MediaInspector
 import com.thehouse.app.domain.model.Building
 import com.thehouse.app.domain.model.Room
 import com.thehouse.app.domain.model.RoomStatus
-import com.thehouse.app.domain.multimedia.MediaValidation
-import com.thehouse.app.domain.multimedia.MediaValidationResult
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InlineMessage
+import com.thehouse.app.presentation.components.InfoRow
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.SectionHeader
+import com.thehouse.app.presentation.components.StatusChip
+import com.thehouse.app.presentation.components.StatusTone
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.presentation.components.TheHouseTextAction
 import com.thehouse.app.presentation.multimedia.MultimediaContracts
-import com.thehouse.app.ui.theme.Heights
 import com.thehouse.app.ui.theme.Spacing
+import com.thehouse.app.ui.theme.theHouseColors
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -142,7 +144,10 @@ fun BuildingDetailDestination(
             buildingPhotoPicker.launch(MultimediaContracts.pickSingleImageRequest())
         },
         onDeleteBuildingPhoto = { viewModel.onEvent(BuildingDetailEvent.DeleteBuildingPhoto) },
-        onPickIne = { localMessage = null; inePicker.launch(arrayOf("application/pdf", "image/jpeg", "image/png")) },
+        onPickIne = {
+            localMessage = null
+            inePicker.launch(arrayOf("application/pdf", "image/jpeg", "image/png"))
+        },
         onPickPropertyProof = {
             localMessage = null
             propertyProofPicker.launch(arrayOf("application/pdf", "image/jpeg", "image/png"))
@@ -191,47 +196,43 @@ fun BuildingDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val building = state.building
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = building?.name ?: "Edificio",
+        subtitle = building?.let {
+            "${it.roomsAvailable}/${it.roomsTotal} cuartos disponibles"
+        },
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = Heights.button)) {
-                Text("Volver")
-            }
-
             when {
                 state.isLoading -> LoadingView(
                     message = "Cargando edificio…",
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 )
                 building == null -> ErrorStateView(
                     title = "No se pudo cargar el edificio",
                     message = state.errorMessage ?: "Intenta de nuevo.",
                     onRetry = onRetry,
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 )
                 else -> LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                    contentPadding = PaddingValues(bottom = Spacing.lg),
                 ) {
                     item {
-                        Text(
-                            building.name,
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.semantics { heading() },
-                        )
-                        Text(
-                            "Estado: ${LandlordErrorMessages.statusLabel(building.status.api)} · " +
-                                "${building.roomsAvailable}/${building.roomsTotal} disponibles · " +
-                                "a ${building.distanceToUniversityKm} km de " +
-                                building.nearestUniversity.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        BuildingSummaryCard(building = building)
                     }
                     item {
                         BuildingPhotoCard(
@@ -250,15 +251,15 @@ fun BuildingDetailScreen(
                         )
                     }
                     item {
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                            OutlinedButton(
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            TheHouseSecondaryButton(
+                                text = "Editar edificio",
                                 onClick = onEditBuilding,
-                                modifier = Modifier.weight(1f).heightIn(min = Heights.button),
-                            ) { Text("Editar edificio") }
-                            OutlinedButton(
+                            )
+                            TheHouseSecondaryButton(
+                                text = "Agregar cuartos",
                                 onClick = onAddRooms,
-                                modifier = Modifier.weight(1f).heightIn(min = Heights.button),
-                            ) { Text("Agregar cuartos") }
+                            )
                         }
                     }
                     item {
@@ -269,47 +270,45 @@ fun BuildingDetailScreen(
                             onPublish = onPublish,
                         )
                     }
-                    item {
-                        VerificationCard(state.verification)
+                    state.verification?.let { verification ->
+                        item {
+                            VerificationCard(verification = verification)
+                        }
                     }
                     item {
-                        localMessage?.let { message ->
-                            Text(
-                                message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                        state.infoMessage?.let { message ->
-                            Text(
-                                message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        if (state.errorMessage != null) {
-                            Text(
-                                state.errorMessage,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            if (state.versionConflict) {
-                                Button(
-                                    onClick = onRetry,
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = Heights.button),
-                                ) { Text("Recargar datos") }
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            localMessage?.let { message ->
+                                InlineMessage(text = message)
+                            }
+                            state.infoMessage?.let { message ->
+                                InlineMessage(text = message, tone = StatusTone.Success)
+                            }
+                            if (state.errorMessage != null) {
+                                InlineMessage(text = state.errorMessage)
+                                if (state.versionConflict) {
+                                    TheHousePrimaryButton(
+                                        text = "Recargar datos",
+                                        onClick = onRetry,
+                                    )
+                                }
                             }
                         }
                     }
                     item {
-                        Text("Cuartos", style = MaterialTheme.typography.titleMedium)
+                        SectionHeader(
+                            title = "Cuartos",
+                            subtitle = if (state.rooms.size == 1) {
+                                "1 registrado"
+                            } else {
+                                "${state.rooms.size} registrados"
+                            },
+                        )
                     }
                     if (state.rooms.isEmpty()) {
                         item {
-                            Text(
-                                "Aún no hay cuartos. Usa «Agregar cuartos».",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            InlineMessage(
+                                text = "Aún no hay cuartos. Usa «Agregar cuartos».",
+                                tone = StatusTone.Neutral,
                             )
                         }
                     } else {
@@ -324,25 +323,58 @@ fun BuildingDetailScreen(
                         }
                     }
                     item {
-                        OutlinedButton(
+                        TheHouseSecondaryButton(
+                            text = "Solicitudes de mis cuartos",
                             onClick = onOpenLandlordRequests,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = Heights.button),
-                        ) { Text("Solicitudes de mis cuartos") }
+                        )
                     }
                     item {
-                        Button(
+                        TheHouseSecondaryButton(
+                            text = if (state.isDeleting) "Eliminando…" else "Eliminar edificio",
                             onClick = onDelete,
                             enabled = !state.isDeleting,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = Heights.button),
-                        ) {
-                            Text(
-                                if (state.isDeleting) "Eliminando…" else "Eliminar edificio",
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
+                            loading = state.isDeleting,
+                            contentColor = MaterialTheme.colorScheme.error,
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BuildingSummaryCard(
+    building: Building,
+    modifier: Modifier = Modifier,
+) {
+    TheHouseCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = building.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusChip(
+                    label = LandlordErrorMessages.statusLabel(building.status.api),
+                    tone = buildingTone(building.status.api),
+                )
+            }
+            InfoRow(
+                label = "Disponibles",
+                value = "${building.roomsAvailable}/${building.roomsTotal}",
+            )
+            InfoRow(
+                label = "Universidad cercana",
+                value = "${building.nearestUniversity.name} · " +
+                    "${building.distanceToUniversityKm} km",
+            )
         }
     }
 }
@@ -354,45 +386,54 @@ private fun PublicationCard(
     isPublishing: Boolean,
     onPublish: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text("Publicación", style = MaterialTheme.typography.titleMedium)
-        if (publication != null) {
-            publication.steps.forEach { step ->
-                Text(
-                    "${if (step.done) "✓" else "○"} ${stepLabel(step.id)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        when (building.status) {
-            com.thehouse.app.domain.model.BuildingStatus.IN_REVIEW ->
-                Text(
-                    "Tu publicación está en revisión.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            com.thehouse.app.domain.model.BuildingStatus.VERIFIED ->
-                Text("Verificado", style = MaterialTheme.typography.bodyMedium)
-            com.thehouse.app.domain.model.BuildingStatus.DRAFT ->
-                Button(
-                    onClick = onPublish,
-                    enabled = !isPublishing && publication?.canPublish == true,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = Heights.button),
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                text = "Publicación",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            publication?.steps?.forEach { step ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(if (isPublishing) "Enviando…" else "Enviar a revisión")
+                    Text(
+                        text = if (step.done) "✓" else "○",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (step.done) {
+                            MaterialTheme.theHouseColors.success
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                    Text(
+                        text = stepLabel(step.id),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-            com.thehouse.app.domain.model.BuildingStatus.REJECTED ->
-                Text(
-                    "Tu publicación fue rechazada.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            com.thehouse.app.domain.model.BuildingStatus.SUSPENDED ->
-                Text(
-                    "Tu publicación está suspendida.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
+            }
+            when (building.status) {
+                com.thehouse.app.domain.model.BuildingStatus.IN_REVIEW ->
+                    InlineMessage(
+                        text = "Tu publicación está en revisión.",
+                        tone = StatusTone.Warning,
+                    )
+                com.thehouse.app.domain.model.BuildingStatus.VERIFIED ->
+                    InlineMessage(text = "Verificado", tone = StatusTone.Success)
+                com.thehouse.app.domain.model.BuildingStatus.DRAFT ->
+                    TheHousePrimaryButton(
+                        text = if (isPublishing) "Enviando…" else "Enviar a revisión",
+                        onClick = onPublish,
+                        enabled = !isPublishing && publication?.canPublish == true,
+                        loading = isPublishing,
+                    )
+                com.thehouse.app.domain.model.BuildingStatus.REJECTED ->
+                    InlineMessage(text = "Tu publicación fue rechazada.")
+                com.thehouse.app.domain.model.BuildingStatus.SUSPENDED ->
+                    InlineMessage(text = "Tu publicación está suspendida.")
+            }
         }
     }
 }
@@ -403,32 +444,37 @@ private fun PublicationCard(
  */
 @Composable
 private fun VerificationCard(
-    verification: com.thehouse.app.domain.model.VerificationInfo?,
+    verification: com.thehouse.app.domain.model.VerificationInfo,
 ) {
-    if (verification == null) return
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text("Verificación", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "Estado: ${LandlordErrorMessages.statusLabel(verification.status.api)}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        verification.lastDecision?.let { decision ->
-            val decisionLabel = when (decision.decision) {
-                com.thehouse.app.domain.model.VerificationDecision.APPROVED ->
-                    "Aprobada"
-                com.thehouse.app.domain.model.VerificationDecision.CHANGES_REQUESTED ->
-                    "Se pidieron correcciones"
-                com.thehouse.app.domain.model.VerificationDecision.REJECTED ->
-                    "Rechazada"
-            }
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(
-                buildString {
-                    append("Última decisión: $decisionLabel")
-                    decision.reason?.let { append(" — $it") }
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "Verificación",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
             )
+            InfoRow(
+                label = "Estado",
+                value = LandlordErrorMessages.statusLabel(verification.status.api),
+            )
+            verification.lastDecision?.let { decision ->
+                val decisionLabel = when (decision.decision) {
+                    com.thehouse.app.domain.model.VerificationDecision.APPROVED ->
+                        "Aprobada"
+                    com.thehouse.app.domain.model.VerificationDecision.CHANGES_REQUESTED ->
+                        "Se pidieron correcciones"
+                    com.thehouse.app.domain.model.VerificationDecision.REJECTED ->
+                        "Rechazada"
+                }
+                Text(
+                    text = buildString {
+                        append("Última decisión: $decisionLabel")
+                        decision.reason?.let { append(" — $it") }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -451,49 +497,56 @@ private fun RoomRow(
     onPause: () -> Unit,
     onResume: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 64.dp),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    TheHouseCard(
+        onClick = onClick,
+        contentPadding = PaddingValues(Spacing.md),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Cuarto ${room.number} · Piso ${room.floor}",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    "MXN ${room.price} · ${room.sizeM2} m² · " +
-                        LandlordErrorMessages.statusLabel(room.status.api),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (room.photos.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "${room.photos.size} foto(s)",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "Cuarto ${room.number} · Piso ${room.floor}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "MXN ${room.price} · ${room.sizeM2} m²",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (room.photos.isNotEmpty()) {
+                        Text(
+                            text = "${room.photos.size} foto(s)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
+                StatusChip(
+                    label = LandlordErrorMessages.statusLabel(room.status.api),
+                    tone = roomTone(room.status),
+                )
             }
-            TextButton(
-                onClick = onClick,
-                modifier = Modifier.heightIn(min = Heights.button),
-            ) { Text("Editar") }
-        }
-        when (room.status) {
-            RoomStatus.AVAILABLE -> OutlinedButton(
-                onClick = onPause,
-                enabled = !isBusy,
-                modifier = Modifier.heightIn(min = Heights.button),
-            ) { Text(if (isBusy) "…" else "Pausar") }
-            RoomStatus.PAUSED -> OutlinedButton(
-                onClick = onResume,
-                enabled = !isBusy,
-                modifier = Modifier.heightIn(min = Heights.button),
-            ) { Text(if (isBusy) "…" else "Reanudar") }
-            else -> Unit
+            when (room.status) {
+                RoomStatus.AVAILABLE -> TheHouseSecondaryButton(
+                    text = if (isBusy) "Pausando…" else "Pausar",
+                    onClick = onPause,
+                    enabled = !isBusy,
+                    loading = isBusy,
+                )
+                RoomStatus.PAUSED -> TheHouseSecondaryButton(
+                    text = if (isBusy) "Reanudando…" else "Reanudar",
+                    onClick = onResume,
+                    enabled = !isBusy,
+                    loading = isBusy,
+                )
+                else -> Unit
+            }
+            TheHouseTextAction(text = "Editar cuarto", onClick = onClick)
         }
     }
 }
@@ -505,42 +558,55 @@ private fun BuildingPhotoCard(
     onPick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Text("Foto del edificio", style = MaterialTheme.typography.titleMedium)
-        val photo = building.photo
-        if (photo != null) {
-            AsyncImage(
-                model = photo.thumbUrl.ifBlank { photo.url },
-                contentDescription = "Foto del edificio ${building.name}",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                text = "Foto del edificio",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("Sin foto del edificio", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val photo = building.photo
+            if (photo != null) {
+                AsyncImage(
+                    model = photo.thumbUrl.ifBlank { photo.url },
+                    contentDescription = "Foto del edificio ${building.name}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(MaterialTheme.shapes.medium),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(MaterialTheme.shapes.medium),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Sin foto del edificio",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            OutlinedButton(
+            TheHouseSecondaryButton(
+                text = when {
+                    isBusy -> "Subiendo…"
+                    photo == null -> "Subir foto"
+                    else -> "Reemplazar foto"
+                },
                 onClick = onPick,
                 enabled = !isBusy,
-                modifier = Modifier.weight(1f).heightIn(min = Heights.button),
-            ) { Text(if (isBusy) "Subiendo…" else if (photo == null) "Subir foto" else "Reemplazar foto") }
+                loading = isBusy,
+            )
             if (photo != null) {
-                OutlinedButton(
+                TheHouseSecondaryButton(
+                    text = "Eliminar foto",
                     onClick = onDelete,
                     enabled = !isBusy,
-                    modifier = Modifier.weight(1f).heightIn(min = Heights.button),
-                ) { Text(if (isBusy) "…" else "Eliminar foto") }
+                    contentColor = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }
@@ -553,25 +619,31 @@ private fun DocumentsCard(
     onPickIne: () -> Unit,
     onPickPropertyProof: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Text("Documentos", style = MaterialTheme.typography.titleMedium)
-        DocumentRow(
-            label = "INE",
-            document = documents?.ine,
-            isBusy = isBusy,
-            onPick = onPickIne,
-        )
-        DocumentRow(
-            label = "Comprobante de propiedad",
-            document = documents?.propertyProof,
-            isBusy = isBusy,
-            onPick = onPickPropertyProof,
-        )
-        Text(
-            "Solo se usan metadatos. No se muestra ni descarga el contenido del documento.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Text(
+                text = "Documentos",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            DocumentRow(
+                label = "INE",
+                document = documents?.ine,
+                isBusy = isBusy,
+                onPick = onPickIne,
+            )
+            DocumentRow(
+                label = "Comprobante de propiedad",
+                document = documents?.propertyProof,
+                isBusy = isBusy,
+                onPick = onPickPropertyProof,
+            )
+            Text(
+                text = "Solo se usan metadatos. No se muestra ni descarga el contenido del documento.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -583,24 +655,46 @@ private fun DocumentRow(
     onPick: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(
-            if (document != null) "$label: cargado" else "$label: pendiente",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        OutlinedButton(
-            onClick = onPick,
-            enabled = !isBusy,
-            modifier = Modifier.fillMaxWidth().heightIn(min = Heights.button),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                when {
-                    isBusy -> "Subiendo…"
-                    document != null -> "Reemplazar $label"
-                    else -> "Subir $label"
-                },
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            StatusChip(
+                label = if (document != null) "Cargado" else "Pendiente",
+                tone = if (document != null) StatusTone.Success else StatusTone.Warning,
             )
         }
+        TheHouseSecondaryButton(
+            text = when {
+                isBusy -> "Subiendo…"
+                document != null -> "Reemplazar $label"
+                else -> "Subir $label"
+            },
+            onClick = onPick,
+            enabled = !isBusy,
+            loading = isBusy,
+        )
     }
+}
+
+private fun buildingTone(status: String): StatusTone = when (status) {
+    "verified" -> StatusTone.Success
+    "in_review", "draft" -> StatusTone.Warning
+    "rejected", "suspended" -> StatusTone.Error
+    else -> StatusTone.Neutral
+}
+
+private fun roomTone(status: RoomStatus): StatusTone = when (status) {
+    RoomStatus.AVAILABLE -> StatusTone.Success
+    RoomStatus.RENTED -> StatusTone.Primary
+    RoomStatus.PAUSED -> StatusTone.Warning
+    else -> StatusTone.Neutral
 }
 
 private const val MAX_BUILDING_PHOTO_BYTES = 5L * 1024L * 1024L

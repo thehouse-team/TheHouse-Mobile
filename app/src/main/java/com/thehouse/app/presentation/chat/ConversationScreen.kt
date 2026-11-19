@@ -1,36 +1,32 @@
 package com.thehouse.app.presentation.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
@@ -38,6 +34,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
+import com.thehouse.app.presentation.components.TheHouseScreen
+import com.thehouse.app.presentation.components.TheHouseTextField
+import com.thehouse.app.ui.theme.Heights
+import com.thehouse.app.ui.theme.IconSizes
+import com.thehouse.app.ui.theme.Spacing
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -84,28 +85,33 @@ fun ConversationScreen(
             listState.animateScrollToItem(state.messages.lastIndex)
         }
     }
-    Scaffold(modifier = modifier) { padding ->
+    TheHouseScreen(
+        title = "Conversación",
+        subtitle = if (state.isClosed) "Cerrada" else null,
+        onBack = onBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Volver")
-            }
-
             when {
                 state.isLoadingInitial -> LoadingView(
                     message = "Cargando mensajes…",
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 )
                 state.errorMessage != null && state.messages.isEmpty() -> ErrorStateView(
                     title = "No se pudieron cargar",
                     message = state.errorMessage,
                     onRetry = onRetry,
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 )
                 else -> {
                     LazyColumn(
@@ -113,15 +119,15 @@ fun ConversationScreen(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("conversation_messages"),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         if (state.hasMoreHistory) {
                             item {
                                 Text(
-                                    "Hay mensajes anteriores.",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = "Hay mensajes anteriores.",
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    modifier = Modifier.padding(vertical = Spacing.xs),
                                 )
                             }
                         }
@@ -130,14 +136,22 @@ fun ConversationScreen(
                         }
                     }
                     state.errorMessage?.let { message ->
-                        Text(
-                            message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.semantics {
-                                contentDescription = "Error: $message"
-                            },
-                        )
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ) {
+                            Text(
+                                text = message,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.md, vertical = Spacing.sm)
+                                    .semantics {
+                                        contentDescription = "Error: $message"
+                                    },
+                            )
+                        }
                     }
                     Composer(
                         text = state.composerText,
@@ -159,34 +173,54 @@ private fun MessageBubble(
 ) {
     // mine/counterpart diferenciados por alineación Y etiqueta (no solo color).
     val alignment = if (message.mine) Alignment.End else Alignment.Start
+    val shape = if (message.mine) {
+        RoundedCornerShape(
+            topStart = 16.dp,
+            topEnd = 16.dp,
+            bottomStart = 16.dp,
+            bottomEnd = 4.dp,
+        )
+    } else {
+        RoundedCornerShape(
+            topStart = 16.dp,
+            topEnd = 16.dp,
+            bottomStart = 4.dp,
+            bottomEnd = 16.dp,
+        )
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = alignment,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = if (message.mine) "Tú" else message.senderRole,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Box(
-            modifier = Modifier
-                .background(
-                    color = if (message.mine) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+        Surface(
+            shape = shape,
+            color = if (message.mine) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            },
+            contentColor = if (message.mine) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            modifier = Modifier.widthIn(max = 320.dp),
         ) {
             Text(
                 text = message.text,
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.semantics {
-                    contentDescription = (if (message.mine) "Tú: " else "Mensaje: ") + message.text
-                },
+                modifier = Modifier
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm)
+                    .semantics {
+                        contentDescription =
+                            (if (message.mine) "Tú: " else "Mensaje: ") + message.text
+                    },
             )
         }
         message.createdAt?.let { createdAt ->
@@ -208,46 +242,45 @@ private fun Composer(
     onSend: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
         if (isClosed) {
             Text(
-                "Esta conversación está cerrada.",
+                text = "Esta conversación está cerrada.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 4.dp),
             )
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.Bottom,
         ) {
-            OutlinedTextField(
+            TheHouseTextField(
                 value = text,
                 onValueChange = onTextChanged,
+                label = "Mensaje",
+                placeholder = "Escribe un mensaje…",
+                supportingText = "${text.length}/1000",
                 enabled = !isClosed,
-                placeholder = { Text("Escribe un mensaje…") },
-                supportingText = { Text("${text.length}/1000") },
-                modifier = Modifier.weight(1f),
+                singleLine = false,
+                minLines = 1,
                 maxLines = 4,
+                modifier = Modifier.weight(1f),
             )
-            if (isClosed) {
-                OutlinedButton(
-                    onClick = {},
-                    enabled = false,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text("Enviar")
-                }
-            } else {
-                Button(
-                    onClick = onSend,
-                    // send disabled si vacío o mientras envía.
-                    enabled = enabled && text.isNotBlank(),
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(if (text.isNotBlank() && enabled) "Enviar" else "Enviar")
-                }
+            FilledIconButton(
+                onClick = onSend,
+                enabled = enabled && text.isNotBlank(),
+                modifier = Modifier.size(Heights.button),
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.Send,
+                    contentDescription = "Enviar",
+                    modifier = Modifier.size(IconSizes.md),
+                )
             }
         }
     }

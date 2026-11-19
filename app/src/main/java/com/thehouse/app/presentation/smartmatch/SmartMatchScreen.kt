@@ -1,14 +1,20 @@
 package com.thehouse.app.presentation.smartmatch
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -17,11 +23,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.thehouse.app.domain.smartmatch.SmartMatchResult
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.EmptyStateView
@@ -29,7 +37,9 @@ import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.MatchBadge
 import com.thehouse.app.presentation.components.PropertyCard
-import com.thehouse.app.domain.smartmatch.SmartMatchResult
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHouseHeader
+import com.thehouse.app.ui.theme.Spacing
 
 @Composable
 fun SmartMatchScreen(
@@ -52,24 +62,29 @@ fun SmartMatchScreen(
         }
     }
 
-    Scaffold(modifier = modifier) { padding ->
+    Scaffold(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Text(
-                text = "Smart Match",
-                style = MaterialTheme.typography.headlineMedium,
+            TheHouseHeader(
+                title = "Smart Match",
+                subtitle = "Recomendaciones según tus preferencias (ML on-device).",
                 modifier = Modifier.semantics { contentDescription = "Título Smart Match" },
             )
             when (val s = state) {
                 SmartMatchUiState.Loading -> {
                     LoadingView(
                         message = "Calculando recomendaciones con ML…",
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     )
                 }
 
@@ -77,7 +92,9 @@ fun SmartMatchScreen(
                     EmptyStateView(
                         title = "Inicia sesión",
                         message = "Necesitas iniciar sesión para ver recomendaciones personalizadas.",
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         ctaLabel = "Iniciar sesión",
                         onCtaClick = onRequireLogin,
                     )
@@ -87,7 +104,9 @@ fun SmartMatchScreen(
                     EmptyStateView(
                         title = "Configura tus preferencias",
                         message = "Para generar Smart Match necesitamos tus preferencias de búsqueda.",
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         ctaLabel = "Configurar preferencias",
                         onCtaClick = onConfigurePreferences,
                     )
@@ -97,7 +116,9 @@ fun SmartMatchScreen(
                     EmptyStateView(
                         title = "Sin recomendaciones",
                         message = "No encontramos propiedades candidatas por ahora. Intenta más tarde.",
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     )
                 }
 
@@ -105,20 +126,20 @@ fun SmartMatchScreen(
                     ErrorStateView(
                         title = "No pudimos cargar Smart Match",
                         message = UiErrorMessages.map(s.error),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         onRetry = { vm.load() },
                     )
                 }
 
                 is SmartMatchUiState.Content -> {
-                    Text(
-                        text = "Recomendaciones basadas en tus preferencias (ML on-device).",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                        contentPadding = PaddingValues(bottom = Spacing.lg),
                     ) {
                         items(s.results, key = { it.property.id }) { result ->
                             SmartMatchResultCard(
@@ -145,24 +166,44 @@ private fun SmartMatchResultCard(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Text(
-            text = "Compatibilidad: ${result.score}%",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        MatchBadge(matchPercent = result.score)
-        if (result.factors.isNotEmpty()) {
-            Text(
-                text = "Factores",
-                style = MaterialTheme.typography.labelLarge,
-            )
-            result.factors.take(4).forEach { factor ->
+        TheHouseCard(contentPadding = PaddingValues(Spacing.md)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Compatibilidad",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "${result.score}%",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                MatchBadge(matchPercent = result.score)
+            }
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            ScoreBar(score = result.score)
+            if (result.factors.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
-                    text = "• $factor",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Factores",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
+                result.factors.take(4).forEach { factor ->
+                    Text(
+                        text = "• $factor",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
         PropertyCard(
@@ -170,6 +211,29 @@ private fun SmartMatchResultCard(
             onFavoriteClick = onFavoriteClick,
             onContactClick = onContactClick,
             onPropertyClick = onPropertyClick,
+        )
+    }
+}
+
+@Composable
+private fun ScoreBar(
+    score: Int,
+    modifier: Modifier = Modifier,
+) {
+    val fraction = score.coerceIn(0, 100) / 100f
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction)
+                .fillMaxHeight()
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
         )
     }
 }

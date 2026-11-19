@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,11 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,19 +34,23 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.R
 import com.thehouse.app.presentation.U2ViewModelFactory
+import com.thehouse.app.presentation.components.BrandMark
+import com.thehouse.app.presentation.components.PasswordVisibilityButton
+import com.thehouse.app.presentation.components.TheHouseCard
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.ui.theme.Heights
+import com.thehouse.app.ui.theme.Spacing
 
 /**
  * Pantalla de Crear cuenta (RF-01), MVVM + UDF.
  *
- * Referencia visual: `03-crear-cuenta.html` (fidelidad pendiente de
- * verificación humana). Consentimientos obligatorios de términos y aviso de
- * privacidad; la URL del aviso es PENDIENTE (`BLOCKED-PRIVACY-URL`) y la UI no
- * inventa enlace.
+ * Referencia visual: `03-crear-cuenta.html` con el Design System TheHouse.
+ * Consentimientos obligatorios de términos y aviso de privacidad; la URL del
+ * aviso es PENDIENTE (`BLOCKED-PRIVACY-URL`) y la UI no inventa enlace.
  */
 @Composable
 fun RegisterScreen(
@@ -65,107 +71,115 @@ fun RegisterScreen(
         }
     }
 
-    Scaffold(modifier = modifier) { padding ->
+    Scaffold(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = Spacing.xxl)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xl, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringResource(R.string.register_title),
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Text(
-                text = stringResource(R.string.register_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = { viewModel.onEvent(RegisterEvent.NameChanged(it)) },
-                label = { Text(stringResource(R.string.field_name)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-            )
-
-            OutlinedTextField(
-                value = state.email,
-                onValueChange = { viewModel.onEvent(RegisterEvent.EmailChanged(it)) },
-                label = { Text(stringResource(R.string.field_email)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-            )
-
-            OutlinedTextField(
-                value = state.password,
-                onValueChange = { viewModel.onEvent(RegisterEvent.PasswordChanged(it)) },
-                label = { Text(stringResource(R.string.field_password)) },
-                singleLine = true,
-                visualTransformation = if (state.passwordVisible) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-            )
-
-            RowConsent(
-                checked = state.acceptedTerms,
-                label = stringResource(R.string.register_accept_terms),
-                onToggle = { accepted -> viewModel.onEvent(RegisterEvent.TermsToggled(accepted)) },
-            )
-            RowConsent(
-                checked = state.acceptedPrivacy,
-                label = stringResource(R.string.register_accept_privacy),
-                onToggle = { accepted -> viewModel.onEvent(RegisterEvent.PrivacyToggled(accepted)) },
-            )
-
-            state.error?.let { message ->
+            Spacer(modifier = Modifier.height(Spacing.xxl))
+            BrandMark()
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
+                    text = stringResource(R.string.register_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    text = stringResource(R.string.register_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { contentDescription = "Error: $message" },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            Button(
-                onClick = { viewModel.onEvent(RegisterEvent.RegisterClicked) },
-                enabled = !state.isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(Heights.buttonLarge),
-                shape = MaterialTheme.shapes.medium,
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.height(Heights.button),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
+            TheHouseCard {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                    TheHouseTextField(
+                        value = state.name,
+                        onValueChange = { viewModel.onEvent(RegisterEvent.NameChanged(it)) },
+                        label = stringResource(R.string.field_name),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     )
-                } else {
-                    Text(stringResource(R.string.action_register), style = MaterialTheme.typography.labelLarge)
+
+                    TheHouseTextField(
+                        value = state.email,
+                        onValueChange = { viewModel.onEvent(RegisterEvent.EmailChanged(it)) },
+                        label = stringResource(R.string.field_email),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next,
+                        ),
+                    )
+
+                    TheHouseTextField(
+                        value = state.password,
+                        onValueChange = { viewModel.onEvent(RegisterEvent.PasswordChanged(it)) },
+                        label = stringResource(R.string.field_password),
+                        visualTransformation = if (state.passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        trailingIcon = {
+                            PasswordVisibilityButton(
+                                visible = state.passwordVisible,
+                                onToggle = {
+                                    viewModel.onEvent(RegisterEvent.PasswordVisibilityToggled)
+                                },
+                                visibleIcon = Icons.Outlined.Visibility,
+                                hiddenIcon = Icons.Outlined.VisibilityOff,
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done,
+                        ),
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    ConsentRow(
+                        checked = state.acceptedTerms,
+                        label = stringResource(R.string.register_accept_terms),
+                        onToggle = { accepted ->
+                            viewModel.onEvent(RegisterEvent.TermsToggled(accepted))
+                        },
+                    )
+                    ConsentRow(
+                        checked = state.acceptedPrivacy,
+                        label = stringResource(R.string.register_accept_privacy),
+                        onToggle = { accepted ->
+                            viewModel.onEvent(RegisterEvent.PrivacyToggled(accepted))
+                        },
+                    )
+
+                    state.error?.let { message ->
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = "Error: $message" },
+                        )
+                    }
+
+                    TheHousePrimaryButton(
+                        text = stringResource(R.string.action_register),
+                        onClick = { viewModel.onEvent(RegisterEvent.RegisterClicked) },
+                        enabled = !state.isLoading,
+                        loading = state.isLoading,
+                    )
                 }
             }
 
@@ -175,39 +189,40 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .height(Heights.button),
             ) {
-                Text(stringResource(R.string.register_go_login), style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = stringResource(R.string.register_go_login),
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
+            Spacer(modifier = Modifier.height(Spacing.xxl))
         }
     }
 }
 
 @Composable
-private fun RowConsent(
+private fun ConsentRow(
     checked: Boolean,
     label: String,
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = modifier.fillMaxWidth(),
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onToggle(!checked) },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        androidx.compose.foundation.layout.Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = onToggle,
-                modifier = Modifier.height(44.dp),
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onToggle(!checked) },
-            )
-        }
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onToggle,
+            modifier = Modifier.height(Heights.iconButton),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
     }
 }

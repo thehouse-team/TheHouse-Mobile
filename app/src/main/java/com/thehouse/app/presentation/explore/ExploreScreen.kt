@@ -2,14 +2,13 @@ package com.thehouse.app.presentation.explore
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.catalog.CatalogLoadState
@@ -28,6 +26,9 @@ import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.OfflineStatusBanner
 import com.thehouse.app.presentation.components.PropertyCard
+import com.thehouse.app.presentation.components.TheHouseHeader
+import com.thehouse.app.presentation.components.TheHouseSearchField
+import com.thehouse.app.ui.theme.Spacing
 
 /**
  * Explorar real D5 (NV-07 parcial, sin mapa).
@@ -56,40 +57,39 @@ fun ExploreScreen(
     val query = state?.query ?: ""
     val isLoading = properties is CatalogLoadState.Loading
 
-    Scaffold(modifier = modifier) { padding ->
+    Scaffold(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Text(
-                text = "Explora rentas cerca de ti",
-                style = MaterialTheme.typography.headlineMedium,
+            TheHouseHeader(
+                title = "Explora rentas cerca de ti",
+                subtitle = "Búsqueda por título o ciudad.",
                 modifier = Modifier.semantics { contentDescription = "Título Explorar" },
             )
-            Text(
-                text = "Búsqueda por título o ciudad.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+
             if (!isOnline) {
                 OfflineStatusBanner(
                     text = if (properties is CatalogLoadState.Success) {
                         "Sin conexión · Mostrando información guardada"
                     } else {
                         "Sin conexión"
-                    }
+                    },
                 )
             }
-            OutlinedTextField(
+
+            TheHouseSearchField(
                 value = query,
                 onValueChange = { viewModel?.onEvent(ExploreEvent.QueryChanged(it)) },
-                label = { Text("Buscar por título o ciudad") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                placeholder = "Busca por título o ciudad",
             )
+
             when (properties) {
                 CatalogLoadState.Loading -> {
                     LoadingView(
@@ -113,14 +113,30 @@ fun ExploreScreen(
                 is CatalogLoadState.Error -> {
                     ErrorStateView(
                         title = "Algo salió mal",
-                        message = properties.errorMessage() ?: "No pudimos cargar las rentas. Revisa tu conexión e inténtalo de nuevo.",
+                        message = properties.errorMessage()
+                            ?: "No pudimos cargar las rentas. Revisa tu conexión e inténtalo de nuevo.",
                         modifier = Modifier.weight(1f),
                         onRetry = { viewModel?.onEvent(ExploreEvent.RetryClicked) },
                     )
                 }
                 is CatalogLoadState.Success -> {
                     if (!isLoading) {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = if (properties.items.size == 1) {
+                                "1 renta disponible"
+                            } else {
+                                "${properties.items.size} rentas disponibles"
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                            contentPadding = PaddingValues(bottom = Spacing.lg),
+                        ) {
                             items(properties.items, key = { it.id }) { property ->
                                 PropertyCard(
                                     property = property,
