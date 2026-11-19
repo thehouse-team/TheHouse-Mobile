@@ -1,24 +1,23 @@
 # D11 — CHECKLIST
 
-## FASE A — Functional stabilization
+## FASE A — Functional stabilization (histórica)
+- [x] Rama/working tree preservados, spec registrada, trazabilidad/memoria actualizadas.
+- [x] Restauración/correcciones D11 y validación: `compileDebugKotlin` + `testDebugUnitTest` en verde.
 
-- [x] Rama `feature/profile-preferences-ui-polish` creada/verificada desde el estado actual de main, working tree intacto (36 cambios).
-- [x] Spec D11 registrada en `specs/d11-profile-preferences-visual-polish/` (spec/plan/task/checklist/evidence).
-- [x] Trazabilidad actualizada (`docs/sdd/REQUIREMENTS_TRACEABILITY.md`, fila «Perfil / cuenta»).
-- [x] `memoria.md` actualizada con la decisión de gobernanza D11.
-- [x] Commit de gobernanza solo documental.
-- [x] Clasificación del working tree realizada y documentada.- [x] Clasificación de eliminaciones resuelta: 23 archivos core restaurados selectivamente con `git restore --source=HEAD --` (autorizado por humano); sin reset/clean/stash/force push.
-- [x] `compileDebugKotlin` verde: **BUILD SUCCESSFUL (44s)**.
-- [x] `testDebugUnitTest` verde: **99 tests, 0 fallos (23 suites)**.
-- [x] D11-FUNCTIONAL-READY declarado.
+## FASE B — Visual Polish (histórica)
+- [x] Design system, componentes, estados y pulido de pantallas previas validados (build/tests/lint/assemble).
+- [ ] QA runtime con emulador: NO EJECUTADO en esa iteración.
 
-## FASE B — Visual Polish
+## FASE C — Profile / Preferences / Quick Setup UI (2026-11-19)
 
-- [x] Design system centralizado: ColorScheme + Typography + Shapes extraídos del prototipo autoritativo (sin paleta nueva externa), tokens `Spacing`/`Heights`/`Elevations` en `ui/theme/Dimens.kt`; `dynamicColor` desactivado por fidelidad.
-- [x] Pantallas pulidas: Onboarding (dots, CTA 56dp, jerarquía prototipo), Login/Register (botones 56dp, loading en CTA, error accesible), Explore (títulos/estados), Favorites (estados), PropertyCard (jerarquía de precio).
-- [x] Componentes unificados: `StateViews.kt` (LoadingView / EmptyStateView / ErrorStateView) reutilizables y stateless.
-- [x] States: Loading/Empty/Error con mensajes humanos, sin códigos HTTP/DomainError/stack traces; CTA en Empty, retry en Error.
-- [x] Accesibilidad: semantics/contentDescription en estados y errores, targets ≥48dp, contraste por tokens; responsive con `fillMaxWidth`/`weight` (sin tamaños rígidos).
-- [x] Validación: `compileDebugKotlin` verde → `testDebugUnitTest lintDebug assembleDebug` **BUILD SUCCESSFUL** (1m 46s).
-- [ ] QA runtime con emulador: NO EJECUTADO (sin emulador/adb en el entorno). Pendiente si se requiere cierre total.
-- [x] Commit `style: polish mobile ui and unify design system` + push a origin.
+- [x] Rama `feature/profile-preferences-ui` creada desde `feature/ui-redesign`; cambios locales preservados (`app/google-services.json`, `specs/nv-13-reviews/*` excluidos de commit).
+- [x] Capas existentes revisadas: `ProfileRepository`/`PreferenceRepository` (domain+data), APIs/DTOs, use cases (`Get/UpdateProfile`, `SelectUserUniversity`, `Get/SavePreferences`, `GetQuickSetup`), `GetUniversitiesUseCase`, `SmartMatchViewModel`, `AppContainer`, `U2ViewModelFactory`, navegación y Design System.
+- [x] Profile: pantalla real con datos soportados (nombre, correo de sesión, universidad, estado Quick Setup), edición de nombre, selección de universidad, Loading/Content/Error/Retry y mensajes seguros.
+- [x] Preferences: pantalla real con carga/edición/guardado de campos soportados (`Preference`/`Budget`) usando use cases/repositorio existente; validación UI de números; estados y mensajes.
+- [x] Quick Setup: pantalla con campos soportados (nombre, universidad) y acceso a preferencias; flag de completitud de solo lectura; sin forzar si ya completo.
+- [x] Navegación: rutas `perfil`, `preferencias`, `configuracion_inicial`; accesos desde Home (cuenta), Perfil y Smart Match (NoPreferences → Preferencias); sin romper rutas existentes.
+- [x] Tests añadidos: `ProfileViewModelTest`, `PreferencesViewModelTest`, `QuickSetupViewModelTest` (load/save/select/error/state).
+- [x] Privacidad UI: sin JWT/tokens/IDs técnicos/datos sensibles innecesarios en pantalla o logs.
+- [x] Gates ejecutados y registrados: `testDebugUnitTest`, `lintDebug`, `assembleDebug` en verde.
+- [x] Runtime en `emulator-5554`: parcial (instalación/arranque OK, sin sesión autenticada/credenciales para flujos protegidos).
+- [ ] `git diff --check`, commit `feat: add profile preferences and quick setup UI`, push `origin feature/profile-preferences-ui` (sin merge).

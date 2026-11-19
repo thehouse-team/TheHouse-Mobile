@@ -96,6 +96,21 @@ object AppRoutes {
         override val route: String = "privacidad"
     }
 
+    /** D11: perfil del usuario autenticado. */
+    val profile: AppRoute = object : AppRoute {
+        override val route: String = "perfil"
+    }
+
+    /** D11: preferencias de búsqueda del usuario autenticado. */
+    val preferences: AppRoute = object : AppRoute {
+        override val route: String = "preferencias"
+    }
+
+    /** D11: configuración inicial (Quick Setup). */
+    val quickSetup: AppRoute = object : AppRoute {
+        override val route: String = "configuracion_inicial"
+    }
+
     val bottomTabs: List<AppRoute> = listOf(home, explore, smartMatch, favorites)
 
     fun isBottomTab(route: String?): Boolean = bottomTabs.any { it.route == route }

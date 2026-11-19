@@ -4,61 +4,68 @@
 |---|---|
 | Spec ID | D11 |
 | Nombre | Profile + Preferences + Quick Setup + Visual Polish |
-| Versión | 1.0.0 |
-| Fecha | 2026-11-12 |
-| Estado | PARCIAL — Fase A (funcional) PENDIENTE DE FORMALIZACIÓN Y VALIDACIÓN; Fase B (Visual Polish) PLANNED / NO EJECUTADO |
-| Autorización | APROBADA por instrucción humana explícita (gobernanza D11, 2026-11-12) |
-| Branch | `feature/profile-preferences-ui-polish` |
+| Versión | 1.1.0 |
+| Fecha | 2026-11-19 |
+| Estado | IMPLEMENTACIÓN UI EN CURSO (branch `feature/profile-preferences-ui`) — pendiente gates/runtime finales |
+| Autorización | APROBADA por instrucción humana explícita (esta sesión, 2026-11-19) |
+| Branch actual | `feature/profile-preferences-ui` (desde `feature/ui-redesign`) |
 | Módulo | `:app` |
-| Relación NV | No existe spec NV previa para Profile/Preferences/Quick Setup. La trazabilidad académica mapea «Perfil / cuenta» a NV-27 (BLOCKED: `/users/me` sin confirmar). D11 NO reutiliza `nv-11-chat` ni ninguna otra spec; permanece separada. |
+| Relación NV | No existe spec NV previa para Profile/Preferences/Quick Setup. Trazabilidad académica «Perfil / cuenta»: NV-27 sigue BLOCKED para contrato `/users/me`; Mobile consume exclusivamente capas data/domain/use cases D11 ya existentes sin inventar endpoints. |
 
 ## Problema
 
-El flujo de cuenta del estudiante (ver/editar perfil, seleccionar universidad, preferencias de búsqueda y Quick Setup configurativo) no tiene spec registrada; el trabajo funcional correspondiente existe en el working tree sin formalizar ni validar. Adicionalmente la app carece de una pasada de consistencia visual global.
+El estudiante no tenía pantallas reales de Perfil, Preferencias y Configuración inicial (Quick Setup), a pesar de existir capas data/domain/use cases previas. Esto impedía ver/editar datos de cuenta soportados y configurar preferencias reales consumidas por Smart Match.
 
-## Alcance
+## Alcance (implementado en esta iteración)
 
-### D11-FUNCTIONAL (estado: IMPLEMENTACIÓN EXISTENTE / PENDIENTE DE FORMALIZACIÓN Y VALIDACIÓN)
-- APIs reales de perfil y preferencias (`ProfileApi`, `PreferencesApi`), DTOs, repositorios y use cases (`GetProfile`, `UpdateProfile`, `SelectUniversity`, `GetPreferences`, `SavePreferences`, `GetQuickSetup`).
-- Registro DI en `AppContainer`.
-- Sin pantallas de presentación nuevas de Profile/Preferences/Quick Setup en este commit (no existen aún en `presentation/`).
+### D11-FUNCTIONAL (data/domain existente, sin cambios de contrato)
+- Reutiliza APIs/DTOs/repositorios/use cases existentes: `ProfileApi`, `PreferencesApi`, `GetProfileUseCase`, `UpdateProfileUseCase`, `SelectUserUniversityUseCase`, `GetPreferencesUseCase`, `SavePreferencesUseCase`, `GetQuickSetupUseCase`, `GetUniversitiesUseCase`.
+- Sin nuevos endpoints, sin cambios de lógica de negocio innecesarios.
 
-### D11-VISUAL-POLISH (estado: PLANNED / NO EJECUTADO)
-- Design system centralizado (colores, typography, shapes, spacing, cards, buttons, inputs).
-- Pulido visual de Onboarding, Login, Register, Home, Explore, Map, Property Detail, Favorites, Visits, Profile, Preferences, Quick Setup y Navigation.
-- Patrones reutilizables Loading / Empty / Error, accesibilidad, responsive, runtime visual QA.
+### D11-UI (nuevo)
+- `presentation/profile`: `ProfileViewModel`, `ProfileScreen`/`ProfileDestination`.
+  - Muestra datos reales disponibles: nombre, correo de sesión activa, universidad y estado de Quick Setup.
+  - Edición de nombre vía `UpdateProfileUseCase` (loading/success/error).
+  - Selección de universidad vía `SelectUserUniversityUseCase` con catálogo real (`GetUniversitiesUseCase`).
+- `presentation/preferences`: `PreferencesViewModel`, `PreferencesScreen`/`PreferencesDestination`.
+  - Carga/edición/guardado vía `GetPreferencesUseCase` y `SavePreferencesUseCase`.
+  - Campos reales del modelo: presupuesto (min/max/moneda), distancia máxima, transporte, convivencia, tipo de lugar, mascotas, servicios esenciales y tipos de propiedad.
+- `presentation/quicksetup`: `QuickSetupViewModel`, `QuickSetupScreen`/`QuickSetupDestination`.
+  - Flujo breve con campos soportados (nombre, universidad) y acceso a Preferencias.
+  - Usa `GetQuickSetupUseCase`/perfil; el flag `quickSetupCompleted` es de solo lectura (no se inventa operación de marcado).
+- Navegación: rutas `perfil`, `preferencias`, `configuracion_inicial` en `AppRoutes`; destinos en `MainActivity`.
+- Accesos: Home (cuenta autenticada) → Perfil/Preferencias/Configuración inicial; Perfil → Preferencias/Quick Setup; Smart Match (NoPreferences) → Preferencias.
+- Design System existente (`TheHouseScreen`, TopBar, Cards, Avatar, SectionHeader, Buttons, Fields, StateViews, InlineMessage, tokens) sin hardcodeo repetido de colores/spacing.
+- Estados: Loading / Content / Error / Retry en cada pantalla; mensajes seguros (sin JWT/tokens/IDs técnicos/PII sensible en UI o logs).
 
 ## No-alcance
 
-- Backend, contratos de API, Chat, Landlord, ML, IA, SDK de mapas de pago, nueva paleta/logo/navegación, datos fake, refactor arquitectónico.
+- Backend, contratos, DTOs, repositorios o reglas de negocio; Map; Roommate; Reviews (NV-13 bloqueado).
+- `app/google-services.json`, secretos, signing, AAB, merge, force push, `reset --hard`.
+- Nuevas operaciones no soportadas (p. ej. forzar/completar Quick Setup sin contrato).
 
 ## Requisitos
 
-- D11-REQ-001: Solo endpoints confirmados por el backend. Contrato registrado por NV-27 confirmaba `auth/*`, `properties`, `universities`, `health`; `GET/PUT /users/me/preferences` y `users/me/profile` NO estaban confirmados en la matriz de trazabilidad. Deben validarse contra el backend real antes de declarar EXECUTED.
-- D11-REQ-002: Arquitectura MVVM + Clean Architecture + UDF; UI no consume Retrofit directamente; Manual DI vía `AppContainer`.
-- D11-REQ-003: Ningún dato inventado ni fake; sin secretos; sin PII en logs.
-- D11-REQ-004: Visual Polish no rehace lógica funcional ni cambia contratos; fidelidad al prototipo autoritativo (https://thehouse-prototipo.netlify.app/pantallas/00-onboarding.html).
+- D11-REQ-001: Solo datos/campos/endpoints ya soportados por las capas existentes.
+- D11-REQ-002: MVVM + UDF + Clean Architecture; UI consume ViewModels/use cases/repositorios de dominio existentes, no Retrofit.
+- D11-REQ-003: Sin datos inventados/fake, sin secretos, sin PII sensible en logs/UI.
+- D11-REQ-004: Consistencia visual con el Design System actual.
 
 ## Criterios de aceptación
 
-- D11-FUNCTIONAL: `compileDebugKotlin` y `testDebugUnitTest` en verde con el working tree íntegro (sin archivos borrados que el código sobreviviente requiera).
-- D11-VISUAL-POLISH: `compileDebugKotlin`, luego `testDebugUnitTest lintDebug assembleDebug`; runtime visual QA si hay emulador; commit `style: polish mobile ui and unify design system`.
-
-## Riesgos
-
-- Working tree actual borra 23 archivos (`AuthApi`, `CatalogApis`, `FavoritesApi`, `VisitsApi`, modelos y use cases de auth/visits/favorites/catalog) que ~30 archivos sobrevivientes aún importan → el árbol actual NO compila.
-- `AppContainer` tiene `val selectUniversity` duplicado (líneas ~194 y ~227) e importa `SelectUniversityUseCase2`, que no existe.
-- `ProfileApi.kt` y `PreferencesApi.kt` declaran `profile interface` (error de sintaxis Kotlin).
-- Endpoints de perfil/preferencias sin confirmación registrada de contrato (riesgo BLOCKED-BACKEND).
+- Pantallas reales de Profile, Preferences y Quick Setup integradas y navegables.
+- Smart Match sigue consumiendo las mismas preferencias reales (sin duplicar lógica).
+- `testDebugUnitTest`, `lintDebug`, `assembleDebug` en verde (máx. 1 ciclo correctivo).
+- Runtime en emulador operativo: navegación y estados sin crashes (o parcial documentado si faltan credenciales/backend).
 
 ## Impacto seguridad
 
-- Sin secretos versionados; tokens fuera de logs; sin permisos nuevos; datos de perfil minimizados.
+- Sin tokens/JWT/IDs técnicos expuestos. Errores mostrados mediante mensajes seguros. Sin permisos nuevos.
 
 ## COST-001 ($0)
 
-- Sin servicios externos nuevos. Free tier: backend existente. Tarjeta: no. Riesgo de cobro: ninguno. Mitigación: sin integraciones de pago/mapa/IA. Alternativa: N/A.
+- Sin servicios externos nuevos ni riesgo de cobro.
 
-## Evidencia esperada
+## Evidencia
 
-- Registro de validación en `evidence.md` de esta spec; actualización de `docs/sdd/REQUIREMENTS_TRACEABILITY.md`; entrada en `memoria.md`.
+- Ver `evidence.md` (implementación, tests/gates/runtime y commit/push de esta iteración).
