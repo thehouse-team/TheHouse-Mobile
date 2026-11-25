@@ -6,4 +6,4 @@ id = "gcp-api-key"
 
   [[rules.allowlists]]
   description = "Firebase Android google-services.json public client API key"
-  paths = ['''^app/google-services\.json$''']
+  paths = ['''(?:^|/)app/google-services\.json$''']
