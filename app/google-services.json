@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "852655596673",
+    "project_id": "thehouse-ac943",
+    "storage_bucket": "thehouse-ac943.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:852655596673:android:f47145090fcf20c5609980",
+        "android_client_info": {
+          "package_name": "com.thehouse.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPfeKbFnz6q2Yu_rJ18h_63_IGfMrbLZA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
