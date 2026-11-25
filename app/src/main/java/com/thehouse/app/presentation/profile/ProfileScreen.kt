@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -207,6 +208,7 @@ private fun ProfileHeaderCard(state: ProfileUiState) {
                     imageVector = Icons.Outlined.Person,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.testTag("profile_screen"),
                 )
             }
             val university = state.profile?.university
@@ -361,6 +363,7 @@ private fun PreferencesCard(onOpenPreferences: () -> Unit) {
                 imageVector = Icons.Outlined.Tune,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag("preferences_screen"),
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(

@@ -23,6 +23,7 @@ import com.thehouse.app.data.remote.RetrofitFactory
 import com.thehouse.app.data.remote.api.AuthApi
 import com.thehouse.app.data.remote.api.ProfileApi
 import com.thehouse.app.data.remote.api.PreferencesApi
+import com.thehouse.app.data.remote.api.SmartMatchApi
 import com.thehouse.app.data.favorites.repository.FavoritesRepositoryImpl
 import com.thehouse.app.data.favorites.state.FavoriteIdsStore
 import com.thehouse.app.data.remote.api.FavoritesApi
@@ -44,6 +45,7 @@ import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
 
 import com.thehouse.app.domain.repository.VisitsRepository
+import com.thehouse.app.data.smartmatch.SmartMatchRepository
 import com.thehouse.app.domain.usecase.AddFavoriteUseCase
 import com.thehouse.app.domain.usecase.CancelVisitUseCase
 import com.thehouse.app.domain.usecase.CreateVisitUseCase
@@ -527,6 +529,14 @@ class AppContainer(context: Context) {
 
     val runSmartMatch: com.thehouse.app.domain.usecase.RunSmartMatchUseCase by lazy {
         com.thehouse.app.domain.usecase.RunSmartMatchUseCase(smartMatchModel)
+    }
+
+    val smartMatchApi: SmartMatchApi by lazy {
+        retrofit.create(SmartMatchApi::class.java)
+    }
+
+    val smartMatchRepository: SmartMatchRepository by lazy {
+        SmartMatchRepository(api = smartMatchApi)
     }
 
     // ===== NV-15 Privacidad + Eliminar cuenta =====

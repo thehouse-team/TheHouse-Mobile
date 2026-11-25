@@ -17,6 +17,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -36,11 +37,17 @@ fun TheHousePrimaryButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     icon: ImageVector? = null,
+    testTag: String? = null,
+    contentDescription: String? = null,
 ) {
+    // Aplicar testTag vía Modifier internamente
+    // contentDescription se establece en los Iconos internos cuando sea necesario
+    val effectiveModifier = modifier
+        .testTag(testTag ?: "")
     Button(
         onClick = onClick,
         enabled = enabled && !loading,
-        modifier = modifier
+        modifier = effectiveModifier
             .fillMaxWidth()
             .height(Heights.buttonLarge),
         shape = MaterialTheme.shapes.medium,

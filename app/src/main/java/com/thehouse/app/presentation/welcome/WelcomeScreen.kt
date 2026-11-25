@@ -83,6 +83,8 @@ fun WelcomeScreen(
             )
             TheHousePrimaryButton(
                 text = "Continuar",
+                testTag = "screen_welcome_continue",
+                contentDescription = "screen.welcome",
                 onClick = onContinue,
                 modifier = Modifier
                     .fillMaxWidth()
