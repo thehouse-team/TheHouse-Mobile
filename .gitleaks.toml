@@ -1,0 +1,3 @@
+[[allowlist]]
+  path = "app/google-services.json"
+  rule = "gcp-api-key"
