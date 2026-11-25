@@ -25,12 +25,13 @@ import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -104,6 +105,7 @@ fun HomeScreen(
     val viewModel: HomeViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
     var showUniversityPicker by remember { mutableStateOf(false) }
+    val drawerState = remember {DrawerState()}
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -127,6 +129,60 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        drawerState = drawerState,
+        drawerContent = {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                horizontalAlignment = Alignment.Start,
+                padding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.lg),
+            ) {
+                Text(
+                    text = "Menú",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = Spacing.lg),
+                )
+                // Destinos del drawer
+                OutlinedTextButton(
+                    onClick = { onOpenProfile() },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.button,
+                ) {
+                    Text(text = "Perfil", modifier = Modifier.padding(end = Spacing.sm))
+                }
+                OutlinedTextButton(
+                    onClick = { onOpenPreferences() },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.button,
+                ) {
+                    Text(text = "Preferencias", modifier = Modifier.padding(end = Spacing.sm))
+                }
+                OutlinedTextButton(
+                    onClick = { onLogout() },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.button,
+                    enabled = !state.isLoggingOut,
+                    colors = ButtonColors(
+                        defaultColor = MaterialTheme.colorScheme.error,
+                        highlitColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                ) {
+                    Text(
+                        text = if (state.isLoggingOut) "Cerrando sesión…" else "Cerrar sesión",
+                        modifier = Modifier.padding(end = Spacing.sm),
+                    )
+                }
+                Spacer(modifier = Modifier.height(Spacing.xl))
+                OutlinedTextButton(
+                    onClick = { onRequireLogin() },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.button,
+                ) {
+                    Text(text = "Iniciar sesión o registrarse", modifier = Modifier.padding(end = Spacing.sm))
+                }
+            }
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -142,10 +198,17 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BrandMark()
-                Avatar(
-                    name = displayName.ifBlank { "TheHouse" },
-                    size = 44.dp,
-                )
+                IconButton(
+                    onClick = { drawerState.open() },
+                    modifier = Modifier.semantics { contentDescription = "Abrir menú" }
+                        .contentSemantics { role = Role.Button }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Abrir menú",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {

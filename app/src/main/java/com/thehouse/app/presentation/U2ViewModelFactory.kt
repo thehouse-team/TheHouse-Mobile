@@ -313,6 +313,7 @@ class U2ViewModelFactory(
             com.thehouse.app.presentation.smartmatch.SmartMatchViewModel(
                 sessionState = container.sessionStore.state,
                 preferenceRepository = container.preferencesRepository,
+                smartMatchRepository = container.smartMatchRepository,
                 getProperties = container.getProperties,
                 runSmartMatch = container.runSmartMatch,
                 dispatchers = container.dispatchers,
