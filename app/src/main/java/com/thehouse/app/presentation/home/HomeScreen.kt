@@ -159,7 +159,7 @@ fun HomeScreen(
                     Text(text = "Preferencias", modifier = Modifier.padding(end = Spacing.sm))
                 }
                 OutlinedTextButton(
-                    onClick = { onLogout() },
+                    onClick = { viewModel.onEvent(HomeEvent.LogoutClicked) },
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.button,
                     enabled = !state.isLoggingOut,
@@ -174,12 +174,14 @@ fun HomeScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(Spacing.xl))
-                OutlinedTextButton(
-                    onClick = { onRequireLogin() },
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.button,
-                ) {
-                    Text(text = "Iniciar sesión o registrarse", modifier = Modifier.padding(end = Spacing.sm))
+                if (state.isGuest) {
+                    OutlinedTextButton(
+                        onClick = { onRequireLogin() },
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.button,
+                    ) {
+                        Text(text = "Iniciar sesión o registrarse", modifier = Modifier.padding(end = Spacing.sm))
+                    }
                 }
             }
         }
