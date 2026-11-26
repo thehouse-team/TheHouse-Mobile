@@ -54,6 +54,7 @@ fun SmartMatchScreen(
     val vm: SmartMatchViewModel = viewModel(factory = factory)
     val state by vm.uiState.collectAsStateWithLifecycle()
 
+    SmartMatchScreenExitLogger.logEnter()
     LaunchedEffect(Unit) { vm.load() }
 
     LaunchedEffect(state) {

@@ -69,15 +69,22 @@ class SmartMatchViewModelTest {
     /** Fake del contrato NV-23 v1.2.0 para el endpoint guest (query pública). */
     private class FakeSmartMatchApi(
         private val queryResponse: SmartMatchRecommendationResponse = SmartMatchRecommendationResponse(),
+        private val recommendations: SmartMatchListResponse = SmartMatchListResponse(),
+        private val recommendationsFailure: Throwable? = null,
     ) : SmartMatchApi {
         var queryCalls: Int = 0
+            private set
+        var recommendationCalls: Int = 0
             private set
 
         override suspend fun calculateScores(request: SmartMatchScoreRequest): SmartMatchScoreResponse =
             SmartMatchScoreResponse()
 
-        override suspend fun getRecommendations(page: Int, pageSize: Int): SmartMatchListResponse =
-            SmartMatchListResponse()
+        override suspend fun getRecommendations(page: Int, pageSize: Int): SmartMatchListResponse {
+            recommendationCalls++
+            recommendationsFailure?.let { throw it }
+            return recommendations
+        }
 
         override suspend fun queryRecommendations(request: SmartMatchQueryRequest): SmartMatchRecommendationResponse {
             queryCalls++
@@ -127,23 +134,32 @@ class SmartMatchViewModelTest {
 
     @Test
     fun `no preferences state`() = runTest {
+        // AUTH: el Backend reporta 422 smart_match_profile_incomplete con missing.
+        val incomplete = com.thehouse.app.domain.error.SmartMatchProfileIncompleteException(
+            listOf("university", "budget.max", "livingWith", "placeType"),
+        )
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = null),
-            smartMatchRepository = guestSmartMatchRepository(),
+            smartMatchRepository = SmartMatchRepository(FakeSmartMatchApi(recommendationsFailure = incomplete)),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
         )
         vm.load(); advanceUntilIdle()
         assertTrue(vm.uiState.value is SmartMatchUiState.NoPreferences)
+        assertEquals(
+            listOf("university", "budget.max", "livingWith", "placeType"),
+            vm.profileMissing.value,
+        )
     }
 
     @Test
     fun `empty candidates state`() = runTest {
+        // AUTH: 200 con items vacíos → Empty (sin preferencias locales ni catálogo).
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
-            preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
+            preferenceRepository = FakePreferenceRepo(pref = null),
             smartMatchRepository = guestSmartMatchRepository(),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
@@ -155,26 +171,33 @@ class SmartMatchViewModelTest {
 
     @Test
     fun `network error maps to error state`() = runTest {
+        // AUTH: 429 NO es elegible a fallback; se mantiene como Error tipado.
+        val rateLimited = DomainException(DomainError.RateLimited)
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
-            smartMatchRepository = guestSmartMatchRepository(),
+            smartMatchRepository = SmartMatchRepository(FakeSmartMatchApi(recommendationsFailure = rateLimited)),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.failure(DomainException(DomainError.Network)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
         )
         vm.load(); advanceUntilIdle()
-        assertTrue(vm.uiState.value is SmartMatchUiState.Error)
+        val state = vm.uiState.value
+        assertTrue(state is SmartMatchUiState.Error)
+        assertEquals(com.thehouse.app.presentation.common.UiError.RateLimited, (state as SmartMatchUiState.Error).error)
     }
 
     @Test
     fun `content with ranked results`() = runTest {
-        val props = listOf(property("1"), property("2"))
+        // AUTH: el Backend devuelve items ya ordenados/scoreados; Mobile no reordena.
+        val recommendations = SmartMatchListResponse(
+            items = listOf(backendItem("2", 70), backendItem("1", 90)),
+        )
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
-            preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
-            smartMatchRepository = guestSmartMatchRepository(),
-            getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(props,1,20,2,1)))),
+            preferenceRepository = FakePreferenceRepo(pref = null),
+            smartMatchRepository = SmartMatchRepository(FakeSmartMatchApi(recommendations = recommendations)),
+            getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
         )
@@ -183,8 +206,34 @@ class SmartMatchViewModelTest {
         assertTrue(s is SmartMatchUiState.Content)
         val results = (s as SmartMatchUiState.Content).results
         assertEquals(2, results.size)
-        assertTrue(results.first().property.id.isNotBlank()) // integrable con detalle/favoritos por propertyId real
+        assertEquals(listOf("2", "1"), results.map { it.property.id })
+        assertEquals(listOf(70, 90), results.map { it.score })
     }
+
+    private fun backendItem(id: String, score: Int) =
+        com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto(
+            room = com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRoomSearchDto(
+                id = id,
+                buildingId = "b1",
+                title = "t$id",
+                price = 3000.0,
+                currency = "MXN",
+                buildingType = "student_residence",
+                allowedTenants = "any",
+                services = listOf("wifi"),
+                distanceKm = 1.0,
+                walkingMinutes = 12,
+            ),
+            matchScore = score,
+            breakdown = listOf(
+                com.thehouse.app.data.remote.dto.smartmatch.SmartMatchFactorDto(
+                    factor = "budget", label = "Presupuesto", points = 30.0, maxPoints = 30.0,
+                ),
+            ),
+            dismissed = false,
+            modelVersion = "baseline-1.0.0",
+            featureSchemaVersion = "2.0.0",
+        )
 
     @Test
     fun `suspended session requires auth`() = runTest {
