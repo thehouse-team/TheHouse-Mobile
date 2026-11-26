@@ -2,6 +2,7 @@ package com.thehouse.app.presentation.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.thehouse.app.perf.Perf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -32,11 +33,12 @@ abstract class BaseViewModel<State, Event : UiEvent, Effect : UiEffect>(
     val effects: Flow<Effect> = _effects.receiveAsFlow()
 
     protected fun setState(state: State) {
-        _uiState.value = state
+        // PERF: emisión de estado (transformación/serialización barata + collectors).
+        Perf.trace(STATE_OPERATION) { _uiState.value = state }
     }
 
     protected fun updateState(transform: (State) -> State) {
-        _uiState.update(transform)
+        Perf.trace(STATE_OPERATION) { _uiState.update(transform) }
     }
 
     protected fun sendEffect(effect: Effect) {
@@ -50,5 +52,10 @@ abstract class BaseViewModel<State, Event : UiEvent, Effect : UiEffect>(
 
     override fun onCleared() {
         _effects.close()
+    }
+
+    private companion object {
+        /** Operación PERF: emisión de estado ViewModel (STATE). */
+        const val STATE_OPERATION = "state.update"
     }
 }

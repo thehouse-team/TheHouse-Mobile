@@ -88,6 +88,9 @@ class HomeViewModel(
     private var unreadEtag: String? = null
     private var unreadPollingJob: Job? = null
 
+    /** Petición de unread en vuelo (single-flight: sin llamadas duplicadas). */
+    private var unreadRefreshJob: Job? = null
+
     override fun onCleared() {
         unreadPollingJob?.cancel()
         super.onCleared()
@@ -138,7 +141,11 @@ class HomeViewModel(
             updateState { it.copy(unreadNotifications = 0) }
             return
         }
-        launch {
+        // Single-flight: ON_START + ON_RESUME + primer tick del polling llegan
+        // en la misma tanda (y el Backend puede tardar 20s+). Con una petición
+        // en vuelo se ignoran los disparos redundantes: una sola llamada lógica.
+        if (unreadRefreshJob?.isActive == true) return
+        unreadRefreshJob = launch {
             try {
                 val result = useCase(unreadEtag)
                 result.fold(

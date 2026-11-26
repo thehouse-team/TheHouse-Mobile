@@ -13,6 +13,7 @@ import com.thehouse.app.domain.repository.PreferenceRepository
 import com.thehouse.app.domain.smartmatch.SmartMatchResult
 import com.thehouse.app.domain.usecase.GetPropertiesUseCase
 import com.thehouse.app.domain.usecase.RunSmartMatchUseCase
+import com.thehouse.app.perf.Perf
 import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.toUiError
 import kotlinx.coroutines.CancellationException
@@ -75,7 +76,10 @@ class SmartMatchViewModel(
                                 return@launch
                             }
                             val ranked = withContext(dispatchers.default) {
-                                runSmartMatch.execute(preference, candidates)
+                                // PERF: sorting/ranking ML (fuera del main thread).
+                                Perf.trace("smartmatch.ranking") {
+                                    runSmartMatch.execute(preference, candidates)
+                                }
                             }
                             _uiState.value = if (ranked.isEmpty()) SmartMatchUiState.Empty
                                 else SmartMatchUiState.Content(ranked)
@@ -106,7 +110,10 @@ class SmartMatchViewModel(
                             return@launch
                         }
                         val ranked = withContext(dispatchers.default) {
-                            runSmartMatch.execute(preference, candidates)
+                            // PERF: sorting/ranking ML (fuera del main thread).
+                            Perf.trace("smartmatch.ranking") {
+                                runSmartMatch.execute(preference, candidates)
+                            }
                         }
                         _uiState.value = if (ranked.isEmpty()) SmartMatchUiState.Empty
                             else SmartMatchUiState.Content(ranked)

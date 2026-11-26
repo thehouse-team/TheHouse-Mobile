@@ -18,6 +18,7 @@ import com.thehouse.app.domain.model.University
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
+import com.thehouse.app.perf.Perf
 import java.io.IOException
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.CancellationException
@@ -37,13 +38,15 @@ class UniversityRepositoryImpl(
     ): Result<PagedResult<University>> {
         val cacheKey = if (page == CatalogPagination.DEFAULT_PAGE) OfflineCacheStore.Keys.UNIVERSITIES_PAGE_1 else null
         return try {
-            val response = api.getUniversities(page, pageSize)
+            val response = Perf.traceSuspend("network.universities.get") {
+                api.getUniversities(page, pageSize)
+            }
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 if (cacheKey != null) {
                     cache?.put(cacheKey, body, UniversityListResponseDto.serializer())
                 }
-                Result.success(body.toDomainPaged())
+                Result.success(Perf.trace("mapping.universities.toDomain") { body.toDomainPaged() })
             } else {
                 val httpError = DomainException(DataError.Http(response.code()).toDomainError())
                 cacheKey?.let { readCachedUniversities(it) }?.let { Result.success(it) } ?: Result.failure(httpError)
@@ -107,13 +110,15 @@ class PropertyRepositoryImpl(
     ): Result<PagedResult<Property>> {
         val cacheKey = if (page == CatalogPagination.DEFAULT_PAGE) OfflineCacheStore.Keys.PROPERTIES_PAGE_1 else null
         return try {
-            val response = api.getProperties(page, pageSize)
+            val response = Perf.traceSuspend("network.properties.get") {
+                api.getProperties(page, pageSize)
+            }
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 if (cacheKey != null) {
                     cache?.put(cacheKey, body, PropertyListResponseDto.serializer())
                 }
-                Result.success(body.toDomainPaged())
+                Result.success(Perf.trace("mapping.properties.toDomain") { body.toDomainPaged() })
             } else {
                 val httpError = DomainException(DataError.Http(response.code()).toDomainError())
                 cacheKey?.let { readCachedProperties(it) }?.let { Result.success(it) } ?: Result.failure(httpError)
@@ -135,11 +140,13 @@ class PropertyRepositoryImpl(
     override suspend fun getPropertyById(id: String): Result<Property> {
         val cacheKey = OfflineCacheStore.Keys.propertyDetail(id)
         return try {
-            val response = api.getPropertyById(id)
+            val response = Perf.traceSuspend("network.properties.detail") {
+                api.getPropertyById(id)
+            }
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 cache?.put(cacheKey, body, PropertyDetailDto.serializer())
-                Result.success(body.toDomain())
+                Result.success(Perf.trace("mapping.property.detail") { body.toDomain() })
             } else {
                 val httpError = DomainException(DataError.Http(response.code()).toDomainError())
                 readCachedProperty(cacheKey)?.let { Result.success(it) } ?: Result.failure(httpError)
