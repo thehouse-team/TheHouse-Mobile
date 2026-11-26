@@ -20,4 +20,4 @@
 - [x] Privacidad UI: sin JWT/tokens/IDs técnicos/datos sensibles innecesarios en pantalla o logs.
 - [x] Gates ejecutados y registrados: `testDebugUnitTest`, `lintDebug`, `assembleDebug` en verde.
 - [x] Runtime en `emulator-5554`: parcial (instalación/arranque OK, sin sesión autenticada/credenciales para flujos protegidos).
-- [ ] `git diff --check`, commit `feat: add profile preferences and quick setup UI`, push `origin feature/profile-preferences-ui` (sin merge).
+- [x] `git diff --check`, commit `feat: add real profile preferences and quick setup`, push `origin feature/profile-preferences-ui` (sin merge). CERRADO 2026-11-26: M-MOB-048 RESUELTO POR RESTAURACIÓN; ver `evidence.md:30-47`.

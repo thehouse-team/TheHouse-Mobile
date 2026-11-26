@@ -24,4 +24,4 @@
 - [x] D11-T27 - Tests unitarios de ViewModels (Profile/Preferences/QuickSetup: load/success/error/save/select/state).
 - [x] D11-T28 - Gates: `testDebugUnitTest`, `lintDebug`, `assembleDebug` en verde (0 ciclos correctivos). Resultados registrados en `evidence.md`.
 - [x] D11-T29 - Runtime en `emulator-5554`: **parcial**. Instalación/arranque sin crash; UI no autenticada ("Inicia sesión"), sin credenciales para validar flujos protegidos/Profile/Preferences/Quick Setup end-to-end.
-- [ ] D11-T30 - `git diff --check`, commit `feat: add profile preferences and quick setup UI` (sin nv-13/google-services), push `origin feature/profile-preferences-ui`, sin merge.
+- [x] D11-T30 - `git diff --check`, commit `feat: add real profile preferences and quick setup` (sin nv-13/google-services), push `origin feature/profile-preferences-ui`, sin merge. CERRADO 2026-11-26: la restauración selectiva de los 23 archivos y los gates verdes están documentados en `evidence.md:30-47`; M-MOB-048 queda RESUELTO POR RESTAURACIÓN.
