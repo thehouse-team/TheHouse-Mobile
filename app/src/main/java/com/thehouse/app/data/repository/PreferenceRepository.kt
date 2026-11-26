@@ -2,20 +2,34 @@ package com.thehouse.app.data.repository
 
 import com.thehouse.app.data.cache.OfflineCacheStore
 import com.thehouse.app.data.cache.PreferencesSnapshot
-import com.thehouse.app.data.remote.api.BudgetPatchBody
+import com.thehouse.app.data.error.DataError
+import com.thehouse.app.data.error.toDomainError
 import com.thehouse.app.data.remote.api.PreferencesApi
 import com.thehouse.app.data.remote.api.PreferencesPatchBody
-import com.thehouse.app.data.remote.dto.preferences.toDomain
+import com.thehouse.app.data.remote.dto.preferences.PreferencesContract.toRequest
+import com.thehouse.app.data.remote.dto.preferences.toDomainDisplay
+import com.thehouse.app.domain.error.DomainError
+import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.Preference
 import com.thehouse.app.domain.repository.PreferenceRepository
-import java.io.IOException
-import java.net.SocketTimeoutException
+import com.thehouse.app.preferences.flow.PreferencesFlowLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import retrofit2.HttpException
+import java.io.IOException
+import java.net.SocketTimeoutException
 
+/**
+ * Implementación real de [PreferenceRepository] contra
+ * `GET|PUT /api/v1/users/me/preferences`.
+ *
+ * D14:
+ * - Los errores HTTP se convierten a [DomainException] antes de cruzar a Presentation.
+ * - La caché NUNCA esconde estados contractuales (401/403/400/404/422/429).
+ * - El guardado usa la respuesta 200 del PUT y no depende de un GET posterior.
+ */
 class PreferenceRepositoryImpl(
     private val api: PreferencesApi,
     private val cache: OfflineCacheStore? = null,
@@ -28,47 +42,109 @@ class PreferenceRepositoryImpl(
     override suspend fun loadPreferences() {
         val userId = currentUserId()
         val cacheKey = userId?.let { OfflineCacheStore.Keys.preferences(it) }
+        PreferencesFlowLogger.loadStart()
         try {
+            PreferencesFlowLogger.requestStart()
             val dto = api.getPreferences()
-            val pref = dto.toDomain()
+            val pref = dto.toDomainDisplay()
             _preferenceState.value = pref
-            if (cacheKey != null) {
-                cache?.put(cacheKey, PreferencesSnapshot.from(pref), PreferencesSnapshot.serializer(), userScope = userId)
-            }
+            writeCache(cacheKey, pref, userId)
+            PreferencesFlowLogger.requestSuccess()
+            PreferencesFlowLogger.state(if (isEmpty(pref)) "Empty" else "Content")
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (e: Exception) {
-            val cached = cacheKey?.let { cache?.get(it, PreferencesSnapshot.serializer()) }?.payload?.toDomain()
-            if (cached != null && isCacheFallbackEligible(e)) {
-                _preferenceState.value = cached
-                return
+        } catch (throwable: Throwable) {
+            reportException(throwable, "load")
+            if (isAvailabilityFailure(throwable)) {
+                val cached = cacheKey?.let { cache?.get(it, PreferencesSnapshot.serializer()) }?.payload?.toDomain()
+                if (cached != null) {
+                    _preferenceState.value = cached
+                    PreferencesFlowLogger.state(if (isEmpty(cached)) "Empty" else "Content")
+                    return
+                }
             }
-            throw e
+            throw toDomainException(throwable)
         }
     }
 
     override suspend fun savePreferences(preference: Preference) {
-        api.putPreferences(
-            PreferencesPatchBody(
-                budget = preference.budget?.let {
-                    BudgetPatchBody(
-                        min = it.min,
-                        max = it.max,
-                        currency = it.currency,
-                    )
-                },
-                maxDistanceKm = preference.maxDistanceKm,
-                essentialServices = preference.essentialServices,
-                livingWith = preference.livingWith,
-                placeType = preference.placeType,
-                pets = preference.pets,
-                transport = preference.transport,
-                propertyTypes = preference.propertyTypes,
-            )
-        )
-        loadPreferences()
+        val userId = currentUserId()
+        val cacheKey = userId?.let { OfflineCacheStore.Keys.preferences(it) }
+        PreferencesFlowLogger.requestStart()
+        try {
+            val body: PreferencesPatchBody = with(com.thehouse.app.data.remote.dto.preferences.PreferencesContract) {
+                preference.toRequest(
+                    min = preference.budget?.min?.toInt(),
+                    max = preference.budget?.max?.toInt(),
+                )
+            }
+            val response = api.putPreferences(body)
+            val saved = response.toDomainDisplay()
+            _preferenceState.value = saved
+            writeCache(cacheKey, saved, userId)
+            PreferencesFlowLogger.requestSuccess()
+            PreferencesFlowLogger.state(if (isEmpty(saved)) "Empty" else "Content")
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (throwable: Throwable) {
+            reportException(throwable, "save")
+            throw toDomainException(throwable)
+        }
     }
 
-    private fun isCacheFallbackEligible(e: Exception): Boolean =
-        e is IOException || e is SocketTimeoutException || e is HttpException
+    private suspend fun writeCache(cacheKey: String?, pref: Preference, userId: String?) {
+        if (cacheKey != null && userId != null) {
+            cache?.put(cacheKey, PreferencesSnapshot.from(pref), PreferencesSnapshot.serializer(), userScope = userId)
+        }
+    }
+
+    private fun isEmpty(preference: Preference): Boolean =
+        preference.budget?.max == null &&
+            preference.livingWith == null &&
+            preference.placeType == null &&
+            preference.essentialServices.isNullOrEmpty() &&
+            preference.propertyTypes.isNullOrEmpty()
+
+    /** Solo fallos de disponibilidad: nunca 4xx. */
+    private fun isAvailabilityFailure(throwable: Throwable): Boolean =
+        throwable is IOException || throwable is SocketTimeoutException
+
+    private fun toDomainException(throwable: Throwable): Throwable {
+        if (throwable is DomainException) return throwable
+        val dataError = when (throwable) {
+            is SocketTimeoutException -> DataError.Timeout
+            is IOException -> DataError.Network
+            is HttpException -> {
+                val status = throwable.code()
+                // 400/422 son estados contractuales conocidos: se tipan como Conflict
+                // (dominio) para evitar caer en Unknown. La UI de Preferences traduce
+                // Conflict a un mensaje específico de validación de preferencias.
+                if (status == 400 || status == 422) {
+                    return DomainException(DomainError.Conflict)
+                }
+                DataError.Http(status)
+            }
+            else -> DataError.Serialization
+        }
+        return DomainException(dataError.toDomainError())
+    }
+
+    private fun reportException(throwable: Throwable, operation: String) {
+        PreferencesFlowLogger.exception(throwable, operation)
+        when (toDomainException(throwable)) {
+            is DomainException -> {
+                val error = (toDomainException(throwable) as DomainException).error
+                when (error) {
+                    DomainError.Unauthorized -> PreferencesFlowLogger.requestUnauthorized()
+                    DomainError.NotFound -> PreferencesFlowLogger.requestNotFound()
+                    DomainError.Network, DomainError.Timeout, DomainError.Server,
+                    DomainError.RateLimited, DomainError.Unknown,
+                    DomainError.AccountSuspended, DomainError.Conflict, DomainError.Gone,
+                    -> PreferencesFlowLogger.requestError()
+                }
+                PreferencesFlowLogger.state("Error")
+            }
+            else -> Unit
+        }
+    }
 }

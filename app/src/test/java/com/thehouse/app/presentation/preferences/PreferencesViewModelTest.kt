@@ -139,9 +139,113 @@ class PreferencesViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assertEquals("Ingresa un número válido.", state.budgetMinError)
-        assertEquals("Revisa los campos marcados.", state.saveError)
+        assertEquals("Ingresa un número entero válido.", state.budgetMinError)
+        assertEquals("Ingresa un número entero válido.", state.saveError)
         assertNull(repo.savedPreference)
+    }
+
+    @Test
+    fun `decimal budget is rejected without silent rounding`() = runTest {
+        val repo = FakePreferenceRepository(preference = null)
+        val vm = createViewModel(repo)
+        vm.onEvent(PreferencesEvent.Load)
+        advanceUntilIdle()
+
+        vm.onEvent(PreferencesEvent.BudgetMaxChanged("4500.5"))
+        vm.onEvent(PreferencesEvent.Save)
+        advanceUntilIdle()
+
+        assertEquals("Ingresa un número entero válido.", vm.uiState.value.budgetMaxError)
+        assertNull(repo.savedPreference)
+    }
+
+    @Test
+    fun `budget out of backend range is rejected`() = runTest {
+        val repo = FakePreferenceRepository(preference = null)
+        val vm = createViewModel(repo)
+        vm.onEvent(PreferencesEvent.Load)
+        advanceUntilIdle()
+
+        vm.onEvent(PreferencesEvent.BudgetMinChanged("60000"))
+        vm.onEvent(PreferencesEvent.Save)
+        advanceUntilIdle()
+
+        assertEquals(
+            "El presupuesto debe estar entre 0 y 50000.",
+            vm.uiState.value.budgetMinError,
+        )
+        assertNull(repo.savedPreference)
+    }
+
+    @Test
+    fun `401 on load maps to RequiresAuth without generic error`() = runTest {
+        val vm = createViewModel(
+            FakePreferenceRepository(
+                preference = null,
+                loadError = DomainException(DomainError.Unauthorized),
+            ),
+        )
+
+        vm.onEvent(PreferencesEvent.Load)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.requiresAuth)
+        assertNull(state.loadError)
+    }
+
+    @Test
+    fun `401 on save maps to RequiresAuth without generic error`() = runTest {
+        val repo = FakePreferenceRepository(
+            preference = null,
+            saveError = DomainException(DomainError.Unauthorized),
+        )
+        val vm = createViewModel(repo)
+        vm.onEvent(PreferencesEvent.Load)
+        advanceUntilIdle()
+
+        vm.onEvent(PreferencesEvent.Save)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.requiresAuth)
+        assertNull(state.saveError)
+    }
+
+    @Test
+    fun `validation conflict shows specific message not generic`() = runTest {
+        val repo = FakePreferenceRepository(
+            preference = null,
+            saveError = DomainException(DomainError.Conflict),
+        )
+        val vm = createViewModel(repo)
+        vm.onEvent(PreferencesEvent.Load)
+        advanceUntilIdle()
+
+        vm.onEvent(PreferencesEvent.Save)
+        advanceUntilIdle()
+
+        assertEquals(
+            "Revisa los datos ingresados. Algunos valores no son válidos.",
+            vm.uiState.value.saveError,
+        )
+    }
+
+    @Test
+    fun `missing fields separates university from editable fields`() = runTest {
+        val vm = createViewModel(FakePreferenceRepository(preference = null))
+        vm.onEvent(PreferencesEvent.Load)
+        advanceUntilIdle()
+
+        vm.onEvent(
+            PreferencesEvent.MissingFieldsChanged(
+                listOf("university", "budget.max", "livingWith", "placeType"),
+            ),
+        )
+
+        val state = vm.uiState.value
+        assertTrue(state.missingUniversity)
+        assertEquals(listOf("budget.max", "livingWith", "placeType"), state.missingHere)
     }
 
     @Test

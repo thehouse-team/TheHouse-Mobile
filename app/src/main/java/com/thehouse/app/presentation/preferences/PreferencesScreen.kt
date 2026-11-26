@@ -32,11 +32,16 @@ import com.thehouse.app.presentation.components.TheHousePrimaryButton
 import com.thehouse.app.presentation.components.TheHouseScreen
 import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.ui.theme.Spacing
+import com.thehouse.app.preferences.flow.PreferencesFlowLogger
 
 @Composable
 fun PreferencesDestination(
     factory: U2ViewModelFactory,
     onBack: () -> Unit,
+    onRequireLogin: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    onOpenQuickSetup: () -> Unit = {},
+    missingFields: List<String> = emptyList(),
 ) {
     val viewModel: PreferencesViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,10 +50,19 @@ fun PreferencesDestination(
         viewModel.onEvent(PreferencesEvent.Load)
     }
 
+    LaunchedEffect(missingFields) {
+        if (missingFields.isNotEmpty()) {
+            viewModel.onEvent(PreferencesEvent.MissingFieldsChanged(missingFields))
+        }
+    }
+
     PreferencesScreen(
         state = state,
         onEvent = viewModel::onEvent,
         onBack = onBack,
+        onRequireLogin = onRequireLogin,
+        onOpenProfile = onOpenProfile,
+        onOpenQuickSetup = onOpenQuickSetup,
     )
 }
 
@@ -58,7 +72,11 @@ fun PreferencesScreen(
     onEvent: (PreferencesEvent) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onRequireLogin: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    onOpenQuickSetup: () -> Unit = {},
 ) {
+    PreferencesFlowLogger.enterScreen()
     TheHouseScreen(
         title = "Preferencias",
         subtitle = "Personaliza tu búsqueda",
@@ -66,6 +84,21 @@ fun PreferencesScreen(
         modifier = modifier,
     ) { padding ->
         when {
+            state.requiresAuth -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ErrorStateView(
+                        title = "Necesitas iniciar sesión",
+                        message = "Inicia sesión para personalizar tus preferencias.",
+                        onRetry = onRequireLogin,
+                    )
+                }
+            }
+
             state.isLoading && state.loadError == null -> {
                 Box(
                     modifier = Modifier
@@ -126,6 +159,19 @@ private fun PreferencesForm(
         state.message?.let { InlineMessage(text = it, tone = StatusTone.Success) }
         state.saveError?.let { InlineMessage(text = it, tone = StatusTone.Error) }
 
+        if (state.missingUniversity) {
+            InlineMessage(
+                text = "Completa tu universidad en Mi perfil o Configuración inicial para mejorar tus recomendaciones.",
+                tone = StatusTone.Warning,
+            )
+        }
+        if (state.missingHere.isNotEmpty()) {
+            InlineMessage(
+                text = "Completa: ${state.missingHere.joinToString(", ")} para mejorar tus recomendaciones.",
+                tone = StatusTone.Warning,
+            )
+        }
+
         TheHouseCard {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 SectionHeader(title = "Presupuesto", subtitle = "Rango mensual aproximado")
@@ -138,7 +184,7 @@ private fun PreferencesForm(
                         onValueChange = { onEvent(PreferencesEvent.BudgetMinChanged(it)) },
                         label = "Mínimo",
                         placeholder = "0",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = state.budgetMinError != null,
                         errorMessage = state.budgetMinError,
                         modifier = Modifier.weight(1f),
@@ -148,7 +194,7 @@ private fun PreferencesForm(
                         onValueChange = { onEvent(PreferencesEvent.BudgetMaxChanged(it)) },
                         label = "Máximo",
                         placeholder = "0",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = state.budgetMaxError != null,
                         errorMessage = state.budgetMaxError,
                         modifier = Modifier.weight(1f),
@@ -203,7 +249,7 @@ private fun PreferencesForm(
                     value = state.pets,
                     onValueChange = { onEvent(PreferencesEvent.PetsChanged(it)) },
                     label = "Mascotas",
-                    placeholder = "Sí, no, depende…",
+                    placeholder = "Sí o No",
                 )
             }
         }

@@ -1,5 +1,8 @@
 package com.thehouse.app.presentation.preferences
 
+import com.thehouse.app.data.remote.dto.preferences.PreferencesContract
+import com.thehouse.app.domain.error.DomainException
+import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.model.Budget
 import com.thehouse.app.domain.model.Preference
 import com.thehouse.app.domain.repository.PreferenceRepository
@@ -9,21 +12,26 @@ import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiEvent
 import com.thehouse.app.presentation.common.toSafeUiMessage
+import com.thehouse.app.preferences.flow.PreferencesFlowLogger
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 
 /**
  * Estado editable de preferencias.
  *
- * Los campos reflejan exclusivamente el modelo real [Preference]. No se inventan
- * opciones ni contratos adicionales.
+ * Los campos reflejan exclusivamente el modelo real [Preference]. D14 añade:
+ * - `requiresAuth`: sesión caducada (401), sin mostrar error genérico.
+ * - `missingFields`: campos requeridos por Smart Match; `university` se gestiona
+ *   en Perfil/Configuración inicial, nunca aquí.
  */
 data class PreferencesUiState(
     val isLoading: Boolean = true,
     val loadError: String? = null,
+    val requiresAuth: Boolean = false,
     val isSaving: Boolean = false,
     val saveError: String? = null,
     val message: String? = null,
+    val missingFields: List<String> = emptyList(),
     val budgetMin: String = "",
     val budgetMax: String = "",
     val budgetCurrency: String = "",
@@ -40,12 +48,20 @@ data class PreferencesUiState(
 ) {
     val hasValidationErrors: Boolean
         get() = budgetMinError != null || budgetMaxError != null || maxDistanceError != null
+
+    /** Campos gestionables por Preferences que siguen incompletos. */
+    val missingHere: List<String>
+        get() = missingFields.filter { it != "university" }
+
+    val missingUniversity: Boolean
+        get() = missingFields.contains("university")
 }
 
 sealed interface PreferencesEvent : UiEvent {
     data object Load : PreferencesEvent
     data object Retry : PreferencesEvent
     data object Save : PreferencesEvent
+    data class MissingFieldsChanged(val fields: List<String>) : PreferencesEvent
     data class BudgetMinChanged(val value: String) : PreferencesEvent
     data class BudgetMaxChanged(val value: String) : PreferencesEvent
     data class BudgetCurrencyChanged(val value: String) : PreferencesEvent
@@ -75,6 +91,10 @@ class PreferencesViewModel(
             PreferencesEvent.Retry -> load()
 
             PreferencesEvent.Save -> save()
+
+            is PreferencesEvent.MissingFieldsChanged -> updateState {
+                it.copy(missingFields = event.fields.distinct(), message = null, saveError = null)
+            }
 
             is PreferencesEvent.BudgetMinChanged -> updateState {
                 it.copy(budgetMin = event.value, budgetMinError = null, saveError = null, message = null)
@@ -123,7 +143,18 @@ class PreferencesViewModel(
     }
 
     private fun load() {
-        updateState { it.copy(isLoading = true, loadError = null, saveError = null, message = null) }
+        PreferencesFlowLogger.enterScreen()
+        PreferencesFlowLogger.loadStart()
+        updateState {
+            it.copy(
+                isLoading = true,
+                loadError = null,
+                requiresAuth = false,
+                saveError = null,
+                message = null,
+            )
+        }
+        PreferencesFlowLogger.state("Loading")
         launch {
             try {
                 preferenceRepository.loadPreferences()
@@ -132,37 +163,57 @@ class PreferencesViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {
-                updateState { it.copy(isLoading = false, loadError = throwable.toSafeUiMessage()) }
+                val unauthorized = isUnauthorized(throwable)
+                updateState {
+                    it.copy(
+                        isLoading = false,
+                        requiresAuth = unauthorized,
+                        loadError = if (unauthorized) null else safeMessage(throwable),
+                    )
+                }
+                PreferencesFlowLogger.state(if (unauthorized) "RequiresAuth" else "Error")
+                PreferencesFlowLogger.exception(throwable, "load_ui")
             }
         }
     }
 
     private fun save() {
         val current = uiState.value
-        if (current.isSaving || current.isLoading) return
+        if (current.isSaving || current.isLoading || current.requiresAuth) return
 
-        val min = parseDouble(current.budgetMin)
-        val max = parseDouble(current.budgetMax)
+        val min = parseInteger(current.budgetMin)
+        val max = parseInteger(current.budgetMax)
         val distance = parseDouble(current.maxDistanceKm)
 
-        val budgetMinError = numberError(current.budgetMin, min)
-        val budgetMaxError = numberError(current.budgetMax, max)
+        val budgetMinError = integerError(current.budgetMin, min)
+        val budgetMaxError = integerError(current.budgetMax, max)
         val maxDistanceError = numberError(current.maxDistanceKm, distance)
 
-        if (budgetMinError != null || budgetMaxError != null || maxDistanceError != null) {
+        val rangeError = if (
+            budgetMinError == null && budgetMaxError == null && min != null && max != null &&
+            min > max
+        ) "El mínimo no puede ser mayor que el máximo." else null
+        val currencyError = validateCurrency(current.budgetCurrency)
+
+        if (
+            budgetMinError != null || budgetMaxError != null || maxDistanceError != null ||
+            rangeError != null || currencyError != null
+        ) {
             updateState {
                 it.copy(
                     budgetMinError = budgetMinError,
-                    budgetMaxError = budgetMaxError,
+                    budgetMaxError = budgetMaxError ?: rangeError,
                     maxDistanceError = maxDistanceError,
-                    saveError = "Revisa los campos marcados.",
+                    saveError = listOfNotNull(
+                        budgetMinError, budgetMaxError, maxDistanceError, rangeError, currencyError,
+                    ).firstOrNull(),
                     message = null,
                 )
             }
             return
         }
 
-        val preference = buildPreference(current, min, max, distance)
+        val preference = buildPreference(current, min?.toDouble(), max?.toDouble(), distance)
         updateState { it.copy(isSaving = true, saveError = null, message = null) }
         launch {
             try {
@@ -184,10 +235,28 @@ class PreferencesViewModel(
                 updateState {
                     it.copy(
                         isSaving = false,
-                        saveError = throwable.toSafeUiMessage(),
+                        requiresAuth = isUnauthorized(throwable),
+                        saveError = if (isUnauthorized(throwable)) null else safeMessage(throwable),
                     )
                 }
+                PreferencesFlowLogger.exception(throwable, "save_ui")
             }
+        }
+    }
+
+    private fun isUnauthorized(throwable: Throwable): Boolean =
+        (throwable as? DomainException)?.error == DomainError.Unauthorized
+
+    /**
+     * Los estados contractuales de Preferences tienen mensaje propio; el resto
+     * usa el mapper central seguro. Nunca se muestra el mensaje genérico para
+     * un estado conocido (400/422 → validación).
+     */
+    private fun safeMessage(throwable: Throwable): String {
+        val error = (throwable as? DomainException)?.error
+        return when (error) {
+            DomainError.Conflict -> "Revisa los datos ingresados. Algunos valores no son válidos."
+            else -> throwable.toSafeUiMessage()
         }
     }
 
@@ -196,7 +265,7 @@ class PreferencesViewModel(
         return state.copy(
             budgetMin = formatNumber(budget?.min),
             budgetMax = formatNumber(budget?.max),
-            budgetCurrency = budget?.currency ?: preference?.currency.orEmpty(),
+            budgetCurrency = budget?.currency ?: preference?.currency ?: PreferencesContract.CURRENCY,
             maxDistanceKm = formatNumber(preference?.maxDistanceKm),
             essentialServices = preference?.essentialServices.orEmpty().joinToString(", "),
             livingWith = preference?.livingWith.orEmpty(),
@@ -217,7 +286,8 @@ class PreferencesViewModel(
         distance: Double?,
     ): Preference {
         val budgetCurrency = state.budgetCurrency.trim().takeIf { it.isNotBlank() }
-        val budget = if (min != null || max != null || budgetCurrency != null) {
+            ?: PreferencesContract.CURRENCY
+        val budget = if (min != null || max != null) {
             Budget(min = min, max = max, currency = budgetCurrency)
         } else {
             null
@@ -235,6 +305,30 @@ class PreferencesViewModel(
         )
     }
 
+    /** El backend usa int? en MXN: un decimal se rechaza, nunca se redondea. */
+    private fun parseInteger(value: String): Int? {
+        val trimmed = value.trim()
+        if (trimmed.isBlank()) return null
+        val parsed = trimmed.replace(',', '.').toDoubleOrNull() ?: return null
+        if (parsed % 1.0 != 0.0) return null
+        return parsed.toInt()
+    }
+
+    private fun integerError(raw: String, parsed: Int?): String? {
+        if (raw.trim().isBlank()) return null
+        if (parsed == null) return "Ingresa un número entero válido."
+        if (parsed !in PreferencesContract.BUDGET_MIN..PreferencesContract.BUDGET_MAX) {
+            return "El presupuesto debe estar entre ${PreferencesContract.BUDGET_MIN} y ${PreferencesContract.BUDGET_MAX}."
+        }
+        return null
+    }
+
+    private fun validateCurrency(raw: String): String? {
+        val value = raw.trim().takeIf { it.isNotBlank() } ?: return null
+        return if (value.equals(PreferencesContract.CURRENCY, ignoreCase = true)) null
+        else "La moneda debe ser ${PreferencesContract.CURRENCY}."
+    }
+
     private fun parseDouble(value: String): Double? {
         val trimmed = value.trim()
         if (trimmed.isBlank()) return null
@@ -243,7 +337,11 @@ class PreferencesViewModel(
 
     private fun numberError(raw: String, parsed: Double?): String? {
         if (raw.trim().isBlank()) return null
-        return if (parsed == null) "Ingresa un número válido." else null
+        if (parsed == null) return "Ingresa un número válido."
+        if (parsed !in PreferencesContract.DISTANCE_MIN..PreferencesContract.DISTANCE_MAX) {
+            return "La distancia debe estar entre ${PreferencesContract.DISTANCE_MIN} y ${PreferencesContract.DISTANCE_MAX} km."
+        }
+        return null
     }
 
     private fun parseList(value: String): List<String>? {
