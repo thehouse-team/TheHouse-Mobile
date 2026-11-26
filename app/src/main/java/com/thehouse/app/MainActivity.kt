@@ -7,16 +7,29 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -39,6 +52,7 @@ import com.thehouse.app.presentation.favorites.FavoritesEvent
 import com.thehouse.app.presentation.favorites.FavoritesScreen
 import com.thehouse.app.presentation.favorites.FavoritesViewModel
 import com.thehouse.app.presentation.home.HomeScreen
+import com.thehouse.app.presentation.navigation.AppDrawerContent
 import com.thehouse.app.presentation.navigation.AppRoutes
 import com.thehouse.app.presentation.navigation.ConversationRoute
 import com.thehouse.app.presentation.navigation.CreateRequestRoute
@@ -135,8 +149,70 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
     val selectedTab = TabNavigationState.fromRoute(currentRoute)
     val showBottomNav = AppRoutes.isBottomTab(currentRoute) && !isAccountSuspended
 
+    // D15: drawer global único en el shell. El hamburger solo aparece en las
+    // pestañas bottom-tab, para no duplicar el back arrow de las pantallas de detalle.
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
+    val showHamburger = showBottomNav
+    val closeDrawer: () -> Unit = { drawerScope.launch { drawerState.close() } }
+    val navigate: (String) -> Unit = { route ->
+        navController.navigate(route) { launchSingleTop = true }
+    }
+    val logoutFromDrawer: () -> Unit = {
+        drawerScope.launch {
+            container.logout()
+            // RootViewModel observa sessionStore y resuelve Home guest / Onboarding;
+            // el cambio de targetRoute limpia el back stack con popUpTo(0).
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = showHamburger,
+        drawerContent = {
+            ModalDrawerSheet {
+                AppDrawerContent(
+                    isGuest = !isAuthenticated,
+                    isLoggingOut = rootState.isLoggingOut,
+                    onCloseDrawer = closeDrawer,
+                    onRequireLogin = { navigate(AppRoutes.login.route) },
+                    onOpenProfile = { navigate(AppRoutes.profile.route) },
+                    onOpenPreferences = { navigate(AppRoutes.preferences.route) },
+                    onOpenQuickSetup = { navigate(AppRoutes.quickSetup.route) },
+                    onOpenNotifications = { navigate(AppRoutes.notifications.route) },
+                    onOpenRequests = { navigate(AppRoutes.requests.route) },
+                    onOpenConversations = { navigate(AppRoutes.conversations.route) },
+                    onOpenMyRental = { navigate(AppRoutes.myRental.route) },
+                    onOpenRentalCode = { navigate(AppRoutes.rentalCode.route) },
+                    onOpenLandlordDashboard = { navigate(AppRoutes.landlordDashboard.route) },
+                    onOpenLandlordRequests = { navigate(AppRoutes.landlordRequests.route) },
+                    onOpenLandlordAgreements = { navigate(AppRoutes.landlordAgreements.route) },
+                    onOpenPrivacy = { navigate(AppRoutes.privacy.route) },
+                    onLogout = logoutFromDrawer,
+                )
+            }
+        },
+    ) {
     Scaffold(
         modifier = modifier,
+        topBar = {
+            if (showHamburger) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = { drawerScope.launch { drawerState.open() } },
+                        modifier = Modifier.testTag("home_menu_button"),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Menu,
+                            contentDescription = "Abrir menú",
+                        )
+                    }
+                }
+            }
+        },
         bottomBar = {
             if (showBottomNav) {
                 BottomNavigation(
@@ -282,6 +358,9 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         },
                         onOpenQuickSetup = {
                             navController.navigate(AppRoutes.quickSetup.route) { launchSingleTop = true }
+                        },
+                        onOpenNotifications = {
+                            navController.navigate(AppRoutes.notifications.route) { launchSingleTop = true }
                         },
                     )
                 }
@@ -1072,6 +1151,7 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                 container.pendingNotificationNavigation.consume()
             }
         }
+    }
     }
 }
 
