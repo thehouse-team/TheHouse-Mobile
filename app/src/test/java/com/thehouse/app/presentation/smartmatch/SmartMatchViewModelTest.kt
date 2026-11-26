@@ -1,4 +1,4 @@
-package com.thehouse.app.presentation.smartmatch
+﻿package com.thehouse.app.presentation.smartmatch
 
 import com.thehouse.app.data.remote.api.SmartMatchApi
 import com.thehouse.app.data.remote.api.SmartMatchDismissalRequest
@@ -207,7 +207,7 @@ class SmartMatchViewModelTest {
         val results = (s as SmartMatchUiState.Content).results
         assertEquals(2, results.size)
         assertEquals(listOf("2", "1"), results.map { it.property.id })
-        assertEquals(listOf(70, 90), results.map { it.score })
+        assertEquals(listOf(70, 90), results.map { it.matchScore })
     }
 
     private fun backendItem(id: String, score: Int) =
@@ -231,7 +231,7 @@ class SmartMatchViewModelTest {
                 ),
             ),
             dismissed = false,
-            modelVersion = "baseline-1.0.0",
+            modelVersion = "logreg-1.0.0",
             featureSchemaVersion = "2.0.0",
         )
 
@@ -280,8 +280,9 @@ class SmartMatchViewModelTest {
         assertEquals(1, api.queryCalls)
     }
 
+    /** D16: GUEST 200 usa el score/orden del Backend, sin re-score local. */
     @Test
-    fun `guest with preferences and candidates returns ranked content`() = runTest {
+    fun `guest with preferences and candidates returns backend content`() = runTest {
         val api = FakeSmartMatchApi(
             SmartMatchRecommendationResponse(
                 items = listOf(
@@ -290,7 +291,7 @@ class SmartMatchViewModelTest {
                         title = "t1",
                         price = 3000.0,
                         currency = "MXN",
-                        matchScore = 80.0,
+                        matchScore = 80,
                         dismissed = false,
                     ),
                 ),
@@ -308,7 +309,10 @@ class SmartMatchViewModelTest {
         vm.load(); advanceUntilIdle()
         val s = vm.uiState.value
         assertTrue(s is SmartMatchUiState.Content)
-        assertEquals(2, (s as SmartMatchUiState.Content).results.size)
+        val results = (s as SmartMatchUiState.Content).results
+        assertEquals(1, results.size)
+        assertEquals(80, results.first().matchScore)
+        assertEquals(com.thehouse.app.domain.smartmatch.SmartMatchSource.BACKEND, results.first().source)
         assertEquals(1, api.queryCalls)
     }
 }

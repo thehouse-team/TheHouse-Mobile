@@ -16,6 +16,8 @@ object UiErrorMessages {
         UiError.Conflict -> "Ese correo ya está registrado. Inicia sesión en lugar de crear una cuenta nueva."
         UiError.Gone -> "El recurso ya no está disponible."
         UiError.RateLimited -> "Demasiados intentos. Espera un momento e intenta de nuevo."
+        UiError.ServiceUnavailable -> "El servicio no está disponible ahora. Intenta más tarde."
+        UiError.ValidationError -> "La solicitud no es válida. Revisa tus datos e intenta de nuevo."
         UiError.Server -> "El servicio no está disponible ahora. Intenta más tarde."
         UiError.Unknown -> "Ocurrió un error inesperado. Intenta de nuevo."
     }

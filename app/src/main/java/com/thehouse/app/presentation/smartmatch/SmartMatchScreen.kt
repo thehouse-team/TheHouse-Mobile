@@ -29,7 +29,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.thehouse.app.domain.smartmatch.SmartMatchFactor
 import com.thehouse.app.domain.smartmatch.SmartMatchResult
+import com.thehouse.app.domain.smartmatch.SmartMatchSource
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.EmptyStateView
@@ -55,7 +57,11 @@ fun SmartMatchScreen(
     val state by vm.uiState.collectAsStateWithLifecycle()
 
     SmartMatchScreenExitLogger.logEnter()
-    LaunchedEffect(Unit) { vm.load() }
+    LaunchedEffect(Unit) {
+        vm.load()
+        // D16: reconexión sustituye la estimación local por el resultado Backend.
+        vm.observeConnectivity()
+    }
 
     LaunchedEffect(state) {
         if (state is SmartMatchUiState.RequiresAuth) {
@@ -157,6 +163,9 @@ fun SmartMatchScreen(
     }
 }
 
+/** Contrato real: matchScore entero 0..100 → "73%". Nunca "73.0%". */
+internal fun formatMatchScore(score: Int): String = "$score%"
+
 @Composable
 private fun SmartMatchResultCard(
     result: SmartMatchResult,
@@ -165,6 +174,8 @@ private fun SmartMatchResultCard(
     onContactClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isLocal = result.source == SmartMatchSource.LOCAL_ESTIMATE
+    val scoreText = formatMatchScore(result.matchScore)
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -182,15 +193,24 @@ private fun SmartMatchResultCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "${result.score}%",
+                        text = scoreText,
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.semantics { contentDescription = "smart.match.score.$scoreText" },
                     )
                 }
-                MatchBadge(matchPercent = result.score)
+                MatchBadge(matchPercent = result.matchScore)
             }
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            ScoreBar(score = result.score)
+            ScoreBar(progress = (result.matchScore / 100.0).coerceIn(0.0, 1.0))
+            if (isLocal) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Text(
+                    text = "Estimación local",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { contentDescription = "smart.match.local.fallback" },
+                )
+            }
             if (result.factors.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
@@ -198,12 +218,8 @@ private fun SmartMatchResultCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                result.factors.take(4).forEach { factor ->
-                    Text(
-                        text = "• $factor",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                result.factors.forEach { factor ->
+                    SmartMatchFactorRow(factor = factor, showBars = !isLocal)
                 }
             }
         }
@@ -217,11 +233,42 @@ private fun SmartMatchResultCard(
 }
 
 @Composable
-private fun ScoreBar(
-    score: Int,
+private fun SmartMatchFactorRow(
+    factor: SmartMatchFactor,
+    showBars: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val fraction = score.coerceIn(0, 100) / 100f
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "${factor.label}: ${formatFactorPoints(factor.points)} / ${formatFactorPoints(factor.maxPoints)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        // Contrato confirmado: fraction = si maxPoints>0 → points/maxPoints
+        // clamp 0..1; si no → 0.0. Nunca NaN ni división por cero.
+        val progress = if (factor.maxPoints > 0.0) {
+            (factor.points / factor.maxPoints).coerceIn(0.0, 1.0)
+        } else {
+            0.0
+        }
+        if (showBars && factor.maxPoints > 0.0) {
+            ScoreBar(
+                progress = progress,
+                modifier = Modifier.semantics { contentDescription = "smart.match.factor.${factor.factor}" },
+            )
+        }
+    }
+}
+
+private fun formatFactorPoints(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else String.format(java.util.Locale.US, "%.1f", value)
+
+@Composable
+private fun ScoreBar(
+    progress: Double,
+    modifier: Modifier = Modifier,
+) {
+    val fraction = progress.coerceIn(0.0, 1.0).toFloat()
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -231,7 +278,7 @@ private fun ScoreBar(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth(fraction)
+                .fillMaxWidth(if (fraction <= 0f) 0f else fraction.coerceAtLeast(0.01f))
                 .fillMaxHeight()
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary),

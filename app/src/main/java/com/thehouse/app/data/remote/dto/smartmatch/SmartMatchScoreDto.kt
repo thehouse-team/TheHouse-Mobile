@@ -44,10 +44,10 @@ data class SmartMatchPreferencesDto(
     val essentialServices: List<String>?,
     val livingWith: String?,
     val placeType: String?,
-    val pets: String?,
+    @kotlinx.serialization.Transient val pets: String? = null,
     val transport: String?,
     val propertyTypes: List<String>?,
-    val currency: String?
+    @kotlinx.serialization.Transient val currency: String? = null,
 )
 
 @Serializable
@@ -76,9 +76,11 @@ data class SmartMatchRecommendationDto(
     val title: String?,
     val price: Double?,
     val currency: String?,
-    val matchScore: Double?,          // puede ser null si no elegible
+    val matchScore: Int?,             // contrato real: entero 0..100 (puede ser null si no elegible)
     val dismissed: Boolean,
-    val excludedBy: List<String> = emptyList()
+    val excludedBy: List<String> = emptyList(),
+    val breakdown: List<SmartMatchFactorDto> = emptyList(),
+    val modelVersion: String = "",
 )
 
 /**
@@ -133,8 +135,11 @@ data class SmartMatchFactorDto(
 )
 
 /**
- * Item real de `GET /api/v1/smart-match/recommendations` (NV-23 v1.2.0).
+ * Item real de `GET /api/v1/smart-match/recommendations` (NV-23 v1.2.0 + D16).
  * El Backend es autoridad de `matchScore`, `breakdown`, `dismissed` y orden.
+ *
+ * Contrato confirmado: `matchScore` SIEMPRE entero 0..100. El breakdown
+ * (`points`/`maxPoints`) sigue siendo Double con decimales reales.
  */
 @Serializable
 data class SmartMatchRecommendationItemDto(

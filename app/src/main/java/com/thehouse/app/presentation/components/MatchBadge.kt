@@ -20,9 +20,10 @@ fun MatchBadge(
     matchPercent: Int,
     modifier: Modifier = Modifier,
 ) {
+    val label = "$matchPercent% Match"
     Surface(
         modifier = modifier.semantics {
-            contentDescription = "Compatibilidad $matchPercent por ciento"
+            contentDescription = "Compatibilidad $label"
         },
         shape = MaterialTheme.shapes.extraSmall,
         color = MaterialTheme.colorScheme.primaryContainer,
@@ -33,7 +34,7 @@ fun MatchBadge(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "$matchPercent% Match",
+                text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
