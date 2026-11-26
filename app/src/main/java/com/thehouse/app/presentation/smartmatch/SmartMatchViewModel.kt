@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.thehouse.app.domain.common.DispatcherProvider
-import retrofit2.HttpException
 
 sealed interface SmartMatchUiState {
     data object Loading : SmartMatchUiState
@@ -52,14 +51,18 @@ class SmartMatchViewModel(
             val session = sessionState.first()
             when (session) {
                 is SessionState.Anonymous -> {
-                    // Modo invitado: usar endpoint público recommendations/query
+                    // Modo invitado: endpoint público recommendations/query.
                     try {
-                        // Obtener preferencias locales para construir la query
-                        preferenceRepository.loadPreferences()
-                        val preference = preferenceRepository.preferenceState.first()
+                        val preference = loadPreferenceOrNull()
+                        if (preference == null || !hasMeaningfulPreferences(preference)) {
+                            // Preferencias ausentes o incompletas: estado tipado.
+                            // No se envía una query inválida al backend.
+                            _uiState.value = SmartMatchUiState.NoPreferences
+                            return@launch
+                        }
                         val queryRequest = SmartMatchQueryRequest(
                             universityId = null,
-                            preferences = preference?.toPreferencesDto()
+                            preferences = preference.toPreferencesDto(),
                         )
                         val response = smartMatchRepository.queryRecommendations(queryRequest)
                         if (response.items.isEmpty()) {
@@ -103,7 +106,7 @@ class SmartMatchViewModel(
                             return@launch
                         }
                         val ranked = withContext(dispatchers.default) {
-                            runSmartMatch.execute(preference!!, candidates)
+                            runSmartMatch.execute(preference, candidates)
                         }
                         _uiState.value = if (ranked.isEmpty()) SmartMatchUiState.Empty
                             else SmartMatchUiState.Content(ranked)
@@ -133,6 +136,25 @@ class SmartMatchViewModel(
             propertyTypes = propertyTypes,
             currency = budget?.currency
         )
+    }
+
+    /**
+     * Carga las preferencias locales tolerando fallos de carga.
+     *
+     * En guest, `GET /users/me/preferences` puede responder 401/403 sin sesión;
+     * eso no debe reportarse como error de Smart Match. Si el estado local ya
+     * contiene preferencias (sesión previa), se reutilizan. Devuelve null cuando
+     * no hay preferencias válidas disponibles.
+     */
+    private suspend fun loadPreferenceOrNull(): com.thehouse.app.domain.model.Preference? {
+        return try {
+            preferenceRepository.loadPreferences()
+            preferenceRepository.preferenceState.first()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (ignored: Exception) {
+            preferenceRepository.preferenceState.first()
+        }
     }
 
     private fun hasMeaningfulPreferences(preference: com.thehouse.app.domain.model.Preference?): Boolean {
