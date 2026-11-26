@@ -94,15 +94,68 @@ data class SmartMatchRecommendationResponse(
 )
 
 /**
+ * RoomSearchItem del contrato NV-14 (Backend `SearchContracts.RoomSearchItem`),
+ * anidado dentro de cada recomendación NV-23 v1.2.0. Sin dirección real:
+ * `approxLocation` es la celda aproximada publicada por el Backend.
+ */
+@Serializable
+data class SmartMatchRoomSearchDto(
+    val id: String,
+    val buildingId: String,
+    val title: String,
+    val price: Double,
+    val currency: String,
+    val roomType: String? = null,
+    val bathroom: String? = null,
+    val buildingType: String,
+    val allowedTenants: String,
+    val services: List<String> = emptyList(),
+    val distanceKm: Double,
+    val walkingMinutes: Int,
+    val approxLocation: SmartMatchApproxLocationDto? = null,
+    val thumbnailUrl: String? = null,
+    val demo: Boolean = false,
+)
+
+@Serializable
+data class SmartMatchApproxLocationDto(
+    val lat: Double,
+    val lng: Double,
+)
+
+/** Factor del desglose expuesto por el Backend (sin valores de features). */
+@Serializable
+data class SmartMatchFactorDto(
+    val factor: String,
+    val label: String,
+    val points: Double,
+    val maxPoints: Double,
+)
+
+/**
+ * Item real de `GET /api/v1/smart-match/recommendations` (NV-23 v1.2.0).
+ * El Backend es autoridad de `matchScore`, `breakdown`, `dismissed` y orden.
+ */
+@Serializable
+data class SmartMatchRecommendationItemDto(
+    val room: SmartMatchRoomSearchDto,
+    val matchScore: Int,
+    val breakdown: List<SmartMatchFactorDto> = emptyList(),
+    val dismissed: Boolean = false,
+    val modelVersion: String,
+    val featureSchemaVersion: String,
+)
+
+/**
  * Response for GET /api/v1/smart-match/recommendations
  */
 @Serializable
 data class SmartMatchListResponse(
-    val items: List<SmartMatchRecommendationDto> = emptyList(),
+    val items: List<SmartMatchRecommendationItemDto> = emptyList(),
     val page: Int = 1,
     val pageSize: Int = 20,
     val totalItems: Long = 0,
-    val totalPages: Int = 0
+    val totalPages: Int = 0,
 )
 
 /** Error 422 perfil incompleto */

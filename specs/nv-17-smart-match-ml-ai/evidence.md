@@ -111,3 +111,33 @@ Autorización humana explícita. Alcance: instrumentación y diagnóstico del fl
 
 ### PENDIENTE (no afirmado)
 - Sin dispositivo/ADB en la sesión: las líneas `SmartMatchFlow` y `TheHouseHttp` en runtime **no fueron capturadas**. La causa raíz está demostrada en código y tests; la confirmación en dispositivo queda para el humano con el APK `app-debug.apk` generado. `HTTP_CALL_REACHED` = NO VERIFICADO EN DISPOSITIVO.
+
+## 12. Migración del flujo AUTH a NV-23 v1.2.0 (2026-11-26, PR #29)
+
+Autorización humana explícita; mismo branch/PR (`fix/smart-match-guest-runtime`), sin merge. Fuente de verdad: código productivo del Backend `origin/main` (`SmartMatchEndpoint.cs`, `SmartMatchService.cs`, `SmartMatchContracts.cs`, `SearchContracts.cs`, `UserEndpointSupport.cs`), no suposiciones.
+
+### Contrato confirmado
+- AUTH `GET /api/v1/smart-match/recommendations?page&pageSize`: **autenticado**, 200 `{items[{room:RoomSearchItem, matchScore, breakdown, dismissed, modelVersion, featureSchemaVersion}], page, pageSize, totalItems, totalPages}`; 422 `smart_match_profile_incomplete` con `missing=[university,budget.max,livingWith,placeType]`; 401; 429; 503.
+- El Backend **resuelve perfil, preferencias, universidad, scoring, ranking, breakdown y descartes**; Mobile NO reordena ni re-scorea una respuesta 200. El ranking on-device de NV-17 queda **solo** como fallback offline/network/503.
+
+### Cambios
+- DTOs: `SmartMatchRoomSearchDto`, `SmartMatchApproxLocationDto`, `SmartMatchFactorDto`, `SmartMatchRecommendationItemDto` y `SmartMatchListResponse` reescritos al contrato real (room anidado + breakdown + versiones). Sin campos inventados.
+- `SmartMatchRepository.getRecommendations()` usa `Result` y mapea errores a dominio: 422→`SmartMatchProfileIncompleteException(missing)`, 401/403→`Unauthorized`, 429→`RateLimited`, 404→`NotFound`, 5xx→`Server`, IOException→`Network`, timeout→`Timeout`.
+- `SmartMatchViewModel.loadAuthenticated()`: una sola llamada a `getRecommendations(page=1,pageSize=20)`; 200 items→Content (mapping 1:1, orden y score del Backend intactos), 200 vacío→Empty, 422→NoPreferences (con `profileMissing` expuesto), 401→RequiresAuth, 429/400/404→Error tipado, network/timeout/503→`localMlFallback()` con `preferences_start`/`fetchCandidates`/`ranking`. Online AUTH **no** carga preferencias ni catálogo.
+- `Throwable.toSafeUiError()` reemplaza al mapper incorrecto (`DomainException` → `Unknown`).
+- `SmartMatchFlowLogger`: `auth_query_result count=<n>`, `auth_query_result=profile_incomplete`, `fallback_start reason=<network|503>`, `candidates_start` solo en fallback.
+
+### Pruebas nuevas/actualizadas
+- `SmartMatchRuntimeFlowTest`: E reescrita a autoridad Backend; A–H (200/empty/422/401/429/503/network/400-404); regresión Anonymous intacta.
+- `SmartMatchViewModelTest`: 4 tests Active reescritos al contrato real (422, Empty, 429 tipado, orden/score del Backend).
+- `SmartMatchBackendContractTest` (nuevo): parseo del JSON real del Backend y del Problem Details 422.
+
+### Gates (resultados reales)
+- `clean compileDebugKotlin` — BUILD SUCCESSFUL.
+- `testDebugUnitTest` — **423 tests / 0 failures / 0 errors** (baseline 413, +10).
+- `lintDebug` — BUILD SUCCESSFUL (0 errores).
+- `assembleDebug` — BUILD SUCCESSFUL.
+- `git diff --check` — exit 0 (solo advertencia LF→CRLF).
+
+### PENDIENTE
+- Sin dispositivo/ADB: captura de `SmartMatchFlow`/`TheHouseHttp` en runtime con usuario autenticado queda para verificación humana. Resultado de código: **SMART-MATCH-ACTIVE-CODE-READY-FOR-RUNTIME**.

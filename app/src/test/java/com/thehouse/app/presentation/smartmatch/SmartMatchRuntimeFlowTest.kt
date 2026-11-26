@@ -95,15 +95,22 @@ class SmartMatchRuntimeFlowTest {
 
     private class CountingApi(
         private val response: SmartMatchRecommendationResponse = SmartMatchRecommendationResponse(),
+        private val recommendations: SmartMatchListResponse = SmartMatchListResponse(),
+        private val recommendationsFailure: Throwable? = null,
     ) : SmartMatchApi {
         var queryCalls = 0
+            private set
+        var recommendationCalls = 0
             private set
 
         override suspend fun calculateScores(request: SmartMatchScoreRequest): SmartMatchScoreResponse =
             SmartMatchScoreResponse()
 
-        override suspend fun getRecommendations(page: Int, pageSize: Int): SmartMatchListResponse =
-            SmartMatchListResponse()
+        override suspend fun getRecommendations(page: Int, pageSize: Int): SmartMatchListResponse {
+            recommendationCalls++
+            recommendationsFailure?.let { throw it }
+            return recommendations
+        }
 
         override suspend fun queryRecommendations(request: SmartMatchQueryRequest): SmartMatchRecommendationResponse {
             queryCalls++
@@ -303,21 +310,166 @@ class SmartMatchRuntimeFlowTest {
         assertEquals(2, api.queryCalls)
     }
 
-    /** E — Active: flujo autenticado intacto (preferencias + candidatos + ranking). */
+    /** E — Active: NV-23 autoridad Backend (GET recommendations), sin ranking local. */
     @Test
     fun `E active session keeps authenticated flow`() = runTest {
         val active = SessionState.Active(UserSession("u1", "n", "e@t.com"))
-        val api = CountingApi()
+        val api = CountingApi(recommendations = authList(authItem("1", 90)))
+        val prefs = FakePrefRepo(pref())
+        val properties = FakePropertyRepo(Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1)))
         val logs = captureLogs {
-            val vm = vm(active, FakePrefRepo(pref()), FakePropertyRepo(
-                Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1))), api)
+            val vm = vm(active, prefs, properties, api)
             vm.load()
             advanceUntilIdle()
             assertTrue(vm.uiState.value is SmartMatchUiState.Content)
         }
         assertTrue(logs.any { it == "session=Active" })
         assertTrue(logs.any { it == "auth_query_start" })
-        assertEquals(0, api.queryCalls) // El flujo autenticado usa ML on-device, no el endpoint guest.
+        assertTrue(logs.any { it == "auth_query_result count=1" })
+        assertTrue(logs.none { it == "ranking_start" })
+        assertTrue(logs.none { it == "candidates_start" })
+        assertEquals(1, api.recommendationCalls)
+        assertEquals(0, api.queryCalls)
+        assertEquals(0, prefs.loadCalls) // Online AUTH NO carga preferencias locales.
+        assertEquals(0, properties.calls) // Online AUTH NO consulta el catálogo.
+    }
+
+    private fun authItem(id: String, score: Int) =
+        com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto(
+            room = com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRoomSearchDto(
+                id = id, buildingId = "b1", title = "t$id", price = 3000.0, currency = "MXN",
+                buildingType = "student_residence", allowedTenants = "any",
+                services = listOf("wifi"), distanceKm = 1.0, walkingMinutes = 12,
+            ),
+            matchScore = score,
+            breakdown = listOf(
+                com.thehouse.app.data.remote.dto.smartmatch.SmartMatchFactorDto(
+                    factor = "budget", label = "Presupuesto", points = 30.0, maxPoints = 30.0,
+                ),
+            ),
+            dismissed = false, modelVersion = "baseline-1.0.0", featureSchemaVersion = "2.0.0",
+        )
+
+    private fun authList(vararg items: com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto) =
+        SmartMatchListResponse(items = items.toList())
+
+    private fun activeVm(
+        api: CountingApi,
+        prefs: FakePrefRepo = FakePrefRepo(pref()),
+        properties: FakePropertyRepo = FakePropertyRepo(Result.success(PagedResult(emptyList(), 1, 50, 0, 0))),
+    ) = vm(SessionState.Active(UserSession("u1", "n", "e@t.com")), prefs, properties, api)
+
+    /** A — Active + 200 items: Content, orden y matchScore del Backend intactos. */
+    @Test
+    fun `A active 200 items keeps backend authority`() = runTest {
+        val api = CountingApi(recommendations = authList(authItem("2", 70), authItem("1", 90)))
+        val vm = activeVm(api)
+        vm.load(); advanceUntilIdle()
+        val state = vm.uiState.value
+        assertTrue(state is SmartMatchUiState.Content)
+        val results = (state as SmartMatchUiState.Content).results
+        assertEquals(listOf("2", "1"), results.map { it.property.id })
+        assertEquals(listOf(70, 90), results.map { it.score })
+        assertEquals(listOf("Presupuesto"), results.first().factors)
+        assertEquals(0, api.queryCalls)
+    }
+
+    /** B — Active + 200 items=[]: Empty. */
+    @Test
+    fun `B active empty recommendations is Empty`() = runTest {
+        val vm = activeVm(CountingApi(recommendations = authList()))
+        vm.load(); advanceUntilIdle()
+        assertTrue(vm.uiState.value is SmartMatchUiState.Empty)
+    }
+
+    /** C — Active + 422 profile_incomplete: NoPreferences con missing, nunca Error. */
+    @Test
+    fun `C active 422 profile incomplete maps to NoPreferences`() = runTest {
+        val missing = listOf("university", "budget.max", "livingWith", "placeType")
+        val vm = activeVm(CountingApi(recommendationsFailure =
+            com.thehouse.app.domain.error.SmartMatchProfileIncompleteException(missing)))
+        val logs = captureLogs {
+            vm.load(); advanceUntilIdle()
+        }
+        assertTrue(vm.uiState.value is SmartMatchUiState.NoPreferences)
+        assertEquals(missing, vm.profileMissing.value)
+        assertTrue(logs.none { it.startsWith("state=Error") })
+    }
+
+    /** D — Active + 401: RequiresAuth. */
+    @Test
+    fun `D active 401 maps to RequiresAuth`() = runTest {
+        val vm = activeVm(CountingApi(recommendationsFailure = DomainException(DomainError.Unauthorized)))
+        vm.load(); advanceUntilIdle()
+        assertTrue(vm.uiState.value is SmartMatchUiState.RequiresAuth)
+    }
+
+    /** E2 — Active + 429: Error tipado, sin fallback ML. */
+    @Test
+    fun `E2 active 429 is typed error without fallback`() = runTest {
+        val prefs = FakePrefRepo(pref())
+        val properties = FakePropertyRepo(Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1)))
+        val logs = captureLogs {
+            val vm = activeVm(
+                CountingApi(recommendationsFailure = DomainException(DomainError.RateLimited)),
+                prefs, properties,
+            )
+            vm.load(); advanceUntilIdle()
+            val state = vm.uiState.value
+            assertTrue(state is SmartMatchUiState.Error)
+            assertEquals(com.thehouse.app.presentation.common.UiError.RateLimited, (state as SmartMatchUiState.Error).error)
+        }
+        assertTrue(logs.none { it.startsWith("fallback_start") })
+        assertEquals(0, prefs.loadCalls)
+        assertEquals(0, properties.calls)
+    }
+
+    /** F — Active + 503 (Server): fallback ML local. */
+    @Test
+    fun `F active 503 falls back to local ML`() = runTest {
+        val properties = FakePropertyRepo(Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1)))
+        val logs = captureLogs {
+            val vm = activeVm(
+                CountingApi(recommendationsFailure = DomainException(DomainError.Server)),
+                FakePrefRepo(pref()), properties,
+            )
+            vm.load(); advanceUntilIdle()
+            assertTrue(vm.uiState.value is SmartMatchUiState.Content)
+        }
+        assertTrue(logs.any { it == "fallback_start reason=503" })
+        assertTrue(logs.any { it == "candidates_start" })
+        assertTrue(logs.any { it == "ranking_start" })
+        assertTrue(logs.any { it == "candidates_result count=1" })
+    }
+
+    /** G — Active + IOException/network: fallback ML local. */
+    @Test
+    fun `G active network failure falls back to local ML`() = runTest {
+        val logs = captureLogs {
+            val vm = activeVm(
+                CountingApi(recommendationsFailure = java.io.IOException("offline")),
+                FakePrefRepo(pref()),
+                FakePropertyRepo(Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1))),
+            )
+            vm.load(); advanceUntilIdle()
+            assertTrue(vm.uiState.value is SmartMatchUiState.Content)
+        }
+        assertTrue(logs.any { it == "fallback_start reason=network" })
+        assertTrue(logs.any { it == "ranking_start" })
+    }
+
+    /** H — Active + 400/404: Error tipado, sin fallback. */
+    @Test
+    fun `H active 400 and 404 are typed errors without fallback`() = runTest {
+        for (error in listOf(DomainError.Unknown, DomainError.NotFound)) {
+            val logs = captureLogs {
+                val vm = activeVm(CountingApi(recommendationsFailure = DomainException(error)))
+                vm.load(); advanceUntilIdle()
+                assertTrue(vm.uiState.value is SmartMatchUiState.Error)
+            }
+            assertTrue(logs.none { it.startsWith("fallback_start") })
+            assertTrue(logs.none { it == "ranking_start" })
+        }
     }
 
     /**

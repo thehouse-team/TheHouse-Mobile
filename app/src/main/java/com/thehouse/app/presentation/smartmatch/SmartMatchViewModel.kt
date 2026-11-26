@@ -8,6 +8,7 @@ import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchBudgetDto
 import com.thehouse.app.data.smartmatch.SmartMatchRepository
 import com.thehouse.app.domain.common.DispatcherProvider
 import com.thehouse.app.domain.error.DomainError
+import com.thehouse.app.domain.error.SmartMatchProfileIncompleteException
 import com.thehouse.app.domain.model.Preference
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.model.SessionState
@@ -17,7 +18,7 @@ import com.thehouse.app.domain.usecase.GetPropertiesUseCase
 import com.thehouse.app.domain.usecase.RunSmartMatchUseCase
 import com.thehouse.app.perf.Perf
 import com.thehouse.app.presentation.common.UiError
-import com.thehouse.app.presentation.common.toUiError
+import com.thehouse.app.presentation.common.toSafeUiError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ import kotlinx.coroutines.withContext
 sealed interface SmartMatchUiState {
     data object Loading : SmartMatchUiState
     data object RequiresAuth : SmartMatchUiState
+    /** Perfil incompleto según el Backend (422 `smart_match_profile_incomplete`). */
     data object NoPreferences : SmartMatchUiState
     data object Empty : SmartMatchUiState
     data class Error(val error: UiError) : SmartMatchUiState
@@ -47,6 +49,10 @@ class SmartMatchViewModel(
     private val _uiState = MutableStateFlow<SmartMatchUiState>(SmartMatchUiState.Loading)
     val uiState: StateFlow<SmartMatchUiState> = _uiState.asStateFlow()
 
+    /** Campos que el Backend reporta como incompletos en el 422 NV-23. */
+    private val _profileMissing = MutableStateFlow<List<String>>(emptyList())
+    val profileMissing: StateFlow<List<String>> = _profileMissing.asStateFlow()
+
     /**
      * Carga única por entrada lógica a la pantalla. El Composable usa
      * `LaunchedEffect(Unit)`; retry invoca explícitamente este mismo método.
@@ -55,6 +61,7 @@ class SmartMatchViewModel(
     fun load() {
         SmartMatchFlowLogger.emit("load_start")
         viewModelScope.launch {
+            _profileMissing.value = emptyList()
             _uiState.value = SmartMatchUiState.Loading
             val session = sessionState.first()
             SmartMatchFlowLogger.emit(
@@ -112,11 +119,52 @@ class SmartMatchViewModel(
         } catch (t: Throwable) {
             // UI segura: error tipado; DEBUG: tipo + operación, sin PII ni mensaje.
             SmartMatchFlowLogger.exception("guest", t)
-            updateState(SmartMatchUiState.Error(toUiError(t)))
+            updateState(SmartMatchUiState.Error(t.toSafeUiError()))
         }
     }
 
+    /**
+     * AUTH (NV-23 v1.2.0): el Backend es autoridad de perfil, preferencias,
+     * universidad, scoring, ranking, breakdown y dismissed. Mobile NO vuelve
+     * a ordenar ni a re-scorear una respuesta 200.
+     *
+     * Solo ante indisponibilidad remota (network/503) se usa el fallback ML
+     * local de NV-17/NV-23; ahí sí se cargan preferencias y candidatos.
+     */
     private suspend fun loadAuthenticated() {
+        try {
+            SmartMatchFlowLogger.emit("auth_query_start")
+            val result = smartMatchRepository.getRecommendations(page = 1, pageSize = DEFAULT_PAGE_SIZE)
+            val response = result.getOrElse { throw it }
+            SmartMatchFlowLogger.authQueryResult(response.items.size)
+            if (response.items.isEmpty()) {
+                updateState(SmartMatchUiState.Empty)
+                return
+            }
+            // Autoridad del Backend: mapping 1:1, sin sort ni re-score.
+            updateState(SmartMatchUiState.Content(response.items.map { it.toDomain() }))
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (e: SmartMatchProfileIncompleteException) {
+            SmartMatchFlowLogger.emit("auth_query_result=profile_incomplete")
+            _profileMissing.value = e.missing
+            updateState(SmartMatchUiState.NoPreferences)
+        } catch (t: Throwable) {
+            SmartMatchFlowLogger.exception("auth", t)
+            when (val error = t.toSafeUiError()) {
+                UiError.Unauthorized -> updateState(SmartMatchUiState.RequiresAuth)
+                UiError.Network, UiError.Timeout, UiError.Server -> {
+                    val reason = if (error == UiError.Server) "503" else "network"
+                    SmartMatchFlowLogger.fallbackStart(reason)
+                    localMlFallback()
+                }
+                else -> updateState(SmartMatchUiState.Error(error))
+            }
+        }
+    }
+
+    /** Fallback ML on-device: solo offline/network/503. Si vuelve el remote, vuelve a ser autoridad. */
+    private suspend fun localMlFallback() {
         try {
             SmartMatchFlowLogger.emit("preferences_start")
             preferenceRepository.loadPreferences()
@@ -133,7 +181,7 @@ class SmartMatchViewModel(
                 updateState(SmartMatchUiState.NoPreferences)
                 return
             }
-            SmartMatchFlowLogger.emit("auth_query_start")
+            SmartMatchFlowLogger.emit("candidates_start")
             val candidates = fetchCandidates()
             if (candidates.isEmpty()) {
                 updateState(SmartMatchUiState.Empty)
@@ -143,8 +191,8 @@ class SmartMatchViewModel(
         } catch (ce: CancellationException) {
             throw ce
         } catch (t: Throwable) {
-            SmartMatchFlowLogger.exception("auth", t)
-            updateState(SmartMatchUiState.Error(toUiError(t)))
+            SmartMatchFlowLogger.exception("fallback", t)
+            updateState(SmartMatchUiState.Error(t.toSafeUiError()))
         }
     }
 
@@ -166,9 +214,6 @@ class SmartMatchViewModel(
         SmartMatchFlowLogger.state(state)
     }
 
-    private fun toUiError(t: Throwable): UiError =
-        (t as? DomainError ?: DomainError.Unknown).toUiError()
-
     private fun Preference?.toPreferencesDto(): SmartMatchPreferencesDto? {
         if (this == null) return null
         return SmartMatchPreferencesDto(
@@ -188,8 +233,7 @@ class SmartMatchViewModel(
      *
      * En guest, `/users/me/preferences` responde 401: eso NO es un error de
      * Smart Match. Si hay caché local (`preferenceState`), se reutiliza; si no,
-     * se devuelve null → NoPreferences. La excepción se registra en DEBUG con
-     * tipo y operación, sin mensaje ni PII.
+     * se devuelve null → NoPreferences.
      */
     private suspend fun loadPreferenceOrNull(): Preference? {
         return try {
@@ -223,6 +267,7 @@ class SmartMatchViewModel(
 
     /** Hasta 3 páginas de 50 (máx. 150), distinct por id. Sin datos fake. */
     private suspend fun fetchCandidates(): List<Property> {
+        SmartMatchFlowLogger.emit("candidates_start")
         val all = mutableListOf<Property>()
         val pageSize = 50
         val maxPages = 3
@@ -234,5 +279,40 @@ class SmartMatchViewModel(
         }
         SmartMatchFlowLogger.candidates(all.distinctBy { it.id }.size)
         return all.distinctBy { it.id }
+    }
+
+    companion object {
+        private const val DEFAULT_PAGE_SIZE = 20
+
+        /**
+         * Mapping del item NV-23 v1.2.0 al modelo de UI. Conserva el orden y
+         * el `matchScore` del Backend; los factores son las etiquetas públicas
+         * del desglose. No se inventan campos ausentes en `RoomSearchItem`.
+         */
+        private fun com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto.toDomain(): SmartMatchResult {
+            val room = this.room
+            val property = Property(
+                id = room.id,
+                title = room.title,
+                price = room.price,
+                currency = room.currency,
+                city = "",
+                universityId = null,
+                bedrooms = 0,
+                bathrooms = 0,
+                areaM2 = 0.0,
+                createdAt = "",
+                description = null,
+                amenities = room.services,
+                thumbnailUrl = room.thumbnailUrl,
+                photos = emptyList(),
+            )
+            return SmartMatchResult(
+                property = property,
+                probability = matchScore / 100.0,
+                score = matchScore,
+                factors = breakdown.map { it.label },
+            )
+        }
     }
 }

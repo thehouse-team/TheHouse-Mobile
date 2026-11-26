@@ -60,6 +60,16 @@ object SmartMatchFlowLogger {
         emit("candidates_result count=$count")
     }
 
+    /** Resultado de la query AUTH (NV-23), solo el número de items. */
+    fun authQueryResult(count: Int) {
+        emit("auth_query_result count=$count")
+    }
+
+    /** Inicio del fallback ML local; motivo sin PII: network o 503. */
+    fun fallbackStart(reason: String) {
+        emit("fallback_start reason=$reason")
+    }
+
     /** Entrada a la pantalla y creación del ViewModel (sin parámetros). */
     fun screenEnter() = emit("enter_screen")
 
