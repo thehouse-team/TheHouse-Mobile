@@ -81,3 +81,33 @@ Ejecución del set `testDebugUnitTest lintDebug assembleDebug` realizada una vez
 - `maxDistanceKm`, mascotas, transporte, tipo/convivencia no mapeables a Property actual (excluidos). Overlap de servicios depende de matching textual de strings.
 - Ruta UI de Preferences D11 no expuesta; CTA “Configurar preferencias” usa fallback a home.
 - Sin verificación runtime en dispositivo (bloqueado por entorno).
+
+## 11. Runbook SMART-MATCH RUNTIME — NO HTTP REQUEST (2026-11-26)
+
+Autorización humana explícita. Alcance: instrumentación y diagnóstico del flujo; sin Backend, contratos, GenAI, ML ni fallback artificial.
+
+### Hallazgo (causa raíz)
+- `SmartMatchScreen` crea el VM con `viewModel(factory = factory)` y dispara `LaunchedEffect(Unit) { vm.load() }` — **una** carga por entrada lógica; retry llama al mismo `vm.load()`.
+- `U2ViewModelFactory.create` entrega dependencias reales (`sessionStore.state`, `preferencesRepository`, `smartMatchRepository`, `getProperties`, `runSmartMatch`, `dispatchers`); sin placeholders.
+- En **Anonymous**, `loadPreferenceOrNull()` invoca `PreferenceRepositoryImpl.loadPreferences()` → `GET /api/v1/users/me/preferences`, que exige Bearer. Sin sesión hay 401; el `catch (ignored: Exception)` anterior lo tragaba y devolvía `preferenceState.first()` (StateFlow inicializado en `null`) → **NoPreferences sin HTTP de Smart Match**.
+- En **Active**, el flujo pasa de preferencias a candidatos y ranking ML on-device; **no llama** al endpoint guest `queryRecommendations` (contrato NV-17 original).
+- `fetchCandidates()` usa `GetPropertiesUseCase` → `GET /api/v1/properties` con caché; una lista vacía válida conduce a `Empty`, no a Error. Las excepciones se mapean a `DomainException` y ahora se registran en DEBUG.
+
+### Cambios
+- `SmartMatchFlowLogger.kt` (nuevo): tag `SmartMatchFlow`, solo DEBUG (`BuildConfig.DEBUG`), sink inyectable para tests. Eventos: `enter_screen`, `viewmodel_created`, `load_start`, `session=<Active|Anonymous|Suspended>`, `preferences_start`, `preferences_result=<present|missing|incomplete>`, `guest_query_start`, `auth_query_start`, `candidates_start`, `candidates_result count=<n>`, `ranking_start`, `state=<...>` y `exception=<SimpleName> operation=<...>`. Sin tokens, correo, nombre, bodies, preferencias completas ni stacktraces.
+- `SmartMatchViewModel.kt`: logging en cada etapa; excepciones convertidas en `UiError` seguro pero con causa observable en DEBUG; `load()` es el único disparador; estados `NoPreferences`/`Empty` separados de `Error`.
+- `SmartMatchScreen.kt`: emite `enter_screen` / `viewmodel_created` sin lógica de negocio.
+
+### Pruebas nuevas
+- `SmartMatchFlowLoggerTest`: eventos requeridos, sin PII, sin mensaje de excepción.
+- `SmartMatchRuntimeFlowTest`: A) Anonymous con preferencias → 1 query; B) Anonymous sin preferencias → NoPreferences, 0 query; B2) incompletas → NoPreferences; C) excepción en candidates → Error controlado + log; C2) fallo de preferencias → NoPreferences + log; D) retry → exactamente una carga adicional; E) Active íntegro; F) Suspended → RequiresAuth; sesión leída en tiempo de carga como la factory real.
+
+### Gates (resultados reales)
+- `clean compileDebugKotlin` — BUILD SUCCESSFUL.
+- `testDebugUnitTest` — **412 tests / 0 failures / 0 errors**.
+- `lintDebug` — BUILD SUCCESSFUL (0 errores; warnings preexistentes).
+- `assembleDebug` — BUILD SUCCESSFUL.
+- `git diff --check` — exit 0 (solo advertencia LF→CRLF del archivo modificado).
+
+### PENDIENTE (no afirmado)
+- Sin dispositivo/ADB en la sesión: las líneas `SmartMatchFlow` y `TheHouseHttp` en runtime **no fueron capturadas**. La causa raíz está demostrada en código y tests; la confirmación en dispositivo queda para el humano con el APK `app-debug.apk` generado. `HTTP_CALL_REACHED` = NO VERIFICADO EN DISPOSITIVO.
