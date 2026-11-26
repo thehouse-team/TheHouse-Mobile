@@ -119,20 +119,23 @@ private fun dispatch(
     onOpenPrivacy: () -> Unit,
     onLogout: () -> Unit,
 ) {
-    when (tag) {
-        "drawer_login" -> onRequireLogin()
-        "drawer_profile" -> onOpenProfile()
-        "drawer_preferences" -> onOpenPreferences()
-        "drawer_quick_setup" -> onOpenQuickSetup()
-        "drawer_notifications" -> onOpenNotifications()
-        "drawer_requests" -> onOpenRequests()
-        "drawer_conversations" -> onOpenConversations()
-        "drawer_my_rental" -> onOpenMyRental()
-        "drawer_rental_code" -> onOpenRentalCode()
-        "drawer_landlord_dashboard" -> onOpenLandlordDashboard()
-        "drawer_landlord_requests" -> onOpenLandlordRequests()
-        "drawer_agreements" -> onOpenLandlordAgreements()
-        "drawer_privacy" -> onOpenPrivacy()
-        "drawer_logout" -> if (!isLoggingOut) onLogout()
+    // D15: despacho único desde el catálogo puro verificado en tests JVM.
+    // Ningún tag queda sin acción: actionFor cubre las 14 entradas reales.
+    when (DrawerNavigationCatalog.actionFor(tag)) {
+        DrawerAction.REQUIRE_LOGIN -> onRequireLogin()
+        DrawerAction.PROFILE -> onOpenProfile()
+        DrawerAction.PREFERENCES -> onOpenPreferences()
+        DrawerAction.QUICK_SETUP -> onOpenQuickSetup()
+        DrawerAction.NOTIFICATIONS -> onOpenNotifications()
+        DrawerAction.REQUESTS -> onOpenRequests()
+        DrawerAction.CONVERSATIONS -> onOpenConversations()
+        DrawerAction.MY_RENTAL -> onOpenMyRental()
+        DrawerAction.RENTAL_CODE -> onOpenRentalCode()
+        DrawerAction.LANDLORD_DASHBOARD -> onOpenLandlordDashboard()
+        DrawerAction.LANDLORD_REQUESTS -> onOpenLandlordRequests()
+        DrawerAction.LANDLORD_AGREEMENTS -> onOpenLandlordAgreements()
+        DrawerAction.PRIVACY -> onOpenPrivacy()
+        DrawerAction.LOGOUT -> if (!isLoggingOut) onLogout()
+        null -> Unit // tag desconocido: no navegar nunca a destino inventado
     }
 }
