@@ -58,6 +58,8 @@ import com.thehouse.app.presentation.navigation.ConversationRoute
 import com.thehouse.app.presentation.navigation.CreateRequestRoute
 import com.thehouse.app.presentation.navigation.LandlordRequestDetailRoute
 import com.thehouse.app.presentation.navigation.PropertyDetailRoute
+import com.thehouse.app.presentation.navigation.RoomDetailRoute
+import com.thehouse.app.presentation.roomdetail.RoomDetailScreen
 import com.thehouse.app.presentation.navigation.ReportRoute
 import com.thehouse.app.presentation.navigation.AgreementPreviewRoute
 import com.thehouse.app.presentation.navigation.CreateAgreementRoute as CreateAgreementNavRoute
@@ -438,8 +440,10 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                 navController.navigate(AppRoutes.preferences.route) { launchSingleTop = true }
                             }
                         },
-                        onPropertyClick = { id ->
-                            navController.navigate(PropertyDetailRoute(id).route) { launchSingleTop = true }
+                        // D18: el id de Smart Match es un roomId real.
+                        // NUNCA se reutiliza como propertyId (GET /properties/{id}).
+                        onRoomClick = { roomId ->
+                            navController.navigate(RoomDetailRoute(roomId).route) { launchSingleTop = true }
                         },
                         onFavoriteClick = {
                             if (!isAuthenticated) {
@@ -453,6 +457,27 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             }
                         },
                     )
+                }
+                composable(
+                    route = RoomDetailRoute.PATTERN,
+                    arguments = listOf(navArgument(RoomDetailRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val roomId = entry.arguments?.getString(RoomDetailRoute.ID_ARGUMENT).orEmpty()
+                    if (!RoomDetailRoute.isValid(roomId)) {
+                        LaunchedEffect(Unit) { navController.popBackStack() }
+                    } else {
+                        val roomFactory = remember(factory, roomId) { factory.roomDetail(roomId) }
+                        RoomDetailScreen(
+                            roomId = roomId,
+                            factory = roomFactory,
+                            onBack = { navController.popBackStack() },
+                            onRequireLogin = {
+                                navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            },
+                        )
+                    }
                 }
                 composable(AppRoutes.favorites.route) {
                     val favVm: FavoritesViewModel = viewModel(factory = factory)

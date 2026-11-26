@@ -1,4 +1,4 @@
-package com.thehouse.app.presentation.smartmatch
+﻿package com.thehouse.app.presentation.smartmatch
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +48,7 @@ fun SmartMatchScreen(
     factory: U2ViewModelFactory,
     onRequireLogin: () -> Unit,
     onConfigurePreferences: () -> Unit,
-    onPropertyClick: (String) -> Unit,
+    onRoomClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
     onContactClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -151,7 +151,7 @@ fun SmartMatchScreen(
                         items(s.results, key = { it.property.id }) { result ->
                             SmartMatchResultCard(
                                 result = result,
-                                onPropertyClick = { onPropertyClick(result.property.id) },
+                                onRoomClick = { onRoomClick(result.roomId) },
                                 onFavoriteClick = { onFavoriteClick(result.property.id) },
                                 onContactClick = { onContactClick(result.property.id) },
                             )
@@ -169,7 +169,7 @@ internal fun formatMatchScore(score: Int): String = "$score%"
 @Composable
 private fun SmartMatchResultCard(
     result: SmartMatchResult,
-    onPropertyClick: () -> Unit,
+    onRoomClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onContactClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -227,7 +227,7 @@ private fun SmartMatchResultCard(
             property = result.property,
             onFavoriteClick = onFavoriteClick,
             onContactClick = onContactClick,
-            onPropertyClick = onPropertyClick,
+            onPropertyClick = onRoomClick,
         )
     }
 }
