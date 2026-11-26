@@ -1,5 +1,17 @@
 package com.thehouse.app.presentation.smartmatch
 
+import com.thehouse.app.data.remote.api.SmartMatchApi
+import com.thehouse.app.data.remote.api.SmartMatchDismissalRequest
+import com.thehouse.app.data.remote.api.SmartMatchDismissalResponse
+import com.thehouse.app.data.remote.api.SmartMatchScoreResponse
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchExplanationQueryRequest
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchExplanationResponse
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchListResponse
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchQueryRequest
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationDto
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationResponse
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchScoreRequest
+import com.thehouse.app.data.smartmatch.SmartMatchRepository
 import com.thehouse.app.domain.common.DispatcherProvider
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.error.DomainException
@@ -54,6 +66,48 @@ class SmartMatchViewModelTest {
         override suspend fun getPropertyById(id: String): Result<Property> = Result.failure(UnsupportedOperationException())
     }
 
+    /** Fake del contrato NV-23 v1.2.0 para el endpoint guest (query pública). */
+    private class FakeSmartMatchApi(
+        private val queryResponse: SmartMatchRecommendationResponse = SmartMatchRecommendationResponse(),
+    ) : SmartMatchApi {
+        var queryCalls: Int = 0
+            private set
+
+        override suspend fun calculateScores(request: SmartMatchScoreRequest): SmartMatchScoreResponse =
+            SmartMatchScoreResponse()
+
+        override suspend fun getRecommendations(page: Int, pageSize: Int): SmartMatchListResponse =
+            SmartMatchListResponse()
+
+        override suspend fun queryRecommendations(request: SmartMatchQueryRequest): SmartMatchRecommendationResponse {
+            queryCalls++
+            return queryResponse
+        }
+
+        override suspend fun dismissRecommendation(request: SmartMatchDismissalRequest): SmartMatchDismissalResponse =
+            SmartMatchDismissalResponse()
+
+        override suspend fun restoreRecommendation(roomId: String): SmartMatchDismissalResponse =
+            SmartMatchDismissalResponse()
+
+        override suspend fun getExplanation(roomId: String): SmartMatchExplanationResponse = explanation()
+
+        override suspend fun queryExplanations(request: SmartMatchExplanationQueryRequest): SmartMatchExplanationResponse =
+            explanation()
+
+        private fun explanation() = SmartMatchExplanationResponse(
+            roomId = "room-1",
+            score = 90.0,
+            summary = "resumen",
+            generatedBy = "template",
+            modelVersion = "v1",
+            explanationVersion = "v1",
+        )
+    }
+
+    private fun guestSmartMatchRepository(api: FakeSmartMatchApi = FakeSmartMatchApi()): SmartMatchRepository =
+        SmartMatchRepository(api)
+
     private val model = object : SmartMatchModel {
         override val modelVersion = "test"
         override val featureVersion = "test"
@@ -76,6 +130,7 @@ class SmartMatchViewModelTest {
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = null),
+            smartMatchRepository = guestSmartMatchRepository(),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
@@ -89,6 +144,7 @@ class SmartMatchViewModelTest {
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
+            smartMatchRepository = guestSmartMatchRepository(),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
@@ -102,6 +158,7 @@ class SmartMatchViewModelTest {
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
+            smartMatchRepository = guestSmartMatchRepository(),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.failure(DomainException(DomainError.Network)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
@@ -116,6 +173,7 @@ class SmartMatchViewModelTest {
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
+            smartMatchRepository = guestSmartMatchRepository(),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(props,1,20,2,1)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
@@ -129,15 +187,79 @@ class SmartMatchViewModelTest {
     }
 
     @Test
-    fun `requires auth state`() = runTest {
+    fun `suspended session requires auth`() = runTest {
         val vm = SmartMatchViewModel(
-            sessionState = MutableStateFlow(SessionState.Anonymous),
+            sessionState = MutableStateFlow(SessionState.Suspended(UserSession(userId = "u1", displayName = "n", email = "e@t.com"))),
             preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
+            smartMatchRepository = guestSmartMatchRepository(),
             getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
             runSmartMatch = RunSmartMatchUseCase(model),
             dispatchers = dispatchers,
         )
         vm.load(); advanceUntilIdle()
         assertTrue(vm.uiState.value is SmartMatchUiState.RequiresAuth)
+    }
+
+    @Test
+    fun `guest without preferences shows no preferences state`() = runTest {
+        val vm = SmartMatchViewModel(
+            sessionState = MutableStateFlow(SessionState.Anonymous),
+            preferenceRepository = FakePreferenceRepo(pref = null),
+            smartMatchRepository = guestSmartMatchRepository(),
+            getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
+            runSmartMatch = RunSmartMatchUseCase(model),
+            dispatchers = dispatchers,
+        )
+        vm.load(); advanceUntilIdle()
+        // Preferencias ausentes/incompletas: estado tipado, sin query inválida.
+        assertTrue(vm.uiState.value is SmartMatchUiState.NoPreferences)
+    }
+
+    @Test
+    fun `guest with preferences queries public recommendations endpoint`() = runTest {
+        val api = FakeSmartMatchApi(SmartMatchRecommendationResponse(items = emptyList()))
+        val vm = SmartMatchViewModel(
+            sessionState = MutableStateFlow(SessionState.Anonymous),
+            preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
+            smartMatchRepository = guestSmartMatchRepository(api),
+            getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(emptyList(),1,20,0,0)))),
+            runSmartMatch = RunSmartMatchUseCase(model),
+            dispatchers = dispatchers,
+        )
+        vm.load(); advanceUntilIdle()
+        assertTrue(vm.uiState.value is SmartMatchUiState.Empty)
+        assertEquals(1, api.queryCalls)
+    }
+
+    @Test
+    fun `guest with preferences and candidates returns ranked content`() = runTest {
+        val api = FakeSmartMatchApi(
+            SmartMatchRecommendationResponse(
+                items = listOf(
+                    SmartMatchRecommendationDto(
+                        roomId = "1",
+                        title = "t1",
+                        price = 3000.0,
+                        currency = "MXN",
+                        matchScore = 80.0,
+                        dismissed = false,
+                    ),
+                ),
+            ),
+        )
+        val props = listOf(property("1"), property("2"))
+        val vm = SmartMatchViewModel(
+            sessionState = MutableStateFlow(SessionState.Anonymous),
+            preferenceRepository = FakePreferenceRepo(pref = meaningfulPref()),
+            smartMatchRepository = guestSmartMatchRepository(api),
+            getProperties = GetPropertiesUseCase(FakePropertyRepo(Result.success(PagedResult(props,1,20,2,1)))),
+            runSmartMatch = RunSmartMatchUseCase(model),
+            dispatchers = dispatchers,
+        )
+        vm.load(); advanceUntilIdle()
+        val s = vm.uiState.value
+        assertTrue(s is SmartMatchUiState.Content)
+        assertEquals(2, (s as SmartMatchUiState.Content).results.size)
+        assertEquals(1, api.queryCalls)
     }
 }

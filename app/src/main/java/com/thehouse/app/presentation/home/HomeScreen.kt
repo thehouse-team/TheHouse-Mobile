@@ -26,24 +26,35 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -53,7 +64,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.catalog.CatalogLoadState
 import com.thehouse.app.presentation.catalog.errorMessage
-import com.thehouse.app.presentation.components.Avatar
 import com.thehouse.app.presentation.components.BrandMark
 import com.thehouse.app.presentation.components.PropertyCard
 import com.thehouse.app.presentation.components.SectionHeader
@@ -65,6 +75,7 @@ import com.thehouse.app.presentation.components.TheHouseSearchBar
 import com.thehouse.app.presentation.components.TheHouseSecondaryButton
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
+import kotlinx.coroutines.launch
 
 /**
  * Home visual (D4 diseño + D5 datos reales, NV-05/NV-06/NV-07).
@@ -105,6 +116,8 @@ fun HomeScreen(
     // Lifecycle-aware: sin colección (ni trabajo) mientras la UI no esté visible.
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showUniversityPicker by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -125,161 +138,260 @@ fun HomeScreen(
         viewModel.onEvent(HomeEvent.RefreshUnread)
     }
 
-    Scaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                BrandMark()
-                Avatar(
-                    name = displayName.ifBlank { "TheHouse" },
-                    size = 44.dp,
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Text(
-                    text = if (state.isGuest) {
-                        "Hola, invitado 👋"
-                    } else if (displayName.isNotBlank()) {
-                        "Hola, $displayName 👋"
-                    } else {
-                        "Hola 👋"
-                    },
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Saludo de inicio"
-                    },
-                )
-                Text(
-                    text = if (state.isGuest) {
-                        "Explorando como invitado. Inicia sesión para guardar favoritos y contactar."
-                    } else {
-                        "Encuentra tu próximo espacio cerca de tu universidad."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            TheHouseSearchBar(
-                hint = "Busca rentas por título o ciudad",
-                onClick = onNavigateToExplore,
-            )
-
-            UniversitySection(
-                state = state,
-                showPicker = showUniversityPicker,
-                onTogglePicker = { showUniversityPicker = !showUniversityPicker },
-                onSelect = { id ->
-                    viewModel.onEvent(HomeEvent.UniversitySelected(id))
-                    showUniversityPicker = false
-                },
-                onRetry = { viewModel.onEvent(HomeEvent.RetryUniversitiesClicked) },
-            )
-
-            SmartMatchPromo()
-
-            SectionHeader(
-                title = "Recomendados para ti",
-                subtitle = "Opciones reales cerca de tu universidad",
-                actionLabel = "Ver todas",
-                onAction = onNavigateToExplore,
-            )
-
-            when (val properties = state.properties) {
-                CatalogLoadState.Loading -> LoadingRow(text = "Buscando rentas…")
-                CatalogLoadState.Empty -> EmptyMessage("Sin propiedades disponibles.")
-                is CatalogLoadState.Error -> ErrorMessage(
-                    message = properties.errorMessage() ?: "Algo salió mal.",
-                    onRetry = { viewModel.onEvent(HomeEvent.RetryPropertiesClicked) },
-                )
-                is CatalogLoadState.Success -> {
-                    val featured = state.featuredProperty
-                    if (featured != null) {
-                        PropertyCard(
-                            property = featured,
-                            onFavoriteClick = { viewModel.onEvent(HomeEvent.FavoriteClicked) },
-                            onContactClick = { viewModel.onEvent(HomeEvent.ContactClicked) },
-                            onPropertyClick = { onPropertyClick(featured.id) },
-                        )
-                    }
-                }
-            }
-
-            TheHouseSecondaryButton(
-                text = "Publicar mi renta",
-                onClick = { viewModel.onEvent(HomeEvent.PublishClicked) },
-            )
-
-            if (state.isGuest) {
-                TheHouseCard {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                        Text(
-                            text = "Tu cuenta",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "Inicia sesión para guardar favoritos, contactar arrendadores y dar seguimiento a tus solicitudes.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        TheHousePrimaryButton(
-                            text = "Iniciar sesión",
-                            onClick = onRequireLogin,
-                        )
-                    }
-                }
-            } else {
-                AccountActionsCard(
-                    unreadNotifications = state.unreadNotifications,
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                HomeMenuDrawer(
+                    isGuest = state.isGuest,
                     isLoggingOut = state.isLoggingOut,
                     onOpenProfile = onOpenProfile,
                     onOpenPreferences = onOpenPreferences,
-                    onOpenQuickSetup = onOpenQuickSetup,
-                    onOpenNotifications = onOpenNotifications,
-                    onOpenRequests = onOpenRequests,
-                    onOpenConversations = onOpenConversations,
-                    onOpenLandlordRequests = onOpenLandlordRequests,
-                    onOpenLandlord = onOpenLandlord,
-                    onOpenMyRental = onOpenMyRental,
-                    onOpenRentalCode = onOpenRentalCode,
-                    onOpenLandlordAgreements = onOpenLandlordAgreements,
                     onLogout = { viewModel.onEvent(HomeEvent.LogoutClicked) },
+                    onRequireLogin = onRequireLogin,
+                    onCloseDrawer = { drawerScope.launch { drawerState.close() } },
                 )
             }
-
-            // NV-15: acceso a privacidad desde el área de cuenta, disponible
-            // también como invitado (sin sesión no hay eliminación de cuenta).
-            TheHouseCard(onClick = onOpenPrivacy) {
+        },
+    ) {
+        Scaffold(
+            modifier = modifier,
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    ActionIcon(Icons.Outlined.PrivacyTip)
+                    BrandMark()
+                    IconButton(
+                        onClick = { drawerScope.launch { drawerState.open() } },
+                        modifier = Modifier
+                            .testTag("home_menu_button")
+                            .semantics { role = Role.Button },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Menu,
+                            contentDescription = "Abrir menú",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Text(
-                        text = "Privacidad",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
+                        text = if (state.isGuest) {
+                            "Hola, invitado 👋"
+                        } else if (displayName.isNotBlank()) {
+                            "Hola, $displayName 👋"
+                        } else {
+                            "Hola 👋"
+                        },
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.semantics {
+                            contentDescription = "Saludo de inicio"
+                        },
+                    )
+                    Text(
+                        text = if (state.isGuest) {
+                            "Explorando como invitado. Inicia sesión para guardar favoritos y contactar."
+                        } else {
+                            "Encuentra tu próximo espacio cerca de tu universidad."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                TheHouseSearchBar(
+                    hint = "Busca rentas por título o ciudad",
+                    onClick = onNavigateToExplore,
+                )
+
+                UniversitySection(
+                    state = state,
+                    showPicker = showUniversityPicker,
+                    onTogglePicker = { showUniversityPicker = !showUniversityPicker },
+                    onSelect = { id ->
+                        viewModel.onEvent(HomeEvent.UniversitySelected(id))
+                        showUniversityPicker = false
+                    },
+                    onRetry = { viewModel.onEvent(HomeEvent.RetryUniversitiesClicked) },
+                )
+
+                SmartMatchPromo()
+
+                SectionHeader(
+                    title = "Recomendados para ti",
+                    subtitle = "Opciones reales cerca de tu universidad",
+                    actionLabel = "Ver todas",
+                    onAction = onNavigateToExplore,
+                )
+
+                when (val properties = state.properties) {
+                    CatalogLoadState.Loading -> LoadingRow(text = "Buscando rentas…")
+                    CatalogLoadState.Empty -> EmptyMessage("Sin propiedades disponibles.")
+                    is CatalogLoadState.Error -> ErrorMessage(
+                        message = properties.errorMessage() ?: "Algo salió mal.",
+                        onRetry = { viewModel.onEvent(HomeEvent.RetryPropertiesClicked) },
+                    )
+                    is CatalogLoadState.Success -> {
+                        val featured = state.featuredProperty
+                        if (featured != null) {
+                            PropertyCard(
+                                property = featured,
+                                onFavoriteClick = { viewModel.onEvent(HomeEvent.FavoriteClicked) },
+                                onContactClick = { viewModel.onEvent(HomeEvent.ContactClicked) },
+                                onPropertyClick = { onPropertyClick(featured.id) },
+                            )
+                        }
+                    }
+                }
+
+                TheHouseSecondaryButton(
+                    text = "Publicar mi renta",
+                    onClick = { viewModel.onEvent(HomeEvent.PublishClicked) },
+                )
+
+                if (state.isGuest) {
+                    TheHouseCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                            Text(
+                                text = "Tu cuenta",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = "Inicia sesión para guardar favoritos, contactar arrendadores y dar seguimiento a tus solicitudes.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            TheHousePrimaryButton(
+                                text = "Iniciar sesión",
+                                onClick = onRequireLogin,
+                            )
+                        }
+                    }
+                } else {
+                    AccountActionsCard(
+                        unreadNotifications = state.unreadNotifications,
+                        isLoggingOut = state.isLoggingOut,
+                        onOpenProfile = onOpenProfile,
+                        onOpenPreferences = onOpenPreferences,
+                        onOpenQuickSetup = onOpenQuickSetup,
+                        onOpenNotifications = onOpenNotifications,
+                        onOpenRequests = onOpenRequests,
+                        onOpenConversations = onOpenConversations,
+                        onOpenLandlordRequests = onOpenLandlordRequests,
+                        onOpenLandlord = onOpenLandlord,
+                        onOpenMyRental = onOpenMyRental,
+                        onOpenRentalCode = onOpenRentalCode,
+                        onOpenLandlordAgreements = onOpenLandlordAgreements,
+                        onLogout = { viewModel.onEvent(HomeEvent.LogoutClicked) },
+                    )
+                }
+
+                // NV-15: acceso a privacidad desde el área de cuenta, disponible
+                // también como invitado (sin sesión no hay eliminación de cuenta).
+                TheHouseCard(onClick = onOpenPrivacy) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                    ) {
+                        ActionIcon(Icons.Outlined.PrivacyTip)
+                        Text(
+                            text = "Privacidad",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+/**
+ * Contenido del drawer lateral del shell (hamburger en Home).
+ * Cada acción cierra el drawer primero y luego ejecuta la navegación
+ * o el evento real; no se crean destinos ficticios.
+ */
+@Composable
+private fun HomeMenuDrawer(
+    isGuest: Boolean,
+    isLoggingOut: Boolean,
+    onOpenProfile: () -> Unit,
+    onOpenPreferences: () -> Unit,
+    onLogout: () -> Unit,
+    onRequireLogin: () -> Unit,
+    onCloseDrawer: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            text = "Menú",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = Spacing.sm),
+        )
+        NavigationDrawerItem(
+            label = { Text(text = "Perfil") },
+            selected = false,
+            onClick = {
+                onCloseDrawer()
+                onOpenProfile()
+            },
+            modifier = Modifier.testTag("drawer_profile"),
+        )
+        NavigationDrawerItem(
+            label = { Text(text = "Preferencias") },
+            selected = false,
+            onClick = {
+                onCloseDrawer()
+                onOpenPreferences()
+            },
+            modifier = Modifier.testTag("drawer_preferences"),
+        )
+        if (isGuest) {
+            NavigationDrawerItem(
+                label = { Text(text = "Iniciar sesión o registrarse") },
+                selected = false,
+                onClick = {
+                    onCloseDrawer()
+                    onRequireLogin()
+                },
+                modifier = Modifier.testTag("drawer_login"),
+            )
+        } else {
+            NavigationDrawerItem(
+                label = {
+                    Text(text = if (isLoggingOut) "Cerrando sesión…" else "Cerrar sesión")
+                },
+                selected = false,
+                onClick = {
+                    if (!isLoggingOut) {
+                        onCloseDrawer()
+                        onLogout()
+                    }
+                },
+                modifier = Modifier.testTag("drawer_logout"),
+            )
         }
     }
 }
