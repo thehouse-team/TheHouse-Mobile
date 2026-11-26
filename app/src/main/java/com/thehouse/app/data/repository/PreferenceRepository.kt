@@ -140,6 +140,7 @@ class PreferenceRepositoryImpl(
                     DomainError.Network, DomainError.Timeout, DomainError.Server,
                     DomainError.RateLimited, DomainError.Unknown,
                     DomainError.AccountSuspended, DomainError.Conflict, DomainError.Gone,
+                    DomainError.ServiceUnavailable, DomainError.ValidationError,
                     -> PreferencesFlowLogger.requestError()
                 }
                 PreferencesFlowLogger.state("Error")

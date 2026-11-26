@@ -147,14 +147,15 @@ class PreferencesRepositoryIntegrationTest {
     }
 
     @Test
-    fun `GET 503 maps to Server`() = runTest {
+    /** D16: 503 es ServiceUnavailable (único 5xx elegible a fallback etiquetado). */
+    fun `GET 503 maps to ServiceUnavailable`() = runTest {
         server.enqueue(jsonResponse(503, "{}"))
 
         try {
             repository.loadPreferences()
             fail("Se esperaba DomainException")
         } catch (e: DomainException) {
-            assertEquals(DomainError.Server, e.error)
+            assertEquals(DomainError.ServiceUnavailable, e.error)
         }
     }
 

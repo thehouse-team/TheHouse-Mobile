@@ -16,6 +16,8 @@ fun DomainError.toUiError(): UiError = when (this) {
     DomainError.Conflict -> UiError.Conflict
     DomainError.Gone -> UiError.Gone
     DomainError.RateLimited -> UiError.RateLimited
+    DomainError.ServiceUnavailable -> UiError.ServiceUnavailable
+    DomainError.ValidationError -> UiError.ValidationError
     DomainError.Server -> UiError.Server
     DomainError.Unknown -> UiError.Unknown
 }

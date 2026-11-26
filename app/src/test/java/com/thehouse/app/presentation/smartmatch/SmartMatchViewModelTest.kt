@@ -191,7 +191,7 @@ class SmartMatchViewModelTest {
     fun `content with ranked results`() = runTest {
         // AUTH: el Backend devuelve items ya ordenados/scoreados; Mobile no reordena.
         val recommendations = SmartMatchListResponse(
-            items = listOf(backendItem("2", 70), backendItem("1", 90)),
+            items = listOf(backendItem("2", 70.0), backendItem("1", 90.0)),
         )
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
@@ -207,10 +207,10 @@ class SmartMatchViewModelTest {
         val results = (s as SmartMatchUiState.Content).results
         assertEquals(2, results.size)
         assertEquals(listOf("2", "1"), results.map { it.property.id })
-        assertEquals(listOf(70, 90), results.map { it.score })
+        assertEquals(listOf(70.0, 90.0), results.map { it.matchScore })
     }
 
-    private fun backendItem(id: String, score: Int) =
+    private fun backendItem(id: String, score: Double) =
         com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto(
             room = com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRoomSearchDto(
                 id = id,
@@ -231,7 +231,7 @@ class SmartMatchViewModelTest {
                 ),
             ),
             dismissed = false,
-            modelVersion = "baseline-1.0.0",
+            modelVersion = "logreg-1.0.0",
             featureSchemaVersion = "2.0.0",
         )
 
@@ -280,8 +280,9 @@ class SmartMatchViewModelTest {
         assertEquals(1, api.queryCalls)
     }
 
+    /** D16: GUEST 200 usa el score/orden del Backend, sin re-score local. */
     @Test
-    fun `guest with preferences and candidates returns ranked content`() = runTest {
+    fun `guest with preferences and candidates returns backend content`() = runTest {
         val api = FakeSmartMatchApi(
             SmartMatchRecommendationResponse(
                 items = listOf(
@@ -308,7 +309,10 @@ class SmartMatchViewModelTest {
         vm.load(); advanceUntilIdle()
         val s = vm.uiState.value
         assertTrue(s is SmartMatchUiState.Content)
-        assertEquals(2, (s as SmartMatchUiState.Content).results.size)
+        val results = (s as SmartMatchUiState.Content).results
+        assertEquals(1, results.size)
+        assertEquals(80.0, results.first().matchScore, 0.0)
+        assertEquals(com.thehouse.app.domain.smartmatch.SmartMatchSource.BACKEND, results.first().source)
         assertEquals(1, api.queryCalls)
     }
 }

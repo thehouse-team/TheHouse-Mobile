@@ -269,7 +269,7 @@ fun PropertyCard(
                         .padding(Spacing.sm),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    MatchBadge(matchPercent = property.matchPercent)
+                    MatchBadge(matchPercent = property.matchPercent.toDouble())
                     if (property.verified) VerifiedBadge()
                 }
                 Surface(

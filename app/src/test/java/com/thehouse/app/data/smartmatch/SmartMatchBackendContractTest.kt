@@ -51,12 +51,17 @@ class SmartMatchBackendContractTest {
                     "approxLocation": { "lat": 19.1, "lng": -99.1 },
                     "thumbnailUrl": null, "demo": false
                   },
-                  "matchScore": 83,
+                  "matchScore": 73.5,
                   "breakdown": [
-                    { "factor": "budget", "label": "Presupuesto", "points": 30.0, "maxPoints": 30.0 }
+                    { "factor": "budget", "label": "Presupuesto", "points": 9.6, "maxPoints": 9.6 },
+                    { "factor": "distance", "label": "Distancia", "points": 72.6, "maxPoints": 72.6 },
+                    { "factor": "essential_services", "label": "Servicios", "points": 6.7, "maxPoints": 6.7 },
+                    { "factor": "place_type", "label": "Tipo de lugar", "points": 4.9, "maxPoints": 4.9 },
+                    { "factor": "property_type", "label": "Tipo de propiedad", "points": 1.7, "maxPoints": 1.7 },
+                    { "factor": "extras", "label": "Extras", "points": 4.5, "maxPoints": 4.5 }
                   ],
                   "dismissed": false,
-                  "modelVersion": "baseline-1.0.0",
+                  "modelVersion": "logreg-1.0.0",
                   "featureSchemaVersion": "2.0.0"
                 }
               ],
@@ -69,9 +74,12 @@ class SmartMatchBackendContractTest {
         assertEquals("room-1", item.room.id)
         assertEquals(4500.0, item.room.price, 0.0)
         assertEquals(listOf("wifi"), item.room.services)
-        assertEquals(83, item.matchScore)
-        assertEquals("Presupuesto", item.breakdown.single().label)
-        assertEquals("baseline-1.0.0", item.modelVersion)
+        assertEquals(73.5, item.matchScore, 0.0)
+        assertEquals(6, item.breakdown.size)
+        assertEquals("Presupuesto", item.breakdown.first().label)
+        assertEquals(listOf(9.6, 72.6, 6.7, 4.9, 1.7, 4.5), item.breakdown.map { it.maxPoints })
+        assertEquals(listOf(9.6, 72.6, 6.7, 4.9, 1.7, 4.5), item.breakdown.map { it.points })
+        assertEquals("logreg-1.0.0", item.modelVersion)
         assertEquals("2.0.0", item.featureSchemaVersion)
     }
 

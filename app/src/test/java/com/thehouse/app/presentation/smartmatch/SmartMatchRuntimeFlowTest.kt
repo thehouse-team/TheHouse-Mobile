@@ -205,8 +205,8 @@ class SmartMatchRuntimeFlowTest {
         assertEquals(1, api.queryCalls)
         assertTrue(logs.any { it == "session=Anonymous" })
         assertTrue(logs.any { it == "guest_query_start" })
-        assertTrue(logs.any { it == "ranking_start" })
-        assertTrue(logs.any { it == "candidates_result count=1" })
+        assertTrue(logs.any { it == "guest_backend_authority" })
+        assertTrue(logs.none { it == "ranking_start" })
     }
 
     /** B — Anonymous sin preferencias: NoPreferences, 0 llamadas al endpoint. */
@@ -241,10 +241,9 @@ class SmartMatchRuntimeFlowTest {
         assertEquals(0, api.queryCalls)
     }
 
-    /** C — fetchCandidates lanza: Error controlado + causa observable en el log. */
+    /** C — D16: GUEST 200 usa el Backend aunque fallase el catálogo local. */
     @Test
-    fun `C fetchCandidates exception is controlled and logged`() = runTest {
-        val boom = IllegalStateException("simulated")
+    fun `C guest backend authority ignores local catalog failure`() = runTest {
         val api = CountingApi(
             SmartMatchRecommendationResponse(items = listOf(
                 SmartMatchRecommendationDto("1", "t1", 3000.0, "MXN", 80.0, false),
@@ -254,15 +253,17 @@ class SmartMatchRuntimeFlowTest {
             val vm = vm(
                 SessionState.Anonymous,
                 FakePrefRepo(pref()),
-                FakePropertyRepo(Result.failure(boom)),
+                FakePropertyRepo(Result.failure(IllegalStateException("simulated"))),
                 api,
             )
             vm.load()
             advanceUntilIdle()
             val state = vm.uiState.value
-            assertTrue(state is SmartMatchUiState.Error)
+            assertTrue(state is SmartMatchUiState.Content)
+            assertEquals(80.0, (state as SmartMatchUiState.Content).results.single().matchScore, 0.0)
         }
-        assertTrue(logs.any { it.startsWith("exception=IllegalStateException operation=") })
+        assertTrue(logs.any { it == "guest_backend_authority" })
+        assertTrue(logs.none { it == "ranking_start" })
         assertTrue(logs.none { it.contains("simulated") })
     }
 
@@ -285,7 +286,7 @@ class SmartMatchRuntimeFlowTest {
         assertEquals(0, api.queryCalls)
     }
 
-    /** D — Retry dispara exactamente una carga adicional. */
+    /** D — Retry dispara exactamente una carga adicional (sin catálogo local). */
     @Test
     fun `D retry triggers exactly one additional attempt`() = runTest {
         val api = CountingApi(
@@ -294,19 +295,16 @@ class SmartMatchRuntimeFlowTest {
             )),
         )
         val prefs = FakePrefRepo(pref())
-        val properties = FakePropertyRepo(Result.failure(IllegalStateException("x")))
+        val properties = FakePropertyRepo(Result.success(PagedResult(emptyList(), 1, 50, 0, 0)))
         val vm = vm(SessionState.Anonymous, prefs, properties, api)
-        captureLogs {
-            vm.load()
-            advanceUntilIdle()
-            assertEquals(1, prefs.loadCalls)
-            assertEquals(1, properties.calls)
-            vm.load()
-            advanceUntilIdle()
-            assertEquals(2, prefs.loadCalls)
-            assertEquals(2, properties.calls)
-        }
-        // Cada carga guest intenta el endpoint una vez; retry añade exactamente una.
+        vm.load()
+        advanceUntilIdle()
+        assertEquals(1, prefs.loadCalls)
+        vm.load()
+        advanceUntilIdle()
+        assertEquals(2, prefs.loadCalls)
+        // D16: GUEST 200 ya no consulta catálogo ni re-scorea.
+        assertEquals(0, properties.calls)
         assertEquals(2, api.queryCalls)
     }
 
@@ -314,7 +312,7 @@ class SmartMatchRuntimeFlowTest {
     @Test
     fun `E active session keeps authenticated flow`() = runTest {
         val active = SessionState.Active(UserSession("u1", "n", "e@t.com"))
-        val api = CountingApi(recommendations = authList(authItem("1", 90)))
+        val api = CountingApi(recommendations = authList(authItem("1", 90.0)))
         val prefs = FakePrefRepo(pref())
         val properties = FakePropertyRepo(Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1)))
         val logs = captureLogs {
@@ -334,7 +332,7 @@ class SmartMatchRuntimeFlowTest {
         assertEquals(0, properties.calls) // Online AUTH NO consulta el catálogo.
     }
 
-    private fun authItem(id: String, score: Int) =
+    private fun authItem(id: String, score: Double) =
         com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto(
             room = com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRoomSearchDto(
                 id = id, buildingId = "b1", title = "t$id", price = 3000.0, currency = "MXN",
@@ -347,7 +345,7 @@ class SmartMatchRuntimeFlowTest {
                     factor = "budget", label = "Presupuesto", points = 30.0, maxPoints = 30.0,
                 ),
             ),
-            dismissed = false, modelVersion = "baseline-1.0.0", featureSchemaVersion = "2.0.0",
+            dismissed = false, modelVersion = "logreg-1.0.0", featureSchemaVersion = "2.0.0",
         )
 
     private fun authList(vararg items: com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto) =
@@ -362,15 +360,15 @@ class SmartMatchRuntimeFlowTest {
     /** A — Active + 200 items: Content, orden y matchScore del Backend intactos. */
     @Test
     fun `A active 200 items keeps backend authority`() = runTest {
-        val api = CountingApi(recommendations = authList(authItem("2", 70), authItem("1", 90)))
+        val api = CountingApi(recommendations = authList(authItem("2", 70.0), authItem("1", 90.0)))
         val vm = activeVm(api)
         vm.load(); advanceUntilIdle()
         val state = vm.uiState.value
         assertTrue(state is SmartMatchUiState.Content)
         val results = (state as SmartMatchUiState.Content).results
         assertEquals(listOf("2", "1"), results.map { it.property.id })
-        assertEquals(listOf(70, 90), results.map { it.score })
-        assertEquals(listOf("Presupuesto"), results.first().factors)
+        assertEquals(listOf(70.0, 90.0), results.map { it.matchScore })
+        assertEquals(listOf("Presupuesto"), results.first().factors.map { it.label })
         assertEquals(0, api.queryCalls)
     }
 
@@ -424,17 +422,20 @@ class SmartMatchRuntimeFlowTest {
         assertEquals(0, properties.calls)
     }
 
-    /** F — Active + 503 (Server): fallback ML local. */
+    /** F — Active + 503: fallback ML local etiquetado. */
     @Test
     fun `F active 503 falls back to local ML`() = runTest {
         val properties = FakePropertyRepo(Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1)))
         val logs = captureLogs {
             val vm = activeVm(
-                CountingApi(recommendationsFailure = DomainException(DomainError.Server)),
+                CountingApi(recommendationsFailure = DomainException(DomainError.ServiceUnavailable)),
                 FakePrefRepo(pref()), properties,
             )
             vm.load(); advanceUntilIdle()
-            assertTrue(vm.uiState.value is SmartMatchUiState.Content)
+            val state = vm.uiState.value
+            assertTrue(state is SmartMatchUiState.Content)
+            assertEquals(com.thehouse.app.domain.smartmatch.SmartMatchSource.LOCAL_ESTIMATE,
+                (state as SmartMatchUiState.Content).results.first().source)
         }
         assertTrue(logs.any { it == "fallback_start reason=503" })
         assertTrue(logs.any { it == "candidates_start" })

@@ -294,7 +294,8 @@ class NotificationsViewModel(
             DomainError.Timeout -> "La solicitud tardó demasiado. Inténtalo de nuevo."
             DomainError.Unauthorized -> "Tu sesión ya no es válida. Inicia sesión nuevamente."
             DomainError.NotFound -> "La notificación ya no está disponible."
-            DomainError.RateLimited, DomainError.Server -> "El servicio no está disponible en este momento. Inténtalo más tarde."
+            DomainError.RateLimited, DomainError.Server, DomainError.ServiceUnavailable -> "El servicio no está disponible en este momento. Inténtalo más tarde."
+            DomainError.ValidationError -> "La solicitud no es válida. Revisa tus datos e inténtalo de nuevo."
             DomainError.Conflict, DomainError.Gone, DomainError.AccountSuspended,
             DomainError.Unknown, null -> "No se pudieron cargar las notificaciones. Inténtalo de nuevo."
         }

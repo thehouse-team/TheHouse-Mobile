@@ -76,9 +76,11 @@ data class SmartMatchRecommendationDto(
     val title: String?,
     val price: Double?,
     val currency: String?,
-    val matchScore: Double?,          // puede ser null si no elegible
+    val matchScore: Double?,          // puede ser null si no elegible; decimal D16
     val dismissed: Boolean,
-    val excludedBy: List<String> = emptyList()
+    val excludedBy: List<String> = emptyList(),
+    val breakdown: List<SmartMatchFactorDto> = emptyList(),
+    val modelVersion: String = "",
 )
 
 /**
@@ -133,13 +135,16 @@ data class SmartMatchFactorDto(
 )
 
 /**
- * Item real de `GET /api/v1/smart-match/recommendations` (NV-23 v1.2.0).
+ * Item real de `GET /api/v1/smart-match/recommendations` (NV-23 v1.2.0 + D16).
  * El Backend es autoridad de `matchScore`, `breakdown`, `dismissed` y orden.
+ *
+ * D16: `matchScore` es `Double` (ej. 73.5). Un entero del Backend se deserializa
+ * sin pérdida (73 → 73.0) y se muestra sin regresión visual. NUNCA se trunca.
  */
 @Serializable
 data class SmartMatchRecommendationItemDto(
     val room: SmartMatchRoomSearchDto,
-    val matchScore: Int,
+    val matchScore: Double,
     val breakdown: List<SmartMatchFactorDto> = emptyList(),
     val dismissed: Boolean = false,
     val modelVersion: String,

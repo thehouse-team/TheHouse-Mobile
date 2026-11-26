@@ -186,49 +186,9 @@ class DeviceProfilePreferencesTest {
     }
 }
 
-@RunWith(AndroidJUnit4::class)
-class DeviceSmartMatchTest {
-
-    @get:Rule
-    val composeRule = androidx.compose.ui.test.junit4.createComposeRule()
-
-    @Test
-    fun `device: Smart Match loading y error states`() {
-        val appContext = InstrumentationRegistry.getInstrumentation()
-            .targetContext.applicationContext as TheHouseApplication
-
-        val factory = U2ViewModelFactory(appContext.container)
-
-        composeRule.setContent {
-            val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = AppRoutes.home.route) {
-                composable(AppRoutes.home.route) { HomeScreen() }
-                composable(AppRoutes.smartMatch.route) { SmartMatchScreen(factory = factory) }
-            }
-        }
-
-        // Verificar state de loading
-        composeRule.onNodeWithContentDescription("smart.match.loading").assertIsDisplayed()
-
-        // Estado de profile incomplete (fallback local)
-        composeRule.onNodeWithContentDescription("smart.match.profile.incomplete").assertIsDisplayed()
-
-        // Estado local fallback cuando no hay datos del backend
-        composeRule.onNodeWithContentDescription("smart.match.local.fallback").assertIsDisplayed()
-    }
-
-    @Test
-    fun `device: Smart Match 422 profile incomplete`() {
-        composeRule.setContent {
-            val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = AppRoutes.home.route) {
-                composable(AppRoutes.home.route) { HomeScreen() }
-                composable(AppRoutes.smartMatch.route) { SmartMatchScreen(factory = factory) }
-            }
-        }
-
-        // Simular respuesta 422 - profile incomplete
-        composeRule.onNodeWithText("Perfil incompleto").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("action.complete.profile").performClick()
-    }
-}
+/**
+ * D16: el bloque Smart Match duplicado en este archivo se elimina.
+ * Las pruebas device de Smart Match viven en `DeviceSmartMatchTest.kt` con
+ * la firma real del Screen (callbacks obligatorios) y nodos existentes.
+ * No se inventan estados ni nodos como "smart.match.loading".
+ */

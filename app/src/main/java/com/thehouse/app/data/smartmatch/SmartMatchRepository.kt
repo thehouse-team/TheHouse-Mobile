@@ -60,9 +60,19 @@ class SmartMatchRepository(
         Result.failure(mapAuthError(e))
     }
 
-    /** Query pública de recomendaciones (sin token) */
+    /**
+     * Query pública de recomendaciones (sin token).
+     * D16: los errores se mapean a tipos de dominio; 503/red/timeout son
+     * elegibles a fallback etiquetado, 400/401/404/422/429 NO.
+     */
     suspend fun queryRecommendations(request: SmartMatchQueryRequest): SmartMatchRecommendationResponse {
-        return api.queryRecommendations(request)
+        return try {
+            api.queryRecommendations(request)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Throwable) {
+            throw mapAuthError(e)
+        }
     }
 
     /** Descarta una recomendación */
@@ -120,10 +130,13 @@ class SmartMatchRepository(
                 }
             }
             val error = when (code) {
+                400 -> DomainError.ValidationError
                 401, 403 -> DomainError.Unauthorized
                 404 -> DomainError.NotFound
                 408 -> DomainError.Timeout
+                422 -> DomainError.ValidationError
                 429 -> DomainError.RateLimited
+                503 -> DomainError.ServiceUnavailable
                 in 500..599 -> DomainError.Server
                 else -> DomainError.Unknown
             }

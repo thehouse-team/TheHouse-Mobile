@@ -15,13 +15,41 @@ data class FeatureVector(
     override fun hashCode(): Int = values.contentHashCode()
 }
 
-/** Resultado de inferencia ML para un candidato real. */
+/** Origen del score: Backend (autoridad online) o estimación local etiquetada. */
+enum class SmartMatchSource {
+    BACKEND,
+    LOCAL_ESTIMATE,
+}
+
+/** Factor real del desglose del Backend. NO convertir a List<String>. */
+data class SmartMatchFactor(
+    val factor: String,
+    val label: String,
+    val points: Double,
+    val maxPoints: Double,
+)
+
+/**
+ * Resultado de Smart Match para un candidato real.
+ *
+ * `matchScore` es decimal (D16): el Backend lo reporta con un decimal
+ * (ej. 73.5). NUNCA se trunca ni se convierte silenciosamente a Int.
+ */
 data class SmartMatchResult(
     val property: Property,
     val probability: Double,
-    val score: Int,
-    val factors: List<String>,
+    val matchScore: Double,
+    val factors: List<SmartMatchFactor>,
+    val source: SmartMatchSource = SmartMatchSource.BACKEND,
+    val modelVersion: String = SmartMatchModelVersions.SERVER_MODEL_VERSION,
 )
+
+/** Versiones: el artefacto local NO se declara equivalente al modelo productivo. */
+object SmartMatchModelVersions {
+    const val LOCAL_MODEL_VERSION = "1.0.0"
+    const val SERVER_MODEL_VERSION = "logreg-1.0.0"
+    const val LOCAL_EQUIVALENCE = "UNKNOWN"
+}
 
 object SmartMatchFeatures {
     const val BUDGET_FIT = "budget_fit"

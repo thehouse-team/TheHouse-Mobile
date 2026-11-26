@@ -145,15 +145,15 @@ class SmartMatchMlTest {
         val r1 = useCase.execute(preference, candidates)
         val r2 = useCase.execute(preference, candidates)
         assertEquals(r1.map { it.property.id }, r2.map { it.property.id })
-        assertEquals(r1.map { it.score }, r2.map { it.score })
-        assertTrue(r1.all { it.score in 0..100 })
+        assertEquals(r1.map { it.matchScore }, r2.map { it.matchScore })
+        assertTrue(r1.all { it.matchScore in 0.0..100.0 })
         // ranking descendente por probabilidad
         for (i in 0 until r1.size - 1) {
             assertTrue(r1[i].probability + 1e-12 >= r1[i + 1].probability)
         }
         // el candidato claramente compatible no debe quedar por debajo del incompatible
-        val scoreA = r1.first { it.property.id == "a" }.score
-        val scoreB = r1.first { it.property.id == "b" }.score
+        val scoreA = r1.first { it.property.id == "a" }.matchScore
+        val scoreB = r1.first { it.property.id == "b" }.matchScore
         assertTrue("compatible score $scoreA should be > incompatible $scoreB", scoreA > scoreB)
     }
 
@@ -181,8 +181,8 @@ class SmartMatchMlTest {
         val bad = prop("bad", 15000.0, currency = "USD", amenities = emptyList())
         val good = prop("good", 2500.0, currency = "MXN", amenities = listOf("wifi"))
         val r = useCase.execute(preference, listOf(bad, good))
-        val badScore = r.first { it.property.id == "bad" }.score
-        val goodScore = r.first { it.property.id == "good" }.score
+        val badScore = r.first { it.property.id == "bad" }.matchScore
+        val goodScore = r.first { it.property.id == "good" }.matchScore
         assertTrue("bad=$badScore good=$goodScore", goodScore > badScore)
     }
 

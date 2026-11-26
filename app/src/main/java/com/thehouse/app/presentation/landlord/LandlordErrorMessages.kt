@@ -63,6 +63,8 @@ object LandlordErrorMessages {
         DomainError.Conflict -> "La operación entró en conflicto. Actualiza e intenta de nuevo."
         DomainError.Gone -> "El recurso ya no está disponible."
         DomainError.RateLimited -> "Demasiadas solicitudes. Espera un momento e intenta de nuevo."
+        DomainError.ServiceUnavailable -> "El servicio no está disponible ahora. Intenta más tarde."
+        DomainError.ValidationError -> "Revisa los datos: hay campos inválidos o incompletos."
         DomainError.Server -> "El servicio no está disponible ahora. Intenta más tarde."
         DomainError.Unknown -> "Ocurrió un error inesperado. Intenta de nuevo."
     }

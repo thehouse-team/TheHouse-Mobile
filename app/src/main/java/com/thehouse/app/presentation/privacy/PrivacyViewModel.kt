@@ -173,7 +173,8 @@ class PrivacyViewModel(
         DomainError.Conflict -> "No se pudo completar la eliminación. Intenta de nuevo."
         DomainError.Gone -> "La cuenta ya no está disponible."
         DomainError.RateLimited -> "Demasiados intentos. Espera un momento e intenta de nuevo."
-        DomainError.Server -> "El servicio no está disponible ahora. Intenta más tarde."
+        DomainError.Server, DomainError.ServiceUnavailable -> "El servicio no está disponible ahora. Intenta más tarde."
+        DomainError.ValidationError -> "La solicitud no es válida. Revisa tus datos e intenta de nuevo."
         DomainError.Unknown -> "No se pudo eliminar la cuenta. Intenta de nuevo."
     }
 

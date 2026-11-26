@@ -317,6 +317,7 @@ class U2ViewModelFactory(
                 getProperties = container.getProperties,
                 runSmartMatch = container.runSmartMatch,
                 dispatchers = container.dispatchers,
+                connectivityObserver = container.connectivityObserver,
             ) as T
 
         modelClass.isAssignableFrom(com.thehouse.app.presentation.notifications.NotificationsViewModel::class.java) ->

@@ -14,6 +14,8 @@ sealed interface UiError {
     data object Conflict : UiError
     data object Gone : UiError
     data object RateLimited : UiError
+    data object ServiceUnavailable : UiError
+    data object ValidationError : UiError
     data object Server : UiError
     data object Unknown : UiError
 }
