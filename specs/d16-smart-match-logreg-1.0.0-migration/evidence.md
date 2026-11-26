@@ -125,7 +125,7 @@ Backend/ML confirmó: `matchScore` SIEMPRE entero 0..100; breakdown `points`/`ma
 - **GUEST:** 0 `GET /users/me/preferences`, 1 `POST /recommendations/query` (tests 11/12).
 - **ROOM_DETAIL:** BLOQUEADO. No existe `RoomDetailScreen`, `RoomDetailViewModel`, ruta de room ni API `GET /api/v1/rooms/{id}` en este repo. NO se inventó pantalla ni endpoint. El click de Smart Match sigue navegando a `PropertyDetailRoute` con `result.property.id` (que proviene de `room.id` del DTO) y el ViewModel de detalle consulta `/properties/{id}`. Requiere spec/autorización nueva.
 - **ONNX:** `model.onnx`, `golden_cases.json` NO están en el repo; no se agregó ONNX Runtime. Se mantiene `model_v1.json` con etiqueta "Estimación local".
-- **Gates:** `clean compileDebugKotlin`, `testDebugUnitTest` 451/0/0, `lintDebug` 0 errores, `assembleDebug`, `git diff --check` exit 0.
+- **Gates:** `clean compileDebugKotlin`, `testDebugUnitTest` 482/0/0, `lintDebug` 0 errores, `assembleDebug`, `git diff --check` exit 0.
 
 ## 9. Auditoría inicial evaluación profesor (solo lectura)
 
