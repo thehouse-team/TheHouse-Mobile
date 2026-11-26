@@ -171,6 +171,8 @@ class U2ViewModelFactory(
                 privacyPolicyUrl = container.config.privacyPolicyUrl,
                 sessionState = container.sessionStore.state,
                 deleteAccount = container.deleteAccount,
+                legalRepository = container.legalRepository,
+                legalUpToDateProvider = { container.legalUpToDate.value },
             )
         }
     }

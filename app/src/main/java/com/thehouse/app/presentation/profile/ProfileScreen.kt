@@ -61,12 +61,21 @@ fun ProfileDestination(
     onBack: () -> Unit,
     onOpenPreferences: () -> Unit,
     onOpenQuickSetup: () -> Unit,
+    onRequireLogin: () -> Unit = {},
 ) {
     val viewModel: ProfileViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.onEvent(ProfileEvent.Load)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                ProfileEffect.RequireLogin -> onRequireLogin()
+            }
+        }
     }
 
     ProfileScreen(

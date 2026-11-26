@@ -58,6 +58,7 @@ fun RegisterScreen(
     onNavigateToOnboarding: () -> Unit,
     modifier: Modifier = Modifier,
     factory: U2ViewModelFactory,
+    onOpenPrivacy: () -> Unit = {},
 ) {
     val viewModel: RegisterViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
@@ -162,6 +163,21 @@ fun RegisterScreen(
                             viewModel.onEvent(RegisterEvent.PrivacyToggled(accepted))
                         },
                     )
+
+                    // D19: enlace navegable al aviso de privacidad (UX A).
+                    // NO envía campos legales en POST /auth/register.
+                    TextButton(
+                        onClick = onOpenPrivacy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Aviso de privacidad",
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.semantics {
+                                contentDescription = "Abrir aviso de privacidad"
+                            },
+                        )
+                    }
 
                     state.error?.let { message ->
                         Text(

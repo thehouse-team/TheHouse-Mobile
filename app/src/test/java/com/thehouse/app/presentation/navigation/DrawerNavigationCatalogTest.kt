@@ -36,7 +36,7 @@ class DrawerNavigationCatalogTest {
     @Test
     fun `03 guest drawer items are exactly login and privacy`() {
         assertEquals(
-            listOf("Iniciar sesión o registrarse", "Privacidad"),
+            listOf("Iniciar sesión o registrarse", "Aviso de privacidad"),
             DrawerItemCatalog.guestItems().map { it.label },
         )
     }
@@ -44,8 +44,9 @@ class DrawerNavigationCatalogTest {
     @Test
     fun `04 auth drawer items include all seven account actions and logout`() {
         val auth = DrawerItemCatalog.authItems(false)
-        assertEquals(12, auth.size)
+        assertEquals(13, auth.size)
         assertTrue(auth.any { it.tag == "drawer_logout" })
+        assertTrue(auth.any { it.tag == "drawer_privacy" })
         assertEquals(7, auth.count { it.section == DrawerItemCatalog.Section.Account })
     }
 

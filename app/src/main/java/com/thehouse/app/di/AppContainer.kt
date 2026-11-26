@@ -122,8 +122,17 @@ class AppContainer(context: Context) {
         EncryptedRefreshTokenStorage(preferences)
     }
 
+    /** D19: único refresher single-flight compartido por interceptor y authenticator. */
+    val tokenRefresher: com.thehouse.app.data.remote.auth.TokenRefresher by lazy {
+        com.thehouse.app.data.remote.auth.TokenRefresher(
+            baseUrl = config.apiBaseUrl,
+            sessionStore = sessionStore,
+            refreshTokenStorage = refreshTokenStorage,
+        )
+    }
+
     val bearerTokenInterceptor: BearerTokenInterceptor by lazy {
-        BearerTokenInterceptor(sessionStore)
+        BearerTokenInterceptor(sessionStore, tokenRefresher)
     }
 
     val refreshAuthenticator: RefreshAuthenticator by lazy {
@@ -131,6 +140,7 @@ class AppContainer(context: Context) {
             baseUrl = config.apiBaseUrl,
             sessionStore = sessionStore,
             refreshTokenStorage = refreshTokenStorage,
+            tokenRefresher = tokenRefresher,
         )
     }
 
@@ -165,6 +175,7 @@ class AppContainer(context: Context) {
             api = authApi,
             sessionStore = sessionStore,
             refreshTokenStorage = refreshTokenStorage,
+            onLegalStatus = { upToDate -> legalUpToDate.value = upToDate },
         )
     }
 
@@ -539,13 +550,27 @@ class AppContainer(context: Context) {
         SmartMatchRepository(api = smartMatchApi)
     }
 
-    // ===== NV-15 Privacidad + Eliminar cuenta =====
-    // DELETE-ACCOUNT-BACKEND-BLOCKED: no hay contrato Backend real. El
-    // repositorio declara isDeletionAvailable=false y no ejecuta HTTP.
+    // ===== NV-15 Privacidad + Eliminar cuenta (D19: contrato Backend real) =====
+
+    val accountApi: com.thehouse.app.data.remote.api.AccountApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.AccountApi::class.java)
+    }
 
     val accountRepository: com.thehouse.app.domain.repository.AccountRepository by lazy {
-        com.thehouse.app.data.account.repository.AccountRepositoryImpl()
+        com.thehouse.app.data.account.repository.AccountRepositoryImpl(api = accountApi, json = json)
     }
+
+    val legalApi: com.thehouse.app.data.remote.api.LegalApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.LegalApi::class.java)
+    }
+
+    val legalRepository: com.thehouse.app.domain.repository.LegalRepository by lazy {
+        com.thehouse.app.data.legal.repository.LegalRepositoryImpl(api = legalApi, json = json)
+    }
+
+    /** D19: estado de aceptación legal vigente (se actualiza tras login/restore). */
+    val legalUpToDate: kotlinx.coroutines.flow.MutableStateFlow<Boolean> =
+        kotlinx.coroutines.flow.MutableStateFlow(true)
 
     val localUserDataPurger: com.thehouse.app.domain.repository.LocalUserDataPurger by lazy {
         com.thehouse.app.data.account.repository.LocalUserDataPurgerImpl(

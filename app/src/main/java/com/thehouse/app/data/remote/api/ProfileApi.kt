@@ -25,7 +25,9 @@ interface ProfileApi {
 }
 
 /** Cuerpo mínimo del PATCH: solo el campo editable (nombre). */
+@kotlinx.serialization.Serializable
 data class PatchProfileRequest(val name: String?)
 
 /** Cuerpo mínimo del PUT de universidad. */
+@kotlinx.serialization.Serializable
 data class PutUniversityRequest(val universityId: String?)

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
@@ -34,7 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,15 +49,11 @@ import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.presentation.components.TheHousePrimaryButton
 import com.thehouse.app.presentation.components.TheHouseScreen
 import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
 
-/**
- * Entrada de Privacidad desde el área de cuenta (Home).
- *
- * La ruta es pública: un invitado puede leer el estado del aviso. La acción de
- * eliminar cuenta solo aparece con sesión activa.
- */
+/** Entrada pública a privacidad/legal; la eliminación solo con sesión activa. */
 @Composable
 fun PrivacyDestination(
     factory: U2ViewModelFactory,
@@ -73,21 +71,16 @@ fun PrivacyDestination(
             when (effect) {
                 is PrivacyEffect.OpenPrivacyPolicy -> {
                     val opened = openPrivacyPolicy(context, effect.url)
-                    if (!opened) {
-                        viewModel.onEvent(PrivacyEvent.PrivacyPolicyLaunchFailed)
-                    }
+                    if (!opened) viewModel.onEvent(PrivacyEvent.PrivacyPolicyLaunchFailed)
                 }
                 PrivacyEffect.AccountDeleted -> onAccountDeleted()
                 PrivacyEffect.RequireLogin -> onRequireLogin()
+                PrivacyEffect.LegalAccepted -> Unit
             }
         }
     }
 
-    PrivacyScreen(
-        state = state,
-        onBack = onBack,
-        onEvent = viewModel::onEvent,
-    )
+    PrivacyScreen(state = state, onBack = onBack, onEvent = viewModel::onEvent)
 }
 
 @Composable
@@ -120,16 +113,16 @@ fun PrivacyScreen(
 
             PrivacyPolicySection(state = state, onEvent = onEvent)
 
+            if (state.isAuthenticated && !state.legalUpToDate) {
+                LegalAcceptanceSection(state = state, onEvent = onEvent)
+            }
+
             if (state.isAuthenticated) {
                 DeleteAccountSection(state = state, onEvent = onEvent)
             }
 
-            state.info?.let { message ->
-                InlineMessage(text = message, tone = StatusTone.Warning)
-            }
-            state.error?.let { message ->
-                InlineMessage(text = message, tone = StatusTone.Error)
-            }
+            state.info?.let { InlineMessage(text = it, tone = StatusTone.Warning) }
+            state.error?.let { InlineMessage(text = it, tone = StatusTone.Error) }
         }
     }
 
@@ -156,30 +149,55 @@ private fun PrivacyPolicySection(
                     )
                 },
             )
-            if (state.privacyPolicyUrl == null) {
+            val info = state.legalInfo
+            if (info != null) {
                 Text(
-                    text = "El aviso de privacidad aún no está publicado. " +
-                        "La app no abrirá una URL no válida ni un contenido alternativo.",
+                    text = "Versión de privacidad: ${info.privacyVersion} · " +
+                        "Versión de términos: ${info.termsVersion}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TheHouseSecondaryButton(
-                    text = "Aviso no disponible",
-                    onClick = { onEvent(PrivacyEvent.OpenPrivacyPolicyClicked) },
-                    enabled = false,
-                )
-            } else {
-                Text(
-                    text = "El aviso se abre en tu navegador mediante una conexión HTTPS.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                TheHousePrimaryButton(
-                    text = "Ver aviso de privacidad",
-                    onClick = { onEvent(PrivacyEvent.OpenPrivacyPolicyClicked) },
-                    icon = Icons.AutoMirrored.Rounded.OpenInNew,
-                )
+                info.updatedAt?.let {
+                    Text(
+                        text = "Actualizado: $it",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
+            Text(
+                text = state.privacyStatus ?: "Cargando información legal…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val canOpen = state.privacyPolicyUrl != null
+            TheHouseSecondaryButton(
+                text = if (canOpen) "Ver aviso de privacidad" else "Aviso de privacidad",
+                onClick = { onEvent(PrivacyEvent.OpenPrivacyPolicyClicked) },
+                icon = if (canOpen) Icons.AutoMirrored.Rounded.OpenInNew else null,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LegalAcceptanceSection(
+    state: PrivacyUiState,
+    onEvent: (PrivacyEvent) -> Unit,
+) {
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            SectionTitle(title = "Aceptación de avisos")
+            Text(
+                text = "Para continuar necesitas aceptar las versiones vigentes " +
+                    "de los términos y el aviso de privacidad.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            TheHousePrimaryButton(
+                text = "Aceptar avisos legales",
+                onClick = { onEvent(PrivacyEvent.AcceptLegalClicked) },
+                loading = state.isAcceptingLegal,
+                enabled = !state.isAcceptingLegal && state.legalInfo != null,
+            )
         }
     }
 }
@@ -210,6 +228,9 @@ private fun DeleteAccountSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            state.deletionPreview?.let { preview ->
+                InlineMessage(text = preview.summary, tone = StatusTone.Warning)
+            }
             if (!state.isDeletionAvailable) {
                 InlineMessage(
                     text = "La eliminación de cuenta todavía no está disponible porque " +
@@ -263,11 +284,26 @@ private fun DeleteAccountDialog(
         title = { Text("¿Eliminar tu cuenta?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Text(
-                    "Esta acción es permanente e irreversible. Se cerrará tu " +
-                        "sesión y se borrarán los datos locales de tu cuenta en " +
-                        "este dispositivo. No podrás recuperar la cuenta.",
+                state.deletionPreview?.let { InlineMessage(text = it.summary, tone = StatusTone.Warning) }
+                TheHouseTextField(
+                    value = state.deletePassword,
+                    onValueChange = { onEvent(PrivacyEvent.DeletePasswordChanged(it)) },
+                    label = "Contraseña",
+                    placeholder = "Tu contraseña actual",
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    enabled = !state.isDeleting,
                 )
+                TheHouseTextField(
+                    value = state.deleteConfirmation,
+                    onValueChange = { onEvent(PrivacyEvent.DeleteConfirmationChanged(it)) },
+                    label = "Confirmación",
+                    placeholder = "Escribe ELIMINAR",
+                    enabled = !state.isDeleting,
+                    isError = state.deleteConfirmationError != null,
+                    errorMessage = state.deleteConfirmationError,
+                )
+                state.error?.let { InlineMessage(text = it, tone = StatusTone.Error) }
                 if (state.isDeleting) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -302,10 +338,7 @@ private fun DeleteAccountDialog(
     )
 }
 
-/**
- * Abre exclusivamente URLs HTTPS validadas. Devuelve false si no hay navegador
- * o si Android rechaza el intent; el llamador informa sin crash.
- */
+/** Abre exclusivamente URLs HTTPS validadas. Nunca inventa una URL. */
 private fun openPrivacyPolicy(context: Context, url: String): Boolean {
     val safeUrl = PrivacyPolicyUrl.normalize(url) ?: return false
     return try {
@@ -315,21 +348,5 @@ private fun openPrivacyPolicy(context: Context, url: String): Boolean {
         false
     } catch (_: SecurityException) {
         false
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PrivacyScreenBlockedPreview() {
-    com.thehouse.app.ui.theme.TheHouseTheme {
-        PrivacyScreen(
-            state = PrivacyUiState(
-                privacyPolicyUrl = null,
-                isAuthenticated = true,
-                isDeletionAvailable = false,
-            ),
-            onBack = {},
-            onEvent = {},
-        )
     }
 }

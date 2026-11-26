@@ -48,6 +48,7 @@ class AuthRepositoryImpl(
     private val api: AuthApi,
     private val sessionStore: InMemorySessionStore,
     private val refreshTokenStorage: SessionTokenStorage,
+    private val onLegalStatus: (upToDate: Boolean) -> Unit = {},
 ) : AuthRepository, com.thehouse.app.domain.auth.LocalSessionCleaner {
 
     private val refreshMutex = Mutex()
@@ -225,6 +226,9 @@ class AuthRepositoryImpl(
                 response.isSuccessful && dto != null -> {
                     val user = dto.toDomain()
                     sessionStore.activate(user, accessToken)
+                    // D19: `/users/me` expone legalUpToDate; la pantalla de
+                    // privacidad ofrecerá aceptar si es false.
+                    onLegalStatus(dto.legalUpToDate)
                     Result.success(user)
                 }
                 else -> Result.failure(

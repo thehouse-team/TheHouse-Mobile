@@ -5,11 +5,14 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import com.thehouse.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -197,10 +204,19 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             if (showHamburger) {
+                // D19: header global — [logo] TheHouse ............ [hamburger].
+                // Un solo hamburger, alineado a la derecha, con insets de
+                // status bar para no superponerse al reloj.
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // BrandMark dibuja el techo + el texto "TheHouse".
+                    com.thehouse.app.presentation.components.BrandMark()
                     IconButton(
                         onClick = { drawerScope.launch { drawerState.open() } },
                         modifier = Modifier.testTag("home_menu_button"),
@@ -271,6 +287,9 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                 popUpTo(0) { inclusive = true }
                                 launchSingleTop = true
                             }
+                        },
+                        onOpenPrivacy = {
+                            navController.navigate(AppRoutes.privacy.route) { launchSingleTop = true }
                         },
                         factory = factory,
                     )
@@ -910,6 +929,9 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         ProfileDestination(
                             factory = factory,
                             onBack = { navController.popBackStack() },
+                            onRequireLogin = {
+                                navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            },
                             onOpenPreferences = {
                                 navController.navigate(AppRoutes.preferences.route) { launchSingleTop = true }
                             },
