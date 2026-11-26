@@ -2,6 +2,10 @@ package com.thehouse.app.presentation.smartmatch
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchQueryRequest
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchPreferencesDto
+import com.thehouse.app.data.remote.dto.smartmatch.SmartMatchBudgetDto
+import com.thehouse.app.data.smartmatch.SmartMatchRepository
 import com.thehouse.app.domain.error.DomainError
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.model.SessionState
@@ -32,6 +36,7 @@ sealed interface SmartMatchUiState {
 class SmartMatchViewModel(
     private val sessionState: StateFlow<SessionState>,
     private val preferenceRepository: PreferenceRepository,
+    private val smartMatchRepository: SmartMatchRepository,
     private val getProperties: GetPropertiesUseCase,
     private val runSmartMatch: RunSmartMatchUseCase,
     private val dispatchers: DispatcherProvider,
@@ -44,33 +49,111 @@ class SmartMatchViewModel(
         viewModelScope.launch {
             _uiState.value = SmartMatchUiState.Loading
             val session = sessionState.first()
-            if (session !is SessionState.Active) {
-                _uiState.value = SmartMatchUiState.RequiresAuth
-                return@launch
+            when (session) {
+                is SessionState.Anonymous -> {
+                    // Modo invitado: endpoint público recommendations/query.
+                    try {
+                        val preference = loadPreferenceOrNull()
+                        if (preference == null || !hasMeaningfulPreferences(preference)) {
+                            // Preferencias ausentes o incompletas: estado tipado.
+                            // No se envía una query inválida al backend.
+                            _uiState.value = SmartMatchUiState.NoPreferences
+                            return@launch
+                        }
+                        val queryRequest = SmartMatchQueryRequest(
+                            universityId = null,
+                            preferences = preference.toPreferencesDto(),
+                        )
+                        val response = smartMatchRepository.queryRecommendations(queryRequest)
+                        if (response.items.isEmpty()) {
+                            _uiState.value = SmartMatchUiState.Empty
+                        } else {
+                            // Scoring local con ML offline para guest
+                            val candidates = fetchCandidates()
+                            if (candidates.isEmpty()) {
+                                _uiState.value = SmartMatchUiState.Empty
+                                return@launch
+                            }
+                            val ranked = withContext(dispatchers.default) {
+                                runSmartMatch.execute(preference, candidates)
+                            }
+                            _uiState.value = if (ranked.isEmpty()) SmartMatchUiState.Empty
+                                else SmartMatchUiState.Content(ranked)
+                        }
+                    } catch (ce: CancellationException) {
+                        throw ce
+                    } catch (t: Throwable) {
+                        val domain = t as? DomainError ?: DomainError.Unknown
+                        _uiState.value = SmartMatchUiState.Error(domain.toUiError())
+                    }
+                }
+                is SessionState.Active -> {
+                    // Modo autenticado: usar endpoint recommendations
+                    try {
+                        preferenceRepository.loadPreferences()
+                        val preference = preferenceRepository.preferenceState.first()
+                        if (preference == null) {
+                            _uiState.value = SmartMatchUiState.NoPreferences
+                            return@launch
+                        }
+                        if (!hasMeaningfulPreferences(preference)) {
+                            _uiState.value = SmartMatchUiState.NoPreferences
+                            return@launch
+                        }
+                        val candidates = fetchCandidates()
+                        if (candidates.isEmpty()) {
+                            _uiState.value = SmartMatchUiState.Empty
+                            return@launch
+                        }
+                        val ranked = withContext(dispatchers.default) {
+                            runSmartMatch.execute(preference, candidates)
+                        }
+                        _uiState.value = if (ranked.isEmpty()) SmartMatchUiState.Empty
+                            else SmartMatchUiState.Content(ranked)
+                    } catch (ce: CancellationException) {
+                        throw ce
+                    } catch (t: Throwable) {
+                        val domain = t as? DomainError ?: DomainError.Unknown
+                        _uiState.value = SmartMatchUiState.Error(domain.toUiError())
+                    }
+                }
+                else -> {
+                    _uiState.value = SmartMatchUiState.RequiresAuth
+                }
             }
-            try {
-                preferenceRepository.loadPreferences()
-                val preference = preferenceRepository.preferenceState.first()
-                if (!hasMeaningfulPreferences(preference)) {
-                    _uiState.value = SmartMatchUiState.NoPreferences
-                    return@launch
-                }
-                val candidates = fetchCandidates()
-                if (candidates.isEmpty()) {
-                    _uiState.value = SmartMatchUiState.Empty
-                    return@launch
-                }
-                val ranked = withContext(dispatchers.default) {
-                    runSmartMatch.execute(preference!!, candidates)
-                }
-                _uiState.value = if (ranked.isEmpty()) SmartMatchUiState.Empty
-                else SmartMatchUiState.Content(ranked)
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (t: Throwable) {
-                val domain = t as? DomainError ?: DomainError.Unknown
-                _uiState.value = SmartMatchUiState.Error(domain.toUiError())
-            }
+        }
+    }
+
+    private fun com.thehouse.app.domain.model.Preference?.toPreferencesDto(): SmartMatchPreferencesDto? {
+        if (this == null) return null
+        return SmartMatchPreferencesDto(
+            budget = budget?.let { SmartMatchBudgetDto(min = it.min, max = it.max, currency = it.currency) },
+            essentialServices = essentialServices,
+            livingWith = livingWith,
+            placeType = placeType,
+            pets = pets,
+            transport = transport,
+            propertyTypes = propertyTypes,
+            currency = budget?.currency
+        )
+    }
+
+    /**
+     * Carga las preferencias locales tolerando fallos de carga.
+     *
+     * En guest, `GET /users/me/preferences` puede responder 401/403 sin sesión;
+     * eso no debe reportarse como error de Smart Match. Si el estado local ya
+     * contiene preferencias (sesión previa), se reutilizan. Devuelve null cuando
+     * no hay preferencias válidas disponibles.
+     */
+    private suspend fun loadPreferenceOrNull(): com.thehouse.app.domain.model.Preference? {
+        return try {
+            preferenceRepository.loadPreferences()
+            preferenceRepository.preferenceState.first()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (ignored: Exception) {
+            preferenceRepository.preferenceState.first()
         }
     }
 
