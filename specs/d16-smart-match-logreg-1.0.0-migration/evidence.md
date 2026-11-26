@@ -49,7 +49,7 @@ PR separados (D14 = #30, ya mergeado; D16 = #32, sin merge).
 ```text
 .\gradlew.bat clean compileDebugKotlin   → BUILD SUCCESSFUL (41s)
 .\gradlew.bat testDebugUnitTest            → BUILD SUCCESSFUL
-                                             452 tests / 0 failures / 0 errors (70 clases; base rebaseada 28cc3e0)
+                                             454 tests / 0 failures / 0 errors (70 clases; incluye 2 tests críticos fix Guest)
                                              D16: 14 tests nuevos (A–N)
 .\gradlew.bat lintDebug                    → BUILD SUCCESSFUL (1m57s)
                                              0 errores lint
@@ -105,3 +105,12 @@ SPECIFIED ✅  IMPLEMENTED ✅  TESTED ✅  DEPLOYED (PR #32 abierto) ✅  EVIDE
 
 Estado: `SMART-MATCH-LOGREG-MIGRATION-CODE-READY`.
 `SMART-MATCH-LOGREG-RUNTIME-CERTIFIED` requiere verificación en dispositivo y CI verde.
+
+## 7. Fix de regresión Guest (D16-T16)
+
+- **Root cause:** `loadGuest()` invocaba `loadPreferenceOrNull()` → `preferenceRepository.loadPreferences()` → `GET /api/v1/users/me/preferences` sin token (401), por lo que `preferenceState` quedaba vacío y se emitía `NoPreferences` aunque existieran preferencias locales.
+- **GUEST_STORAGE_SOURCE:** `OfflineCacheStore` sobre el DataStore existente (`DataStorePreferencesStore`), clave pública `cache_guest_preferences` con `PreferencesSnapshot`; más el `preferenceState` en memoria de `PreferenceRepositoryImpl`. Sin almacenamiento nuevo.
+- **Cambio:** `loadGuest()` usa `loadGuestPreferencesOrNull()` → `restoreLocalOrNull()` (0 HTTP). `PreferenceRepositoryImpl.restoreLocalOrNull()` lee la clave guest del DataStore; `writeCache()` escribe también esa clave al guardar preferencias.
+- **Tests críticos:** Anonymous con preferencias faltantes → `loadPreferences()=0`, `POST query=0`, `NoPreferences`; Anonymous con preferencias completas → `loadPreferences()=0`, `restoreLocal=1`, `POST query=1`, score `73.5`.
+- **Preservado:** matchScore Double, breakdown decimal, `logreg-1.0.0`, autoridad Backend, etiqueta offline, reconexión, flujo AUTH y `model_v1.json` intacto.
+- **Gates del fix:** `clean compileDebugKotlin`, `testDebugUnitTest` 454/0/0, `lintDebug` 0 errores, `assembleDebug`, `git diff --check` exit 0.

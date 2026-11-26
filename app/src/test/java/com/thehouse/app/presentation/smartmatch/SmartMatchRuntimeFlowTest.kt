@@ -66,6 +66,8 @@ class SmartMatchRuntimeFlowTest {
         override val preferenceState: Flow<Preference?> = state
         var loadCalls = 0
             private set
+        var restoreLocalCalls = 0
+            private set
 
         override suspend fun loadPreferences() {
             loadCalls++
@@ -75,6 +77,12 @@ class SmartMatchRuntimeFlowTest {
 
         override suspend fun savePreferences(preference: Preference) {
             state.value = preference
+        }
+
+        /** D16 guest: estado local existente, sin endpoint protegido. */
+        override suspend fun restoreLocalOrNull(): Preference? {
+            restoreLocalCalls++
+            return state.value
         }
     }
 
@@ -267,14 +275,15 @@ class SmartMatchRuntimeFlowTest {
         assertTrue(logs.none { it.contains("simulated") })
     }
 
-    /** C2 — Preferencias fallan (401 simulado): NoPreferences + excepción observable. */
+    /** C2 — D16 guest: sin preferencias locales → NoPreferences sin endpoint 401. */
     @Test
-    fun `C2 preference load failure is observable and not generic Error`() = runTest {
+    fun `C2 guest missing local preferences shows NoPreferences without auth endpoint`() = runTest {
         val api = CountingApi()
+        val prefs = FakePrefRepo(null, failure = DomainException(DomainError.Unauthorized))
         val logs = captureLogs {
             val vm = vm(
                 SessionState.Anonymous,
-                FakePrefRepo(null, failure = DomainException(DomainError.Unauthorized)),
+                prefs,
                 FakePropertyRepo(Result.success(PagedResult(emptyList(), 1, 50, 0, 0))),
                 api,
             )
@@ -282,7 +291,9 @@ class SmartMatchRuntimeFlowTest {
             advanceUntilIdle()
             assertTrue(vm.uiState.value is SmartMatchUiState.NoPreferences)
         }
-        assertTrue(logs.any { it == "exception=DomainException operation=loadPreferences" })
+        assertEquals(0, prefs.loadCalls) // 401 jamás se dispara en guest
+        assertEquals(1, prefs.restoreLocalCalls)
+        assertTrue(logs.any { it == "session=Anonymous" })
         assertEquals(0, api.queryCalls)
     }
 
@@ -299,10 +310,12 @@ class SmartMatchRuntimeFlowTest {
         val vm = vm(SessionState.Anonymous, prefs, properties, api)
         vm.load()
         advanceUntilIdle()
-        assertEquals(1, prefs.loadCalls)
+        assertEquals(0, prefs.loadCalls) // guest NUNCA llama GET /users/me/preferences
+        assertEquals(1, prefs.restoreLocalCalls)
         vm.load()
         advanceUntilIdle()
-        assertEquals(2, prefs.loadCalls)
+        assertEquals(0, prefs.loadCalls)
+        assertEquals(2, prefs.restoreLocalCalls)
         // D16: GUEST 200 ya no consulta catálogo ni re-scorea.
         assertEquals(0, properties.calls)
         assertEquals(2, api.queryCalls)

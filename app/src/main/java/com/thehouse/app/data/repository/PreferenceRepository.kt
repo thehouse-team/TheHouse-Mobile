@@ -67,6 +67,22 @@ class PreferenceRepositoryImpl(
         }
     }
 
+    /**
+     * D16 guest: lee el snapshot local (DataStore existente) sin invocar
+     * `GET /users/me/preferences`. Si hay estado en memoria lo reutiliza;
+     * si no, restaura el snapshot guest del DataStore. 0 HTTP.
+     */
+    override suspend fun restoreLocalOrNull(): Preference? {
+        _preferenceState.value?.let { return it }
+        val cached = cache?.get(OfflineCacheStore.Keys.GUEST_PREFERENCES, PreferencesSnapshot.serializer())
+            ?.payload?.toDomain()
+        if (cached != null) {
+            _preferenceState.value = cached
+            PreferencesFlowLogger.state(if (isEmpty(cached)) "Empty" else "Content")
+        }
+        return cached
+    }
+
     override suspend fun savePreferences(preference: Preference) {
         val userId = currentUserId()
         val cacheKey = userId?.let { OfflineCacheStore.Keys.preferences(it) }
@@ -93,8 +109,12 @@ class PreferenceRepositoryImpl(
     }
 
     private suspend fun writeCache(cacheKey: String?, pref: Preference, userId: String?) {
+        val store = cache ?: return
+        // D16 guest: toda preferencia guardada queda también en la clave guest
+        // del MISMO DataStore, para que Anonymous pueda leerla sin endpoint 401.
+        store.put(OfflineCacheStore.Keys.GUEST_PREFERENCES, PreferencesSnapshot.from(pref), PreferencesSnapshot.serializer())
         if (cacheKey != null && userId != null) {
-            cache?.put(cacheKey, PreferencesSnapshot.from(pref), PreferencesSnapshot.serializer(), userScope = userId)
+            store.put(cacheKey, PreferencesSnapshot.from(pref), PreferencesSnapshot.serializer(), userScope = userId)
         }
     }
 

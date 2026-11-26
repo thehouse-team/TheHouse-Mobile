@@ -189,6 +189,36 @@ class D16SmartMatchLogregMigrationTest {
         assertEquals(0, api.getRecommendationsCalls)
     }
 
+    // ---------- FIX GUEST: 0 GET /users/me/preferences cuando Anonymous ----------
+    @Test
+    fun `guest anonymous with missing preferences never calls auth preferences endpoint`() = runTest {
+        val api = FakeApi()
+        val prefs = CountingLocalPrefRepo(preference = null)
+        val vm = vmWithPrefs(SessionState.Anonymous, api, prefs)
+        vm.load(); advanceUntilIdle()
+
+        assertTrue(vm.uiState.value is SmartMatchUiState.NoPreferences)
+        assertEquals(0, prefs.loadPreferencesCalls) // GET /users/me/preferences = 0
+        assertEquals(1, prefs.restoreLocalCalls) // solo lectura local (DataStore)
+        assertEquals(0, api.queryCalls)
+    }
+
+    @Test
+    fun `guest anonymous with complete local preferences queries once`() = runTest {
+        val complete = preference()
+        val api = FakeApi(query = SmartMatchRecommendationResponse(items = listOf(guestItem("g", 73.5))))
+        val prefs = CountingLocalPrefRepo(preference = complete)
+        val vm = vmWithPrefs(SessionState.Anonymous, api, prefs)
+        vm.load(); advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state is SmartMatchUiState.Content)
+        assertEquals(73.5, (state as SmartMatchUiState.Content).results.single().matchScore, 0.0)
+        assertEquals(0, prefs.loadPreferencesCalls) // endpoint protegido NUNCA
+        assertEquals(1, prefs.restoreLocalCalls)
+        assertEquals(1, api.queryCalls)
+    }
+
     // ---------- I/J: network y 503 → fallback etiquetado ----------
     @Test
     fun `I network failure uses labeled local estimate`() = runTest {
@@ -304,27 +334,50 @@ class D16SmartMatchLogregMigrationTest {
         modelVersion = "logreg-1.0.0",
     )
 
+    private fun preference() = Preference(
+        budget = com.thehouse.app.domain.model.Budget(2000.0, 5000.0, "MXN"),
+        essentialServices = listOf("wifi"),
+        livingWith = "any",
+        placeType = "shared",
+        pets = "none",
+        transport = "any",
+        propertyTypes = listOf("room"),
+        currency = "MXN",
+        maxDistanceKm = 5.0,
+    )
+
+    /** Fake que cuenta specifically el endpoint protegido y el restore local. */
+    private class CountingLocalPrefRepo(
+        preference: Preference?,
+    ) : PreferenceRepository {
+        private val state = MutableStateFlow(preference)
+        override val preferenceState = state
+        var loadPreferencesCalls = 0
+            private set
+        var restoreLocalCalls = 0
+            private set
+
+        override suspend fun loadPreferences() { loadPreferencesCalls++ }
+        override suspend fun savePreferences(preference: Preference) { state.value = preference }
+        override suspend fun restoreLocalOrNull(): Preference? {
+            restoreLocalCalls++
+            return state.value
+        }
+    }
+
     private fun vm(
         session: SessionState,
         api: FakeApi,
         connectivity: ConnectivityObserver? = null,
+        prefs: PreferenceRepository = CountingLocalPrefRepo(preference()),
+    ): SmartMatchViewModel = vmWithPrefs(session, api, prefs, connectivity)
+
+    private fun vmWithPrefs(
+        session: SessionState,
+        api: FakeApi,
+        prefs: PreferenceRepository,
+        connectivity: ConnectivityObserver? = null,
     ): SmartMatchViewModel {
-        val preference = Preference(
-            budget = com.thehouse.app.domain.model.Budget(2000.0, 5000.0, "MXN"),
-            essentialServices = listOf("wifi"),
-            livingWith = "any",
-            placeType = "shared",
-            pets = "none",
-            transport = "any",
-            propertyTypes = listOf("room"),
-            currency = "MXN",
-            maxDistanceKm = 5.0,
-        )
-        val prefs = object : PreferenceRepository {
-            override val preferenceState = MutableStateFlow<Preference?>(preference)
-            override suspend fun loadPreferences() { }
-            override suspend fun savePreferences(preference: Preference) { }
-        }
         val property = Property(
             id = "r", title = "t", price = 3000.0, currency = "MXN", city = "",
             universityId = null, bedrooms = 1, bathrooms = 1, areaM2 = 20.0,

@@ -110,7 +110,12 @@ class SmartMatchViewModel(
     private suspend fun loadGuest() {
         try {
             SmartMatchFlowLogger.emit("preferences_start")
-            val preference = loadPreferenceOrNull()
+            // D16 fix: un usuario Anonymous NUNCA debe invocar
+            // GET /api/v1/users/me/preferences (endpoint protegido → 401).
+            // Las preferencias guest se leen del estado local existente
+            // (PreferenceRepository.preferenceState, alimentado por DataStore
+            // y por la sesión local); 0 llamadas HTTP de preferencias.
+            val preference = loadGuestPreferencesOrNull()
             val ready = preference != null && hasMeaningfulPreferences(preference)
             SmartMatchFlowLogger.preferences(
                 when {
@@ -272,12 +277,26 @@ class SmartMatchViewModel(
     }
 
     /**
-     * Carga preferencias tolerando fallos de red sin sesión.
+     * D16 fix — Guest: SOLO estado local, SIN `loadPreferences()`.
      *
-     * En guest, `/users/me/preferences` responde 401: eso NO es un error de
-     * Smart Match. Si hay caché local (`preferenceState`), se reutiliza; si no,
-     * se devuelve null → NoPreferences.
+     * `PreferenceRepository.preferenceState` ya contiene las preferencias
+     * persistidas localmente (DataStore/OfflineCacheStore para la sesión)
+     * cargadas por el flujo de Preferences/Quick Setup. Nunca se llama al
+     * endpoint autenticado cuando `sessionState` es Anonymous.
      */
+    private suspend fun loadGuestPreferencesOrNull(): Preference? {
+        return try {
+            // restoreLocalOrNull usa SOLO DataStore/estado en memoria (0 HTTP).
+            preferenceRepository.restoreLocalOrNull() ?: preferenceRepository.preferenceState.first()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            SmartMatchFlowLogger.exception("guestLocalPreferences", t)
+            null
+        }
+    }
+
+    /** Carga preferencias del usuario autenticado (endpoint protegido). */
     private suspend fun loadPreferenceOrNull(): Preference? {
         return try {
             preferenceRepository.loadPreferences()

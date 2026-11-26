@@ -47,6 +47,9 @@ class OfflineCacheStore(
         const val PROPERTIES_PAGE_1 = "cache_public_properties_p1"
         fun propertyDetail(propertyId: String) = "cache_public_property_$propertyId"
 
+        /** Preferencias guest (sin usuario): dato no sensible en el mismo DataStore. */
+        const val GUEST_PREFERENCES = "cache_guest_preferences"
+
         fun favorites(userId: String) = "cache_user_${userId}_favorites"
         fun favoriteIds(userId: String) = "cache_user_${userId}_favorite_ids"
         fun profile(userId: String) = "cache_user_${userId}_profile"
