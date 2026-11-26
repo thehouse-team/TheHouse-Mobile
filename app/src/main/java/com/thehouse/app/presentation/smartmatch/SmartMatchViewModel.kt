@@ -1,4 +1,4 @@
-package com.thehouse.app.presentation.smartmatch
+﻿package com.thehouse.app.presentation.smartmatch
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -390,6 +390,7 @@ class SmartMatchViewModel(
                 photos = emptyList(),
             )
             return SmartMatchResult(
+                roomId = roomId,
                 property = property,
                 probability = (score / 100.0).coerceIn(0.0, 1.0),
                 matchScore = score,
@@ -425,6 +426,7 @@ class SmartMatchViewModel(
                 photos = emptyList(),
             )
             return SmartMatchResult(
+                roomId = room.id,
                 property = property,
                 probability = (matchScore / 100.0).coerceIn(0.0, 1.0),
                 matchScore = matchScore.coerceIn(0, 100),

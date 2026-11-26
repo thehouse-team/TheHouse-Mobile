@@ -233,6 +233,14 @@ class AppContainer(context: Context) {
         )
     }
 
+    val roomApi: com.thehouse.app.data.remote.api.RoomApi by lazy { retrofit.create(com.thehouse.app.data.remote.api.RoomApi::class.java) }
+    val roomRepository: com.thehouse.app.domain.usecase.RoomDetailRepository by lazy {
+        com.thehouse.app.data.room.RoomRepository(roomApi)
+    }
+    val getRoomDetail: com.thehouse.app.domain.usecase.GetRoomDetailUseCase by lazy {
+        com.thehouse.app.domain.usecase.GetRoomDetailUseCase(roomRepository)
+    }
+
     val getProfile: GetProfileUseCase by lazy { GetProfileUseCase(profileRepository) }
     val updateProfile: UpdateProfileUseCase by lazy { UpdateProfileUseCase(profileRepository) }
     val selectUserUniversity: SelectUserUniversityUseCase by lazy { SelectUserUniversityUseCase(profileRepository) }

@@ -36,6 +36,8 @@ data class SmartMatchFactor(
  * ([SmartMatchFactor]) conserva `points`/`maxPoints` decimales; NO se truncan.
  */
 data class SmartMatchResult(
+    /** D18: identidad real del cuarto del Backend. NO es propertyId. */
+    val roomId: String,
     val property: Property,
     val probability: Double,
     val matchScore: Int,
