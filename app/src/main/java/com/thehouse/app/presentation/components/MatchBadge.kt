@@ -17,11 +17,10 @@ import com.thehouse.app.ui.theme.Spacing
 /** Indicador de compatibilidad del prototipo (D4, NV-05). */
 @Composable
 fun MatchBadge(
-    matchPercent: Double,
+    matchPercent: Int,
     modifier: Modifier = Modifier,
 ) {
-    val label = if (matchPercent % 1.0 == 0.0) "${matchPercent.toLong()}% Match"
-    else String.format(java.util.Locale.US, "%.1f%% Match", matchPercent)
+    val label = "$matchPercent% Match"
     Surface(
         modifier = modifier.semantics {
             contentDescription = "Compatibilidad $label"
@@ -46,5 +45,5 @@ fun MatchBadge(
 @Preview(showBackground = true)
 @Composable
 private fun MatchBadgePreview() {
-    MaterialTheme { MatchBadge(matchPercent = 95.0) }
+    MaterialTheme { MatchBadge(matchPercent = 95) }
 }

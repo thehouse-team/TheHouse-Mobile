@@ -1,4 +1,4 @@
-package com.thehouse.app.domain.smartmatch
+﻿package com.thehouse.app.domain.smartmatch
 
 import com.thehouse.app.data.smartmatch.LogisticRegressionSmartMatchModel
 import com.thehouse.app.domain.model.Budget
@@ -146,7 +146,7 @@ class SmartMatchMlTest {
         val r2 = useCase.execute(preference, candidates)
         assertEquals(r1.map { it.property.id }, r2.map { it.property.id })
         assertEquals(r1.map { it.matchScore }, r2.map { it.matchScore })
-        assertTrue(r1.all { it.matchScore in 0.0..100.0 })
+        assertTrue(r1.all { it.matchScore in 0..100 })
         // ranking descendente por probabilidad
         for (i in 0 until r1.size - 1) {
             assertTrue(r1[i].probability + 1e-12 >= r1[i + 1].probability)

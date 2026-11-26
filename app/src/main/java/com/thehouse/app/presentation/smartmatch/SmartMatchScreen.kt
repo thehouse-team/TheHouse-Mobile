@@ -163,9 +163,8 @@ fun SmartMatchScreen(
     }
 }
 
-/** Formato legible del score decimal del Backend (73.5 → "73.5%"). */
-internal fun formatMatchScore(score: Double): String =
-    if (score % 1.0 == 0.0) "${score.toLong()}%" else String.format(java.util.Locale.US, "%.1f%%", score)
+/** Contrato real: matchScore entero 0..100 → "73%". Nunca "73.0%". */
+internal fun formatMatchScore(score: Int): String = "$score%"
 
 @Composable
 private fun SmartMatchResultCard(
@@ -245,10 +244,14 @@ private fun SmartMatchFactorRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        // maxPoints=0 significa dato no provisto por el Backend (fallback local):
-        // no se inventa una barra ni se divide por 100.
+        // Contrato confirmado: fraction = si maxPoints>0 → points/maxPoints
+        // clamp 0..1; si no → 0.0. Nunca NaN ni división por cero.
+        val progress = if (factor.maxPoints > 0.0) {
+            (factor.points / factor.maxPoints).coerceIn(0.0, 1.0)
+        } else {
+            0.0
+        }
         if (showBars && factor.maxPoints > 0.0) {
-            val progress = (factor.points / factor.maxPoints).coerceIn(0.0, 1.0)
             ScoreBar(
                 progress = progress,
                 modifier = Modifier.semantics { contentDescription = "smart.match.factor.${factor.factor}" },

@@ -8,6 +8,7 @@ import com.thehouse.app.domain.smartmatch.SmartMatchModel
 import com.thehouse.app.domain.smartmatch.SmartMatchModelVersions
 import com.thehouse.app.domain.smartmatch.SmartMatchResult
 import com.thehouse.app.domain.smartmatch.SmartMatchSource
+import kotlin.math.roundToInt
 
 /**
  * Ejecuta inferencia del artefacto LOCAL sobre candidatos reales.
@@ -26,7 +27,7 @@ class RunSmartMatchUseCase(
         return candidates.map { property ->
             val vector = SmartMatchFeatureExtractor.extract(preference, property)
             val probability = model.predictProbability(vector).coerceIn(0.0, 1.0)
-            val matchScore = (probability * 100.0).coerceIn(0.0, 100.0)
+            val matchScore = (probability * 100.0).roundToInt().coerceIn(0, 100)
             SmartMatchResult(
                 property = property,
                 probability = probability,

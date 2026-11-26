@@ -262,18 +262,33 @@ class SmartMatchViewModel(
         SmartMatchFlowLogger.state(state)
     }
 
+    /**
+     * D16 realineación: el request GUEST usa EXCLUSIVAMENTE los códigos
+     * contractuales. Se reutiliza [PreferencesContract] (D14), que ya traduce
+     * etiquetas humanas → códigos y descarta cualquier valor no reconocido.
+     * Nunca se envían textos visuales ("Mujeres", "Cuarto", "Caminar", ...)
+     * ni campos extra: el Backend responde 400.
+     */
     private fun Preference?.toPreferencesDto(): SmartMatchPreferencesDto? {
         if (this == null) return null
-        return SmartMatchPreferencesDto(
-            budget = budget?.let { SmartMatchBudgetDto(min = it.min, max = it.max, currency = it.currency) },
-            essentialServices = essentialServices,
-            livingWith = livingWith,
-            placeType = placeType,
-            pets = pets,
-            transport = transport,
-            propertyTypes = propertyTypes,
-            currency = budget?.currency,
-        )
+        with(com.thehouse.app.data.remote.dto.preferences.PreferencesContract) {
+            return SmartMatchPreferencesDto(
+                budget = budget?.let { b ->
+                    SmartMatchBudgetDto(
+                        min = b.min?.takeIf { it in BUDGET_MIN.toDouble()..BUDGET_MAX.toDouble() },
+                        max = b.max?.takeIf { it in BUDGET_MIN.toDouble()..BUDGET_MAX.toDouble() },
+                        currency = b.currency?.trim()?.takeIf { it.isNotBlank() } ?: CURRENCY,
+                    )
+                },
+                essentialServices = essentialServices?.mapNotNull(::essentialServicesCode)?.distinct()?.takeIf { it.isNotEmpty() },
+                livingWith = livingWith?.let(::livingWithCode),
+                placeType = placeType?.let(::placeTypeCode),
+                pets = pets?.let(::petsToBoolean)?.let { if (it) "yes" else "no" },
+                transport = transport?.let(::transportCode),
+                propertyTypes = propertyTypes?.mapNotNull(::propertyTypeCode)?.distinct()?.takeIf { it.isNotEmpty() },
+                currency = budget?.currency?.trim()?.takeIf { it.isNotBlank() } ?: com.thehouse.app.data.remote.dto.preferences.PreferencesContract.CURRENCY,
+            )
+        }
     }
 
     /**
@@ -357,7 +372,7 @@ class SmartMatchViewModel(
          * solo cuando el Backend marca el room como no elegible.
          */
         private fun com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationDto.toDomain(): SmartMatchResult {
-            val score = (matchScore ?: 0.0).coerceIn(0.0, 100.0)
+            val score = (matchScore ?: 0).coerceIn(0, 100)
             val property = Property(
                 id = roomId,
                 title = title ?: "",
@@ -412,7 +427,7 @@ class SmartMatchViewModel(
             return SmartMatchResult(
                 property = property,
                 probability = (matchScore / 100.0).coerceIn(0.0, 1.0),
-                matchScore = matchScore,
+                matchScore = matchScore.coerceIn(0, 100),
                 factors = breakdown.map {
                     SmartMatchFactor(
                         factor = it.factor,

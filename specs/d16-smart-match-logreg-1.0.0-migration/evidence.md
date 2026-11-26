@@ -114,3 +114,24 @@ Estado: `SMART-MATCH-LOGREG-MIGRATION-CODE-READY`.
 - **Tests críticos:** Anonymous con preferencias faltantes → `loadPreferences()=0`, `POST query=0`, `NoPreferences`; Anonymous con preferencias completas → `loadPreferences()=0`, `restoreLocal=1`, `POST query=1`, score `73.5`.
 - **Preservado:** matchScore Double, breakdown decimal, `logreg-1.0.0`, autoridad Backend, etiqueta offline, reconexión, flujo AUTH y `model_v1.json` intacto.
 - **Gates del fix:** `clean compileDebugKotlin`, `testDebugUnitTest` 454/0/0, `lintDebug` 0 errores, `assembleDebug`, `git diff --check` exit 0.
+## 8. Realineación con contrato productivo confirmado (2026-11-26)
+
+Backend/ML confirmó: `matchScore` SIEMPRE entero 0..100; breakdown `points`/`maxPoints` Double; códigos cerrados en el request GUEST; 422 `smart_match_profile_incomplete`; GUEST sin GET de preferencias; detalle debe usar `GET /api/v1/rooms/{roomId}`.
+
+- **MATCH_SCORE_TYPE:** `Int` en `SmartMatchRecommendationItemDto`, `SmartMatchRecommendationDto` y `SmartMatchResult`. UI `"73%"` (nunca `"73.0%"`). `MatchBadge` restaurado a `Int`.
+- **BREAKDOWN_TYPES:** `points: Double`, `maxPoints: Double` intactos; `fraction = if (maxPoints > 0) (points/maxPoints).coerceIn(0..1) else 0.0`. Acepta `points=0`, `maxPoints=72.6`, `1.7`, sin NaN.
+- **GUEST_CODES_VALIDATED:** `women`, `room`, `walk`, `apartment`, `wifi` — mapper reutiliza `PreferencesContract` (D14); etiquetas visuales descartadas. `@Transient` en `pets`/`currency` de `SmartMatchPreferencesDto` para evitar campos extra (400). Tests de serialización incluidos.
+- **EXTRA_FIELDS_REMOVED:** `pets`, `currency` del objeto `preferences`; `currency` solo dentro de `budget` (contractual).
+- **GUEST:** 0 `GET /users/me/preferences`, 1 `POST /recommendations/query` (tests 11/12).
+- **ROOM_DETAIL:** BLOQUEADO. No existe `RoomDetailScreen`, `RoomDetailViewModel`, ruta de room ni API `GET /api/v1/rooms/{id}` en este repo. NO se inventó pantalla ni endpoint. El click de Smart Match sigue navegando a `PropertyDetailRoute` con `result.property.id` (que proviene de `room.id` del DTO) y el ViewModel de detalle consulta `/properties/{id}`. Requiere spec/autorización nueva.
+- **ONNX:** `model.onnx`, `golden_cases.json` NO están en el repo; no se agregó ONNX Runtime. Se mantiene `model_v1.json` con etiqueta "Estimación local".
+- **Gates:** `clean compileDebugKotlin`, `testDebugUnitTest` 451/0/0, `lintDebug` 0 errores, `assembleDebug`, `git diff --check` exit 0.
+
+## 9. Auditoría inicial evaluación profesor (solo lectura)
+
+| Ítem | ENDPOINT | MOBILE_IMPLEMENTED | SCREEN | VIEWMODEL | API | TESTS | RUNTIME | BLOCKER |
+|---|---|---|---|---|---|---|---|---|
+| Búsqueda real cuartos | `GET /api/v1/rooms/search` | NO | NO (`ExploreScreen` usa `/properties`) | SÍ (Explore) | NO | Parciales de explore | PENDING | Sin spec ni contrato móvil de rooms/search |
+| Push registration | Sin contrato confirmado de devices/token | NO | NO | NO | NO | NO | PENDING | `FCM-TOKEN-BACKEND-BLOCKED` (AppContainer:602) |
+| Eliminar cuenta | Sin `DELETE /users/me` confirmado | PARCIAL (UI + purga local) | SÍ (PrivacyScreen) | SÍ (PrivacyViewModel) | NO | SÍ | PENDING | `DELETE-ACCOUNT-BACKEND-BLOCKED` + `BLOCKED-PRIVACY-URL` |
+| Avisos legales | URL pública no publicada | PARCIAL (ruta `privacidad`) | SÍ | SÍ | N/A | SÍ | PENDING | `BLOCKED-PRIVACY-URL` (`BuildConfig.PRIVACY_POLICY_URL` vacío) |

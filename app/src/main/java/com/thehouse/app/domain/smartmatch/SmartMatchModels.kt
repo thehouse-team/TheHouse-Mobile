@@ -32,13 +32,13 @@ data class SmartMatchFactor(
 /**
  * Resultado de Smart Match para un candidato real.
  *
- * `matchScore` es decimal (D16): el Backend lo reporta con un decimal
- * (ej. 73.5). NUNCA se trunca ni se convierte silenciosamente a Int.
+ * Contrato confirmado: `matchScore` es SIEMPRE entero 0..100. El breakdown
+ * ([SmartMatchFactor]) conserva `points`/`maxPoints` decimales; NO se truncan.
  */
 data class SmartMatchResult(
     val property: Property,
     val probability: Double,
-    val matchScore: Double,
+    val matchScore: Int,
     val factors: List<SmartMatchFactor>,
     val source: SmartMatchSource = SmartMatchSource.BACKEND,
     val modelVersion: String = SmartMatchModelVersions.SERVER_MODEL_VERSION,

@@ -1,4 +1,4 @@
-package com.thehouse.app.data.smartmatch
+﻿package com.thehouse.app.data.smartmatch
 
 import com.thehouse.app.data.remote.api.SmartMatchApi
 import com.thehouse.app.data.remote.api.SmartMatchDismissalRequest
@@ -51,7 +51,7 @@ class SmartMatchBackendContractTest {
                     "approxLocation": { "lat": 19.1, "lng": -99.1 },
                     "thumbnailUrl": null, "demo": false
                   },
-                  "matchScore": 73.5,
+                  "matchScore": 73,
                   "breakdown": [
                     { "factor": "budget", "label": "Presupuesto", "points": 9.6, "maxPoints": 9.6 },
                     { "factor": "distance", "label": "Distancia", "points": 72.6, "maxPoints": 72.6 },
@@ -74,7 +74,7 @@ class SmartMatchBackendContractTest {
         assertEquals("room-1", item.room.id)
         assertEquals(4500.0, item.room.price, 0.0)
         assertEquals(listOf("wifi"), item.room.services)
-        assertEquals(73.5, item.matchScore, 0.0)
+        assertEquals(73, item.matchScore)
         assertEquals(6, item.breakdown.size)
         assertEquals("Presupuesto", item.breakdown.first().label)
         assertEquals(listOf(9.6, 72.6, 6.7, 4.9, 1.7, 4.5), item.breakdown.map { it.maxPoints })

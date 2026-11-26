@@ -1,4 +1,4 @@
-package com.thehouse.app.presentation.smartmatch
+﻿package com.thehouse.app.presentation.smartmatch
 
 import com.thehouse.app.data.remote.api.SmartMatchApi
 import com.thehouse.app.data.remote.api.SmartMatchDismissalRequest
@@ -191,7 +191,7 @@ class SmartMatchViewModelTest {
     fun `content with ranked results`() = runTest {
         // AUTH: el Backend devuelve items ya ordenados/scoreados; Mobile no reordena.
         val recommendations = SmartMatchListResponse(
-            items = listOf(backendItem("2", 70.0), backendItem("1", 90.0)),
+            items = listOf(backendItem("2", 70), backendItem("1", 90)),
         )
         val vm = SmartMatchViewModel(
             sessionState = MutableStateFlow(activeSession()),
@@ -207,10 +207,10 @@ class SmartMatchViewModelTest {
         val results = (s as SmartMatchUiState.Content).results
         assertEquals(2, results.size)
         assertEquals(listOf("2", "1"), results.map { it.property.id })
-        assertEquals(listOf(70.0, 90.0), results.map { it.matchScore })
+        assertEquals(listOf(70, 90), results.map { it.matchScore })
     }
 
-    private fun backendItem(id: String, score: Double) =
+    private fun backendItem(id: String, score: Int) =
         com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto(
             room = com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRoomSearchDto(
                 id = id,
@@ -291,7 +291,7 @@ class SmartMatchViewModelTest {
                         title = "t1",
                         price = 3000.0,
                         currency = "MXN",
-                        matchScore = 80.0,
+                        matchScore = 80,
                         dismissed = false,
                     ),
                 ),
@@ -311,7 +311,7 @@ class SmartMatchViewModelTest {
         assertTrue(s is SmartMatchUiState.Content)
         val results = (s as SmartMatchUiState.Content).results
         assertEquals(1, results.size)
-        assertEquals(80.0, results.first().matchScore, 0.0)
+        assertEquals(80, results.first().matchScore)
         assertEquals(com.thehouse.app.domain.smartmatch.SmartMatchSource.BACKEND, results.first().source)
         assertEquals(1, api.queryCalls)
     }

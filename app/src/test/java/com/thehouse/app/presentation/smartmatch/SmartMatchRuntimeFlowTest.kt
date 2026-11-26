@@ -1,4 +1,4 @@
-package com.thehouse.app.presentation.smartmatch
+﻿package com.thehouse.app.presentation.smartmatch
 
 import com.thehouse.app.data.remote.api.SmartMatchApi
 import com.thehouse.app.data.remote.api.SmartMatchDismissalRequest
@@ -200,7 +200,7 @@ class SmartMatchRuntimeFlowTest {
     fun `A anonymous with preferences queries once`() = runTest {
         val api = CountingApi(
             SmartMatchRecommendationResponse(items = listOf(
-                SmartMatchRecommendationDto("1", "t1", 3000.0, "MXN", 80.0, false),
+                SmartMatchRecommendationDto("1", "t1", 3000.0, "MXN", 80, false),
             )),
         )
         val logs = captureLogs {
@@ -254,7 +254,7 @@ class SmartMatchRuntimeFlowTest {
     fun `C guest backend authority ignores local catalog failure`() = runTest {
         val api = CountingApi(
             SmartMatchRecommendationResponse(items = listOf(
-                SmartMatchRecommendationDto("1", "t1", 3000.0, "MXN", 80.0, false),
+                SmartMatchRecommendationDto("1", "t1", 3000.0, "MXN", 80, false),
             )),
         )
         val logs = captureLogs {
@@ -268,7 +268,7 @@ class SmartMatchRuntimeFlowTest {
             advanceUntilIdle()
             val state = vm.uiState.value
             assertTrue(state is SmartMatchUiState.Content)
-            assertEquals(80.0, (state as SmartMatchUiState.Content).results.single().matchScore, 0.0)
+            assertEquals(80, (state as SmartMatchUiState.Content).results.single().matchScore)
         }
         assertTrue(logs.any { it == "guest_backend_authority" })
         assertTrue(logs.none { it == "ranking_start" })
@@ -302,7 +302,7 @@ class SmartMatchRuntimeFlowTest {
     fun `D retry triggers exactly one additional attempt`() = runTest {
         val api = CountingApi(
             SmartMatchRecommendationResponse(items = listOf(
-                SmartMatchRecommendationDto("1", "t1", 3000.0, "MXN", 80.0, false),
+                SmartMatchRecommendationDto("1", "t1", 3000.0, "MXN", 80, false),
             )),
         )
         val prefs = FakePrefRepo(pref())
@@ -325,7 +325,7 @@ class SmartMatchRuntimeFlowTest {
     @Test
     fun `E active session keeps authenticated flow`() = runTest {
         val active = SessionState.Active(UserSession("u1", "n", "e@t.com"))
-        val api = CountingApi(recommendations = authList(authItem("1", 90.0)))
+        val api = CountingApi(recommendations = authList(authItem("1", 90)))
         val prefs = FakePrefRepo(pref())
         val properties = FakePropertyRepo(Result.success(PagedResult(listOf(property("1")), 1, 50, 1, 1)))
         val logs = captureLogs {
@@ -345,7 +345,7 @@ class SmartMatchRuntimeFlowTest {
         assertEquals(0, properties.calls) // Online AUTH NO consulta el catálogo.
     }
 
-    private fun authItem(id: String, score: Double) =
+    private fun authItem(id: String, score: Int) =
         com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationItemDto(
             room = com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRoomSearchDto(
                 id = id, buildingId = "b1", title = "t$id", price = 3000.0, currency = "MXN",
@@ -373,14 +373,14 @@ class SmartMatchRuntimeFlowTest {
     /** A — Active + 200 items: Content, orden y matchScore del Backend intactos. */
     @Test
     fun `A active 200 items keeps backend authority`() = runTest {
-        val api = CountingApi(recommendations = authList(authItem("2", 70.0), authItem("1", 90.0)))
+        val api = CountingApi(recommendations = authList(authItem("2", 70), authItem("1", 90)))
         val vm = activeVm(api)
         vm.load(); advanceUntilIdle()
         val state = vm.uiState.value
         assertTrue(state is SmartMatchUiState.Content)
         val results = (state as SmartMatchUiState.Content).results
         assertEquals(listOf("2", "1"), results.map { it.property.id })
-        assertEquals(listOf(70.0, 90.0), results.map { it.matchScore })
+        assertEquals(listOf(70, 90), results.map { it.matchScore })
         assertEquals(listOf("Presupuesto"), results.first().factors.map { it.label })
         assertEquals(0, api.queryCalls)
     }
