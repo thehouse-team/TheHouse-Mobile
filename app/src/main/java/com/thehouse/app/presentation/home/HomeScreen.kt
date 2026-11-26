@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.catalog.CatalogLoadState
@@ -102,7 +102,8 @@ fun HomeScreen(
     onOpenQuickSetup: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
-    val state by viewModel.uiState.collectAsState()
+    // Lifecycle-aware: sin colección (ni trabajo) mientras la UI no esté visible.
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showUniversityPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {

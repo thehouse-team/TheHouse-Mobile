@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +41,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import com.thehouse.app.domain.model.Property
+import com.thehouse.app.perf.Perf
 import com.thehouse.app.presentation.demo.PrototypeProperties
 import com.thehouse.app.presentation.demo.PrototypeProperty
 import com.thehouse.app.ui.theme.Elevations
@@ -77,10 +80,19 @@ fun PropertyCard(
             Box {
                 val thumb = property.thumbnailUrl
                 if (!thumb.isNullOrBlank()) {
+                    // PERF: duración de carga de imagen (inicio -> estado final).
+                    val imageStartNanos = remember(thumb) { System.nanoTime() }
                     AsyncImage(
                         model = thumb,
                         contentDescription = "Foto de ${property.title}",
                         contentScale = ContentScale.Crop,
+                        onState = { imageState ->
+                            if (imageState is AsyncImagePainter.State.Success ||
+                                imageState is AsyncImagePainter.State.Error
+                            ) {
+                                Perf.since("image.load.property_card", imageStartNanos)
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(168.dp),

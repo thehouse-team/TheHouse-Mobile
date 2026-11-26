@@ -2,6 +2,7 @@ package com.thehouse.app
 
 import android.app.Application
 import com.thehouse.app.di.AppContainer
+import com.thehouse.app.perf.Perf
 
 /**
  * Application de TheHouse Mobile.
@@ -18,6 +19,9 @@ class TheHouseApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Instrumentación DEBUG de rendimiento (PERF <op> durationMs=<n>).
+        // En tests JVM permanece desactivado: no se toca android.util.Log.
+        Perf.enabled = BuildConfig.DEBUG
         container.notificationChannels.ensureChannels()
         container.appVisibilityTracker.register(this)
         container.observePushSession()

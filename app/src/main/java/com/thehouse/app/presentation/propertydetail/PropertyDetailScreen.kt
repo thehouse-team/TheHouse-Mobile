@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,8 +47,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import com.thehouse.app.domain.auth.ProtectedAction
 import com.thehouse.app.domain.model.Property
+import com.thehouse.app.perf.Perf
 import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.InfoChip
@@ -80,12 +83,19 @@ fun PropertyDetailDestination(
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val snackbarState = remember { androidx.compose.material3.SnackbarHostState() }
 
-    LaunchedEffect(viewModel, onRequireLogin) {
+    // Claves estables del efecto: los callbacks de navegación se recrean en
+    // cada recomposición del destino; usarlos como clave reiniciaba el
+    // collector de efectos sin motivo. Se leen siempre actualizados.
+    val currentOnRequireLogin by rememberUpdatedState(onRequireLogin)
+    val currentOnScheduleVisit by rememberUpdatedState(onScheduleVisit)
+    val currentOnMakeRequest by rememberUpdatedState(onMakeRequest)
+
+    LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                PropertyDetailEffect.RequireLogin -> onRequireLogin()
-                PropertyDetailEffect.ScheduleVisit -> onScheduleVisit(propertyId)
-                PropertyDetailEffect.MakeRequest -> onMakeRequest(propertyId)
+                PropertyDetailEffect.RequireLogin -> currentOnRequireLogin()
+                PropertyDetailEffect.ScheduleVisit -> currentOnScheduleVisit(propertyId)
+                PropertyDetailEffect.MakeRequest -> currentOnMakeRequest(propertyId)
                 is PropertyDetailEffect.ActionUnavailable -> snackbarState.showSnackbar(
                     when (effect.action) {
                         ProtectedAction.SaveFavorite ->
@@ -278,10 +288,19 @@ private fun PropertyPhotos(property: Property) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         items(photos, key = { it.id }) { photo ->
+            // PERF: duración de carga de imagen del detalle (navegación reciente).
+            val photoStartNanos = remember(photo.url) { System.nanoTime() }
             AsyncImage(
                 model = photo.url.ifBlank { photo.thumbUrl },
                 contentDescription = "Foto de ${property.title}",
                 contentScale = ContentScale.Crop,
+                onState = { imageState ->
+                    if (imageState is AsyncImagePainter.State.Success ||
+                        imageState is AsyncImagePainter.State.Error
+                    ) {
+                        Perf.since("image.load.property_detail", photoStartNanos)
+                    }
+                },
                 modifier = Modifier
                     .height(240.dp)
                     .fillMaxWidth(0.9f)
