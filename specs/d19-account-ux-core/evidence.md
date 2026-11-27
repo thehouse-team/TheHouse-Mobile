@@ -48,3 +48,15 @@ Tests nuevos: `D19SessionBearerTest.kt` (2), `D19AccountUxCoreTest.kt` (15).
 ## Resultado
 
 **D19-ACCOUNT-UX-CORE-CODE-READY** — SIN MERGE.
+
+## HOTFIX RUNTIME (2026-11-27)
+
+- MEMORIA: conflicto reportado entre D18 (M-MOB-061) y D19 (M-MOB-062) resuelto conservando AMBOS bloques; marcadores eliminados (git grep sin coincidencias); caracter de control en "rama fix/account-ux-core" corregido.
+- CRASH REAL (dropbox data_app_crash, 2026-11-26 18:01:49, PID 21978):
+  java.lang.IllegalArgumentException: ViewModel no soportado: com.thehouse.app.presentation.landlord.LandlordProfileViewModel
+  at U2ViewModelFactory.create(U2ViewModelFactory.kt:358) -> LandlordDashboardDestination(LandlordDashboardScreen.kt:471).
+- CAUSA: LandlordDashboardDestination crea LandlordProfileViewModel con el factory generico cuando notLandlord=true, pero U2ViewModelFactory.create() no tenia rama para ese tipo (verificado: git show HEAD:...U2ViewModelFactory.kt no contiene LandlordProfileViewModel::class.java). PREEXISTENTE en origin/main (D12/D15), NO regresion D19. Se manifiesta porque D15 expone la seccion Arrendador a todo usuario autenticado.
+- FIX: rama adicional en U2ViewModelFactory.create() que construye LandlordProfileViewModel(activateLandlord = container.activateLandlord). Sin refactors laterales.
+- TEST DE REGRESION: D19CrashRegressionTest.kt — falla antes del fix (rama ausente), pasa despues.
+- RUNTIME (emulador ADB): reinstall APK, startup sin FATAL EXCEPTION, Home guest visible, header con TheHouse + hamburger arriba-derecha, drawer guest con exactamente "Iniciar sesion o registrarse" y "Aviso de privacidad". Login/Profile/Preferences/Delete pendientes de credenciales de prueba.
+- GATES TRAS HOTFIX: clean compileDebugKotlin, testDebugUnitTest 502 tests / 0 failures, lintDebug 0 errores, assembleDebug, git diff --check — todos BUILD SUCCESSFUL.
