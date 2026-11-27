@@ -51,7 +51,7 @@ class D18RoomDetailTest {
     @Test
     fun `11 DTO maps every real field without inventing data`() = runTest {
         val dto = roomDto()
-        val room = RoomRepository(object : RoomApi {
+        val room = RoomRepository(object : com.thehouse.app.testutil.SearchStubRoomApi() {
             override suspend fun getRoom(id: String) = dto
         }).getRoomDetail("room-1").getOrThrow()
         assertEquals("room-1", room.roomId)
@@ -210,7 +210,7 @@ class D18RoomDetailTest {
 
     private class FakeRoomApi(
         val error: Throwable? = null,
-    ) : RoomApi {
+    ) : com.thehouse.app.testutil.SearchStubRoomApi() {
         var calls = 0
             private set
         var lastId: String? = null

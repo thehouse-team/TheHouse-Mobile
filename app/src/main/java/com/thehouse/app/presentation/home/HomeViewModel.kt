@@ -350,14 +350,14 @@ class HomeViewModel(
                     return@launch
                 }
                 CatalogFlowLogger.search(
-                    "deserialization_result",
-                    "success", result.isSuccess,
-                    "exception_type", result.exceptionOrNull()?.let { it::class.simpleName } ?: "none",
+                    "search_result", "success", result.isSuccess,
+                    "error_type", result.exceptionOrNull()?.let { it::class.simpleName } ?: "none",
                 )
                 result.fold(
                     onSuccess = { page ->
                         CatalogFlowLogger.search(
-                            "result_count", "count", page.items.size, "total", page.totalItems,
+                            "state_transition", "to", if (page.items.isEmpty()) "Empty" else "Content",
+                            "count", page.items.size, "total", page.totalItems,
                         )
                         updateState {
                             it.copy(

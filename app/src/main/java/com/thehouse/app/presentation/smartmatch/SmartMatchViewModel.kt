@@ -56,6 +56,18 @@ class SmartMatchViewModel(
 
     private var localEstimateActive = false
 
+    private val _uiState = MutableStateFlow<SmartMatchUiState>(SmartMatchUiState.Loading)
+    val uiState: StateFlow<SmartMatchUiState> = _uiState.asStateFlow()
+
+    /** Campos que el Backend reporta como incompletos en el 422 NV-23. */
+    private val _profileMissing = MutableStateFlow<List<String>>(emptyList())
+    val profileMissing: StateFlow<List<String>> = _profileMissing.asStateFlow()
+
+    /**
+     * D20 hotfix: el collector se declara DESPUÉS de todos los StateFlow que
+     * utiliza. Antes estaba antes de `_uiState`; con Main.immediate/Unconfined
+     * el collector emitía durante la construcción y `_uiState` era null (NPE).
+     */
     init {
         favoriteStateStore?.roomIds?.let { flow ->
             viewModelScope.launch {
@@ -77,7 +89,6 @@ class SmartMatchViewModel(
         if (sessionState.value !is SessionState.Active) return
         viewModelScope.launch {
             val result = useCase(roomId)
-            // El store compartido actualiza los resultados vía collect.
             if (result is com.thehouse.app.domain.usecase.FavoriteToggleResult.Failed) {
                 com.thehouse.app.presentation.catalog.CatalogFlowLogger.search(
                     "favorite_toggle_failed", "exception_type", result.error::class.simpleName.orEmpty(),
@@ -85,13 +96,6 @@ class SmartMatchViewModel(
             }
         }
     }
-
-    private val _uiState = MutableStateFlow<SmartMatchUiState>(SmartMatchUiState.Loading)
-    val uiState: StateFlow<SmartMatchUiState> = _uiState.asStateFlow()
-
-    /** Campos que el Backend reporta como incompletos en el 422 NV-23. */
-    private val _profileMissing = MutableStateFlow<List<String>>(emptyList())
-    val profileMissing: StateFlow<List<String>> = _profileMissing.asStateFlow()
 
     /**
      * Carga única por entrada lógica a la pantalla. El Composable usa

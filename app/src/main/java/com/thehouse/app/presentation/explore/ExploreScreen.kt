@@ -81,7 +81,7 @@ fun ExploreScreen(
         ) {
             TheHouseHeader(
                 title = "Explora alojamientos",
-                subtitle = "Resultados reales de rooms/search. Búsqueda por texto limitada a lo cargado.",
+                subtitle = "Encuentra alojamientos cerca de tu universidad.",
                 modifier = Modifier.semantics { contentDescription = "Título Explorar" },
             )
 
@@ -96,16 +96,22 @@ fun ExploreScreen(
             TheHouseSearchField(
                 value = query,
                 onValueChange = { viewModel?.onEvent(ExploreEvent.QueryChanged(it)) },
-                placeholder = if (showRooms) "Filtrar resultados cargados (local)" else "Busca por título o ciudad",
+                placeholder = if (showRooms) {
+                    "Buscar entre los alojamientos mostrados"
+                } else "Busca por título o ciudad",
             )
 
             if (showRooms) {
                 FilterBar(
-                    filters = state.filters,
+                    filters = state.draftFilters,
+                    applied = state.filters,
                     expanded = state.showFilters,
                     universities = state.universities,
                     onToggle = { viewModel?.onEvent(ExploreEvent.ToggleFilters) },
-                    onFiltersChange = { viewModel?.onEvent(ExploreEvent.FilterChanged(it)) },
+                    onDraftChange = { viewModel?.onEvent(ExploreEvent.DraftFilterChanged(it)) },
+                    onQuickApply = { viewModel?.onEvent(ExploreEvent.FilterChanged(it)) },
+                    onApply = { viewModel?.onEvent(ExploreEvent.ApplyFilters) },
+                    onClear = { viewModel?.onEvent(ExploreEvent.ClearFilters) },
                 )
             }
 
@@ -174,7 +180,7 @@ fun ExploreScreen(
                             text = if (query.isBlank()) {
                                 "${visible.size} de ${rooms.totalItems} alojamientos"
                             } else {
-                                "${visible.size} resultados locales de ${rooms.items.size} cargados"
+                                "${visible.size} resultados entre los alojamientos mostrados"
                             },
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -226,32 +232,36 @@ fun ExploreScreen(
 @Composable
 private fun FilterBar(
     filters: ExploreFiltersUi,
+    applied: ExploreFiltersUi,
     expanded: Boolean,
     universities: List<com.thehouse.app.domain.model.University>,
     onToggle: () -> Unit,
-    onFiltersChange: (ExploreFiltersUi) -> Unit,
+    onDraftChange: (ExploreFiltersUi) -> Unit,
+    onQuickApply: (ExploreFiltersUi) -> Unit,
+    onApply: () -> Unit,
+    onClear: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             FilterChip(selected = expanded, onClick = onToggle, label = { Text("Filtros") })
             FilterChip(
-                selected = filters.roomType != null,
+                selected = applied.roomType != null,
                 onClick = {
-                    val next = if (filters.roomType != null) null else RoomSearchCatalog.ROOM_TYPES.first()
-                    onFiltersChange(filters.copy(roomType = next))
+                    val next = if (applied.roomType != null) null else RoomSearchCatalog.ROOM_TYPES.first()
+                    onQuickApply(filters.copy(roomType = next))
                 },
                 label = {
-                    Text(filters.roomType?.let { RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, it) } ?: "Tipo cuarto")
+                    Text(applied.roomType?.let { RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, it) } ?: "Tipo cuarto")
                 },
             )
             FilterChip(
-                selected = filters.sort != "distance",
+                selected = applied.sort != "distance",
                 onClick = {
-                    val idx = RoomSearchCatalog.SORTS.indexOf(filters.sort)
+                    val idx = RoomSearchCatalog.SORTS.indexOf(applied.sort)
                     val next = RoomSearchCatalog.SORTS[(idx + 1) % RoomSearchCatalog.SORTS.size]
-                    onFiltersChange(filters.copy(sort = next))
+                    onQuickApply(filters.copy(sort = next))
                 },
-                label = { Text("Orden: " + RoomSearchCatalog.label(RoomSearchCatalog.Kind.SORT, filters.sort)) },
+                label = { Text("Orden: " + RoomSearchCatalog.label(RoomSearchCatalog.Kind.SORT, applied.sort)) },
             )
         }
         if (expanded) {
@@ -261,39 +271,39 @@ private fun FilterBar(
                 labels = universities.associate { it.id to it.name },
                 selected = filters.universityId,
                 kind = null,
-            ) { onFiltersChange(filters.copy(universityId = it)) }
+            ) { onDraftChange(filters.copy(universityId = it)) }
             ClosedDropdown(
                 label = "Tipo de inmueble",
                 options = RoomSearchCatalog.BUILDING_TYPES,
                 selected = filters.buildingType,
                 kind = RoomSearchCatalog.Kind.BUILDING_TYPE,
-            ) { onFiltersChange(filters.copy(buildingType = it)) }
+            ) { onDraftChange(filters.copy(buildingType = it)) }
             ClosedDropdown(
                 label = "Baño",
                 options = RoomSearchCatalog.BATHROOMS,
                 selected = filters.bathroom,
                 kind = RoomSearchCatalog.Kind.BATHROOM,
-            ) { onFiltersChange(filters.copy(bathroom = it)) }
+            ) { onDraftChange(filters.copy(bathroom = it)) }
             ClosedDropdown(
                 label = "Convivencia",
                 options = RoomSearchCatalog.ALLOWED_TENANTS,
                 selected = filters.allowedTenants,
                 kind = RoomSearchCatalog.Kind.ALLOWED_TENANTS,
-            ) { onFiltersChange(filters.copy(allowedTenants = it)) }
+            ) { onDraftChange(filters.copy(allowedTenants = it)) }
             ClosedDropdown(
                 label = "Servicios (multi-selección simple)",
                 options = listOf("wifi", "parking", "laundry", "kitchen"),
                 selected = filters.services.firstOrNull(),
                 kind = null,
             ) { code ->
-                onFiltersChange(filters.copy(services = if (code == null) emptyList() else listOf(code)))
+                onDraftChange(filters.copy(services = if (code == null) emptyList() else listOf(code)))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 OutlinedTextField(
                     value = filters.minPrice?.toString().orEmpty(),
                     onValueChange = { value ->
                         val parsed = value.toIntOrNull()
-                        onFiltersChange(
+                        onDraftChange(
                             filters.copy(
                                 minPrice = if (parsed != null && parsed in RoomSearchCatalog.MIN_PRICE..RoomSearchCatalog.MAX_PRICE) parsed else null,
                             ),
@@ -306,7 +316,7 @@ private fun FilterBar(
                     value = filters.maxPrice?.toString().orEmpty(),
                     onValueChange = { value ->
                         val parsed = value.toIntOrNull()
-                        onFiltersChange(
+                        onDraftChange(
                             filters.copy(
                                 maxPrice = if (parsed != null && parsed in RoomSearchCatalog.MIN_PRICE..RoomSearchCatalog.MAX_PRICE) parsed else null,
                             ),
@@ -320,7 +330,7 @@ private fun FilterBar(
                 value = filters.maxDistanceKm.toString(),
                 onValueChange = { value ->
                     val parsed = value.toDoubleOrNull()
-                    onFiltersChange(
+                    onDraftChange(
                         filters.copy(
                             maxDistanceKm = if (parsed != null && parsed in RoomSearchCatalog.MIN_DISTANCE_KM..RoomSearchCatalog.MAX_DISTANCE_KM) {
                                 parsed
@@ -331,9 +341,10 @@ private fun FilterBar(
                 label = { Text("Distancia máx. km (0.5–30)") },
                 modifier = Modifier.fillMaxWidth(),
             )
-            TextButton(onClick = {
-                onFiltersChange(ExploreFiltersUi(universityId = filters.universityId))
-            }) { Text("Limpiar filtros") }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                androidx.compose.material3.Button(onClick = onApply) { Text("Aplicar filtros") }
+                TextButton(onClick = onClear) { Text("Limpiar filtros") }
+            }
         }
     }
 }

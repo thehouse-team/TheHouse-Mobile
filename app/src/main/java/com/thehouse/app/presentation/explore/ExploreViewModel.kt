@@ -57,6 +57,8 @@ data class ExploreUiState(
     val universitySource: String = "none",
     val isAuthenticated: Boolean = false,
     val universities: List<University> = emptyList(),
+    /** Borrador: los campos se editan sin lanzar petición hasta "Aplicar". */
+    val draftFilters: ExploreFiltersUi = ExploreFiltersUi(),
 ) {
     fun visibleRooms(): List<com.thehouse.app.domain.room.RoomSearchItem> {
         val items = (rooms as? RoomSearchState.Content)?.items.orEmpty()
@@ -76,6 +78,10 @@ sealed interface ExploreEvent : UiEvent {
     data class QueryChanged(val query: String) : ExploreEvent
     data class UniversityChanged(val universityId: String) : ExploreEvent
     data class FilterChanged(val filters: ExploreFiltersUi) : ExploreEvent
+    /** Edición del borrador: NO dispara petición. */
+    data class DraftFilterChanged(val filters: ExploreFiltersUi) : ExploreEvent
+    data object ApplyFilters : ExploreEvent
+    data object ClearFilters : ExploreEvent
     data object ToggleFilters : ExploreEvent
     data object RefreshRoomsClicked : ExploreEvent
     data object LoadMoreRoomsClicked : ExploreEvent
@@ -181,10 +187,30 @@ class ExploreViewModel(
                 applyUniversity(event.universityId, "user_selection")
             }
             is ExploreEvent.FilterChanged -> {
-                updateState { it.copy(filters = event.filters) }
+                updateState { it.copy(filters = event.filters, draftFilters = event.filters) }
                 loadRooms(refresh = true)
             }
-            ExploreEvent.ToggleFilters -> updateState { it.copy(showFilters = !it.showFilters) }
+            is ExploreEvent.DraftFilterChanged -> updateState { it.copy(draftFilters = event.filters) }
+            ExploreEvent.ApplyFilters -> {
+                val draft = uiState.value.draftFilters
+                updateState { it.copy(filters = draft) }
+                loadRooms(refresh = true)
+            }
+            ExploreEvent.ClearFilters -> {
+                val currentUniversity = uiState.value.filters.universityId
+                val cleared = ExploreFiltersUi(universityId = currentUniversity)
+                updateState { it.copy(filters = cleared, draftFilters = cleared) }
+                loadRooms(refresh = true)
+            }
+            ExploreEvent.ToggleFilters -> {
+                // Al abrir, sincroniza el borrador con los filtros aplicados.
+                updateState {
+                    it.copy(
+                        showFilters = !it.showFilters,
+                        draftFilters = if (!it.showFilters) it.filters else it.draftFilters,
+                    )
+                }
+            }
             ExploreEvent.RefreshRoomsClicked -> loadRooms(refresh = true)
             ExploreEvent.LoadMoreRoomsClicked -> loadMoreRooms()
             is ExploreEvent.FavoriteRoomClicked -> toggleRoomFavorite(event.roomId)
@@ -195,7 +221,11 @@ class ExploreViewModel(
         val current = uiState.value
         if (current.filters.universityId == id && lastLoadedFiltersKey?.startsWith(id) == true) return
         updateState {
-            it.copy(universitySource = source, filters = it.filters.copy(universityId = id))
+            it.copy(
+                universitySource = source,
+                filters = it.filters.copy(universityId = id),
+                draftFilters = it.draftFilters.copy(universityId = id),
+            )
         }
         loadRooms(refresh = true)
     }
@@ -249,12 +279,15 @@ class ExploreViewModel(
                     return@launch
                 }
                 CatalogFlowLogger.search(
-                    "deserialization_result", "success", result.isSuccess,
-                    "exception_type", result.exceptionOrNull()?.let { it::class.simpleName } ?: "none",
+                    "search_result", "success", result.isSuccess,
+                    "error_type", result.exceptionOrNull()?.let { it::class.simpleName } ?: "none",
                 )
                 result.fold(
                     onSuccess = { page ->
-                        CatalogFlowLogger.search("result_count", "count", page.items.size, "total", page.totalItems)
+                        CatalogFlowLogger.search(
+                            "state_transition", "to", if (page.items.isEmpty()) "Empty" else "Content",
+                            "count", page.items.size, "total", page.totalItems,
+                        )
                         updateState {
                             it.copy(
                                 rooms = if (page.items.isEmpty()) RoomSearchState.Empty else RoomSearchState.Content(

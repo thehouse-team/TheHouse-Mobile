@@ -26,6 +26,11 @@ class RoomSearchRepositoryImpl(
 ) : RoomSearchRepository {
 
     override suspend fun searchRooms(filters: RoomSearchFilters): Result<RoomSearchPage> = try {
+        com.thehouse.app.presentation.catalog.CatalogFlowLogger.search(
+            "network_request", "source", "network",
+            "universityId_set", filters.universityId.isNotBlank(),
+            "page", filters.page, "pageSize", filters.pageSize,
+        )
         val response = api.searchRooms(
             universityId = filters.universityId,
             minPrice = filters.minPrice,
@@ -40,11 +45,23 @@ class RoomSearchRepositoryImpl(
             page = filters.page,
             pageSize = filters.pageSize,
         )
-        Result.success(response.toDomain())
+        val page = response.toDomain()
+        com.thehouse.app.presentation.catalog.CatalogFlowLogger.search(
+            "deserialization_result", "source", "network", "success", true,
+            "result_count", page.items.size, "total", page.totalItems,
+        )
+        Result.success(page)
     } catch (cancelled: CancellationException) {
+        com.thehouse.app.presentation.catalog.CatalogFlowLogger.search(
+            "error_type", "type", "cancellation",
+        )
         throw cancelled
     } catch (t: Throwable) {
-        Result.failure(DomainException(t.toSearchDomainError()))
+        val error = t.toSearchDomainError()
+        com.thehouse.app.presentation.catalog.CatalogFlowLogger.search(
+            "error_type", "type", t::class.simpleName.orEmpty(), "domain", error::class.simpleName.orEmpty(),
+        )
+        Result.failure(DomainException(error))
     }
 }
 

@@ -29,5 +29,5 @@ interface RoomApi {
         @Query("sort") sort: String? = null,
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 20,
-    ): RoomSearchResponseDto = RoomSearchResponseDto()
+    ): RoomSearchResponseDto
 }

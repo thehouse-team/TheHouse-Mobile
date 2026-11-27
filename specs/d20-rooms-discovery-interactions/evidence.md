@@ -100,3 +100,37 @@ Filtros siempre accesibles (Chip «Filtros» + panel): universidad (catálogo re
 
 ### TEST DE REGRESIÓN P0
 `D20HotfixCatalogTest.P0 home dispara search cuando perfil emite universidad con sesion restaurada despues`: crea el VM con sesión Anonymous, emite la universidad del Perfil después de la restauración y exige `calls > 0` con `RoomSearchState.Content`. Antes del fix: `calls == 0` (falla). Después: pasa.
+
+## D20 HOTFIX CRÍTICO — Retrofit, StateFlow y regresiones runtime (2026-11-27)
+
+Autorización humana individual sobre el mismo PR #36 (base `c6d4db0`). Sin merge, sin Backend/GenAI/ML/ONNX/infra, sin Fase C.
+
+### SMART_MATCH_CRASH_ROOT_CAUSE / UNINITIALIZED_STATEFLOW
+`SmartMatchViewModel` incorporó en el hotfix anterior un bloque `init { favoriteStateStore.roomIds.collect { _uiState.value = ... } }` **antes** de la declaración `private val _uiState = MutableStateFlow(...)`. Con `Main.immediate`/Unconfined durante la construcción, el collector emite de inmediato y `_uiState` aún es null → NPE en `SmartMatchViewModel.kt:63`. Confirmado por código y reproducido por `SmartMatchImmediateEmissionTest` (guest y Active, store ya emitido, UnconfinedTestDispatcher).
+
+### SMART_MATCH_CRASH_FIX
+Todas las propiedades de estado (`_uiState`, `uiState`, `_profileMissing`, `profileMissing`) se declaran antes del bloque `init`; el collector de favoritos se movió después de ellas. Sin lateinit, sin delays, sin null-checks para ocultar fallos, sin eliminar favoritos. Revisión dirigida: `HomeViewModel`, `ExploreViewModel`, `FavoritesViewModel` tenían sus StateFlow declarados antes del `init` (verificado por número de línea); sin el mismo patrón.
+
+### CATALOG_ROOT_CAUSE / ROOM_API_PRODUCTION_IMPLEMENTATION
+`RoomApi.searchRooms` tenía un **cuerpo Kotlin por defecto** (`= RoomSearchResponseDto()`) añadido para que los fakes de tests compilaran. Retrofit trata los métodos default de Kotlin como default methods de plataforma y **no ejecuta la petición HTTP**: devuelve la respuesta vacía del `DefaultImpls` en 1–10 ms. Coincide exactamente con la evidencia (`deserialization_result success=true`, `result_count count=0`, sin `GET /rooms/search`). Corrección: declaración abstracta real (sin cuerpo) + `SearchStubRoomApi` SOLO en `src/test` para los fakes de detalle; la prueba de transporte usa el proxy Retrofit real.
+
+### RETROFIT_REAL_REQUEST_TEST
+`RoomSearchHttpIntegrationTest` (9 pruebas): `RoomApi` de producción + `JsonProvider` + `RoomRepositoryImpl` + MockWebServer. Verifica `RecordedRequest`: `GET`, `/api/v1/rooms/search`, `universityId=6aeecc11f3c9f3f762946293`, `page=1`, `pageSize=20`, `maxDistanceKm=10.0`, `sort=distance`, filtros opcionales (`minPrice`, `maxPrice`, `roomType`, `bathroom`, `buildingType`, `allowedTenants`, `services`) y **ausencia de `q`**. Cubre 200 con 1 habitación (roomId conservado), 200 vacío → Empty, 400 → ValidationError, 503 → ServiceUnavailable, fallo de red, JSON inválido y cancelación. Además Home y Explore con el repositorio real sobre MockWebServer alcanzan `Content` y verifican la ruta HTTP.
+
+### LOGGING VERAZ
+`RoomSearchRepositoryImpl` registra `network_request(source=network)`, `deserialization_result(success=true)` solo tras deserializar una respuesta real, `error_type` en excepciones y `state_transition/result_count` en los VMs. Se eliminó el `deserialization_result success=true` de los ViewModels, que afirmaba deserialización sin petición. No se registra HTTP 200 inventado ni se transforma fallo en Empty.
+
+### BACKEND_TEPEJI_COUNT (solo lectura, productivo)
+`GET /universities` → UAEH-ESTE «Universidad Autónoma del Estado de Hidalgo, Escuela Superior de Tepeji del Río» = `6aeecc11f3c9f3f762946290`. Con los mismos parámetros efectivos de Mobile (`maxDistanceKm=10`, `sort=distance`, `page=1`, `pageSize=20`): `rooms/search totalItems=4, items=4`; `rooms/count = 4`. Coherentes.
+
+### FILTER_DEDUPLICATION / FILTERS_VISUAL
+Explore usa `draftFilters` (edición sin petición) + CTA «Aplicar filtros» y «Limpiar filtros». Los chips rápidos de tipo/orden aplican una sola búsqueda controlada por single-flight. Texto visible: «Encuentra alojamientos cerca de tu universidad» y «Buscar entre los alojamientos mostrados», con aclaración discreta de resultado local. Sin terminología técnica (`rooms/search`) en UI.
+
+### DUPLICATE_HAMBURGER_ORIGIN
+Búsqueda dirigida: una sola occurrence de `Icons.Rounded.Menu` en código de la app (`MainActivity`, header global, `testTag=home_menu_button`). No hay segundo hamburger en Compose; el observado en la captura corresponde a capa del dispositivo/accesibilidad. Sin cambios de código.
+
+### GATES
+`clean compileDebugKotlin`, `testDebugUnitTest` **578 tests / 0 failures / 0 errors** (baseline 567 + 2 regresiones inmediatas + 9 integración HTTP), `lintDebug` 0 errores SARIF, `assembleDebug`, `git diff --check` exit 0.
+
+### RUNTIME
+Sin `adb` disponible en la sesión: no se instaló APK ni se capturaron pantallas. Queda pendiente la validación humana en dispositivo: apertura guest de Smart Match sin FATAL, y selección de universidad en guest comprobando `source=network`, `result_count count=N` y tarjetas.
