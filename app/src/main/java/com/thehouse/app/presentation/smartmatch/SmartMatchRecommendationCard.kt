@@ -16,7 +16,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Roofing
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -161,19 +163,28 @@ internal fun SmartMatchRecommendationCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
+                // D20: acciones reales conectadas al estado compartido y al
+                // formulario de solicitudes; sin "próximamente".
                 OutlinedButton(
                     onClick = onFavoriteClick,
-                    enabled = false,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Favoritos · próximamente", style = MaterialTheme.typography.labelMedium)
+                    Icon(
+                        imageVector = if (result.isFavorite) Icons.Rounded.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = null,
+                        modifier = Modifier.size(IconSizes.sm),
+                    )
+                    Spacer(modifier = Modifier.size(Spacing.xs))
+                    Text(
+                        if (result.isFavorite) "Quitar favorito" else "Guardar favorito",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
                 OutlinedButton(
                     onClick = onContactClick,
-                    enabled = false,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Contactar · próximamente", style = MaterialTheme.typography.labelMedium)
+                    Text("Contactar", style = MaterialTheme.typography.labelMedium)
                 }
             }
 

@@ -55,7 +55,7 @@ class FavoritesRepositoryImpl(
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 if (cacheKey != null) cache?.put(cacheKey, body, FavoriteIdsResponseDto.serializer(), userScope = currentUserId())
-                Result.success(body.propertyIds.toSet())
+                Result.success(body.effectiveRoomIds())
             } else {
                 val httpError = DomainException(DataError.Http(response.code()).toDomainError())
                 cacheKey?.let { readCachedFavoriteIds(it) }?.let { Result.success(it) } ?: Result.failure(httpError)
@@ -74,43 +74,25 @@ class FavoritesRepositoryImpl(
         }
     }
 
-    override suspend fun addFavorite(propertyId: String): Result<Unit> {
-        return try {
-            val response = api.addFavorite(propertyId)
-            if (response.isSuccessful) {
-                // refrescar cache ids/list si existe en siguiente lectura; invalidación simple
-                Result.success(Unit)
-            } else {
-                Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (timeout: SocketTimeoutException) {
-            Result.failure(DomainException(DomainError.Timeout))
-        } catch (network: IOException) {
-            Result.failure(DomainException(DomainError.Network))
-        } catch (unexpected: Exception) {
-            Result.failure(DomainException(DomainError.Unknown))
-        }
-    }
+    override suspend fun addFavorite(roomId: String): Result<Unit> = mutate { api.addFavorite(roomId) }
 
-    override suspend fun removeFavorite(propertyId: String): Result<Unit> {
-        return try {
-            val response = api.removeFavorite(propertyId)
-            if (response.isSuccessful) {
-                Result.success(Unit)
-            } else {
-                Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (timeout: SocketTimeoutException) {
-            Result.failure(DomainException(DomainError.Timeout))
-        } catch (network: IOException) {
-            Result.failure(DomainException(DomainError.Network))
-        } catch (unexpected: Exception) {
-            Result.failure(DomainException(DomainError.Unknown))
+    override suspend fun removeFavorite(roomId: String): Result<Unit> = mutate { api.removeFavorite(roomId) }
+
+    private suspend fun mutate(call: suspend () -> retrofit2.Response<Unit>): Result<Unit> = try {
+        val response = call()
+        if (response.isSuccessful) {
+            Result.success(Unit) // 204 No Content
+        } else {
+            Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
         }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (timeout: SocketTimeoutException) {
+        Result.failure(DomainException(DomainError.Timeout))
+    } catch (network: IOException) {
+        Result.failure(DomainException(DomainError.Network))
+    } catch (unexpected: Exception) {
+        Result.failure(DomainException(DomainError.Unknown))
     }
 
     private suspend fun readCachedFavorites(key: String): PagedResult<Favorite>? {
@@ -120,7 +102,7 @@ class FavoritesRepositoryImpl(
 
     private suspend fun readCachedFavoriteIds(key: String): Set<String>? {
         val cached = cache?.get(key, FavoriteIdsResponseDto.serializer()) ?: return null
-        return cached.payload.propertyIds.toSet()
+        return cached.payload.effectiveRoomIds()
     }
 }
 
@@ -128,6 +110,6 @@ private fun FavoritesListResponseDto.toDomainPaged(): PagedResult<Favorite> = Pa
     items = items.map { it.toDomain() },
     page = page,
     pageSize = pageSize,
-    totalItems = totalItems.toLong(),
+    totalItems = totalItems,
     totalPages = totalPages,
 )

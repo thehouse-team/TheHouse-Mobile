@@ -1,6 +1,8 @@
 package com.thehouse.app.presentation.roomdetail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,21 +10,32 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Roofing
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider
+import coil3.compose.AsyncImage
 import com.thehouse.app.domain.room.RoomDetail
 import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.EmptyStateView
@@ -30,9 +43,12 @@ import com.thehouse.app.presentation.components.ErrorStateView
 import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.presentation.components.TheHouseHeader
+import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
 
-/** D18: pantalla real del detalle de cuarto. Solo muestra campos del contrato. */
+/** D18 + D20: detalle real del cuarto con fotos, campos contractuales y acciones reales. */
 @Composable
 fun RoomDetailScreen(
     roomId: String,
@@ -40,13 +56,18 @@ fun RoomDetailScreen(
     onBack: () -> Unit,
     onRequireLogin: () -> Unit,
     modifier: Modifier = Modifier,
+    onContact: (String) -> Unit = {},
+    onScheduleVisit: (String) -> Unit = {},
 ) {
     val vm: RoomDetailViewModel = viewModel(factory = factory)
     val state by vm.uiState.collectAsStateWithLifecycle()
 
     Scaffold(modifier = modifier, containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             TheHouseHeader(
@@ -59,9 +80,14 @@ fun RoomDetailScreen(
                     message = "Cargando detalle del cuarto…",
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
-
-                is RoomDetailUiState.Content -> RoomDetailContent(s.room, Modifier.fillMaxWidth().weight(1f))
-
+                is RoomDetailUiState.Content -> RoomDetailContent(
+                    room = s.room,
+                    isFavorite = s.isFavorite,
+                    onFavorite = { vm.onEvent(RoomDetailEvent.FavoriteClicked) },
+                    onContact = { onContact(roomId) },
+                    onScheduleVisit = { onScheduleVisit(roomId) },
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                )
                 RoomDetailUiState.NotFound -> EmptyStateView(
                     title = "Cuarto no encontrado",
                     message = "El cuarto ya no está disponible.",
@@ -69,7 +95,6 @@ fun RoomDetailScreen(
                     ctaLabel = "Volver",
                     onCtaClick = onBack,
                 )
-
                 RoomDetailUiState.RequiresAuth -> EmptyStateView(
                     title = "Inicia sesión",
                     message = "Necesitas iniciar sesión para ver el detalle del cuarto.",
@@ -77,7 +102,6 @@ fun RoomDetailScreen(
                     ctaLabel = "Iniciar sesión",
                     onCtaClick = onRequireLogin,
                 )
-
                 is RoomDetailUiState.Error -> ErrorStateView(
                     title = "No pudimos cargar el cuarto",
                     message = UiErrorMessages.map(s.error),
@@ -90,21 +114,48 @@ fun RoomDetailScreen(
 }
 
 @Composable
-private fun RoomDetailContent(room: RoomDetail, modifier: Modifier = Modifier) {
+private fun RoomDetailContent(
+    room: RoomDetail,
+    isFavorite: Boolean,
+    onFavorite: () -> Unit,
+    onContact: () -> Unit,
+    onScheduleVisit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         item {
+            RoomPhotos(room)
+        }
+        item {
             TheHouseCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
-                Text(room.title, style = MaterialTheme.typography.headlineSmall)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Text(room.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.IconButton(onClick = onFavorite) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Quitar favorito" else "Guardar favorito",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Spacer(Modifier.height(Spacing.xs))
                 Text(
-                    "${room.price} ${room.currency}",
+                    text = "$${room.price} ${room.currency} / mes",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                room.roomType?.let { Text("Tipo: $it", style = MaterialTheme.typography.bodyMedium) }
+                room.roomType?.let { Text("Tipo de cuarto: $it", style = MaterialTheme.typography.bodyMedium) }
                 room.bathroom?.let { Text("Baño: $it", style = MaterialTheme.typography.bodyMedium) }
                 room.sizeM2?.let { Text("Tamaño: $it m²", style = MaterialTheme.typography.bodyMedium) }
-                Text("Distancia: ${room.distanceKm} km · ${room.walkingMinutes} min a pie")
+                Text("Distancia: ${room.distanceKm} km · ${room.walkingMinutes} min a pie (aprox.)")
+                Text("Ubicación aproximada: ${room.approxLocation.lat}, ${room.approxLocation.lng}")
+            }
+        }
+        // Acciones reales (D20): enlazadas a solicitudes y visitas, sin "próximamente".
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                TheHousePrimaryButton(text = "Contactar", onClick = onContact)
+                TheHouseSecondaryButton(text = "Agendar visita", onClick = onScheduleVisit)
             }
         }
         item {
@@ -134,13 +185,70 @@ private fun RoomDetailContent(room: RoomDetail, modifier: Modifier = Modifier) {
                 }
             }
         }
-        if (room.photos.isNotEmpty()) {
-            item { Text("Fotos (${room.photos.size})", style = MaterialTheme.typography.titleMedium) }
-            items(room.photos, key = { it.id }) { photo ->
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(photo.id, style = MaterialTheme.typography.bodySmall)
-                }
+    }
+}
+
+@Composable
+private fun RoomPhotos(room: RoomDetail) {
+    val photos = room.photos
+    when {
+        !room.thumbnailUrl.isNullOrBlank() -> {
+            val start = remember(room.thumbnailUrl) { System.nanoTime() }
+            AsyncImage(
+                model = room.thumbnailUrl,
+                contentDescription = "Foto de ${room.title}",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+            )
+            com.thehouse.app.perf.Perf.since("image.load.room_detail", start)
+        }
+        photos.isNotEmpty() -> {
+            val firstUrl = photos.firstNotNullOfOrNull { photo ->
+                photo.url.takeIf { it.isNotBlank() } ?: photo.thumbUrl.takeIf { it.isNotBlank() }
+            }
+            if (!firstUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = firstUrl,
+                    contentDescription = "Foto de ${room.title}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                )
+            } else {
+                PhotoPlaceholder(room.title)
             }
         }
+        else -> PhotoPlaceholder(room.title)
+    }
+}
+
+@Composable
+private fun PhotoPlaceholder(title: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Roofing,
+            contentDescription = "Sin foto disponible para $title",
+            modifier = Modifier.size(44.dp),
+            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+        )
     }
 }

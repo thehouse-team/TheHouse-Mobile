@@ -3,15 +3,17 @@ package com.thehouse.app.data.favorites.mapper
 import com.thehouse.app.data.remote.dto.favorites.FavoriteItemDto
 import com.thehouse.app.domain.model.Favorite
 
+/** Identidad principal: roomId. Legacy: propertyId solo si no hay roomId. */
 fun FavoriteItemDto.toDomain(): Favorite = Favorite(
-    propertyId = propertyId,
+    roomId = roomId ?: propertyId.orEmpty(),
     title = title,
     price = price,
     currency = currency,
+    roomType = roomType,
+    bathroom = bathroom,
     city = city,
-    universityId = universityId,
-    bedrooms = bedrooms,
-    bathrooms = bathrooms,
-    areaM2 = areaM2,
+    buildingId = buildingId,
     favoritedAt = favoritedAt,
+    propertyId = propertyId,
+    demo = demo,
 )

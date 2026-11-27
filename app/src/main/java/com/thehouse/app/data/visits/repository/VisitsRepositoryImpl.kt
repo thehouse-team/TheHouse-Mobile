@@ -24,6 +24,24 @@ class VisitsRepositoryImpl(
     private val json: Json,
 ) : VisitsRepository {
 
+    override suspend fun createRoomVisit(
+        roomId: String,
+        scheduledAt: String,
+        message: String?,
+        idempotencyKey: String,
+    ): Result<VisitCreation> = safeCall {
+        val response = api.createVisit(
+            idempotencyKey = idempotencyKey,
+            body = CreateVisitRequestDto(
+                roomId = roomId,
+                propertyId = null, // XOR contractual: nunca ambos
+                scheduledAt = scheduledAt,
+                message = message,
+            ),
+        )
+        visitCreationFrom(response)
+    }
+
     override suspend fun createVisit(
         propertyId: String,
         scheduledAt: String,
@@ -33,13 +51,18 @@ class VisitsRepositoryImpl(
         val response = api.createVisit(
             idempotencyKey = idempotencyKey,
             body = CreateVisitRequestDto(
+                roomId = null,
                 propertyId = propertyId,
                 scheduledAt = scheduledAt,
                 message = message,
             ),
         )
+        visitCreationFrom(response)
+    }
+
+    private fun visitCreationFrom(response: Response<com.thehouse.app.data.remote.dto.visits.VisitDto>): Result<VisitCreation> {
         val body = response.body()
-        if (response.isSuccessful && body != null) {
+        return if (response.isSuccessful && body != null) {
             Result.success(
                 VisitCreation(
                     visit = body.toDomain(),
@@ -104,6 +127,7 @@ class VisitsRepositoryImpl(
     private fun errorFor(response: Response<*>): VisitException {
         val code = parseCode(response)
         val domainError = when (response.code()) {
+            400, 422 -> DomainError.ValidationError
             401, 403 -> DomainError.Unauthorized
             404 -> DomainError.NotFound
             409 -> DomainError.Conflict

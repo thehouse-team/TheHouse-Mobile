@@ -76,6 +76,7 @@ import com.thehouse.app.presentation.navigation.BuildingDetailRoute
 import com.thehouse.app.presentation.navigation.BuildingFormRoute
 import com.thehouse.app.presentation.navigation.RoomFormRoute
 import com.thehouse.app.presentation.navigation.ScheduleVisitRoute
+import com.thehouse.app.presentation.navigation.ScheduleRoomVisitRoute
 import com.thehouse.app.presentation.navigation.VisitDetailRoute
 import com.thehouse.app.presentation.navigation.BottomTab
 import com.thehouse.app.presentation.navigation.TabNavigationState
@@ -148,10 +149,12 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
     val isAuthenticated = sessionState is SessionState.Active
     val isAccountSuspended = sessionState is SessionState.Suspended
     val displayName = (sessionState as? SessionState.Active)?.session?.displayName.orEmpty()
-
     LaunchedEffect(Unit) {
         rootViewModel.collect(container.sessionStore.state)
     }
+
+    // D20: sincronizar favoritos reales (roomIds) al iniciar sesión/cada cambio de sesión.
+    LaunchedEffect(isAuthenticated) { container.syncFavorites() }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -351,6 +354,13 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             }
                         },
                         factory = factory,
+                        roomsEnabled = true,
+                        onRoomClick = { roomId ->
+                            if (currentRoute != RoomDetailRoute.PATTERN && RoomDetailRoute.isValid(roomId)) {
+                                navController.navigate(RoomDetailRoute(roomId).route) { launchSingleTop = true }
+                            }
+                        },
+                        onFavoriteRoomClick = { _ -> Unit },
                         onOpenRequests = {
                             navController.navigate(AppRoutes.requests.route) { launchSingleTop = true }
                         },
@@ -411,6 +421,12 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             }
                         },
                         factory = factory,
+                        roomsEnabled = true,
+                        onRoomClick = { roomId ->
+                            if (currentRoute != RoomDetailRoute.PATTERN && RoomDetailRoute.isValid(roomId)) {
+                                navController.navigate(RoomDetailRoute(roomId).route) { launchSingleTop = true }
+                            }
+                        },
                     )
                 }
                 composable(
@@ -481,14 +497,17 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             }
                         },
                         onFavoriteClick = {
+                            // D20: el toggle real lo ejecuta SmartMatchViewModel con roomId.
                             if (!isAuthenticated) {
                                 navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                             }
-                            // Toggle de favoritos reutiliza flujo existente vía detalle/listas; no se duplica lógica aquí.
                         },
-                        onContactClick = {
+                        onContactClick = { roomId ->
                             if (!isAuthenticated) {
                                 navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            } else if (RoomDetailRoute.isValid(roomId)) {
+                                // D20: formulario real de solicitudes con roomId.
+                                navController.navigate(CreateRequestRoute(roomId).route) { launchSingleTop = true }
                             }
                         },
                     )
@@ -510,6 +529,20 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             onBack = { navController.popBackStack() },
                             onRequireLogin = {
                                 navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            },
+                            onContact = { id ->
+                                if (!isAuthenticated) {
+                                    navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                                } else {
+                                    navController.navigate(CreateRequestRoute(id).route) { launchSingleTop = true }
+                                }
+                            },
+                            onScheduleVisit = { id ->
+                                if (!isAuthenticated) {
+                                    navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                                } else {
+                                    navController.navigate(ScheduleRoomVisitRoute(id).route) { launchSingleTop = true }
+                                }
                             },
                         )
                     }
@@ -538,6 +571,11 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onRemove = { id -> favVm.onEvent(FavoritesEvent.Remove(id)) },
                         onRetry = { favVm.onEvent(FavoritesEvent.Load) },
                         isOnline = favOnline,
+                        onRoomClick = { roomId ->
+                            if (currentRoute != RoomDetailRoute.PATTERN && RoomDetailRoute.isValid(roomId)) {
+                                navController.navigate(RoomDetailRoute(roomId).route) { launchSingleTop = true }
+                            }
+                        },
                     )
                 }
                 composable(AppRoutes.visits.route) {
@@ -577,6 +615,35 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         ScheduleVisitDestination(
                             propertyId = propertyId,
                             factory = scheduleFactory,
+                            onBack = { navController.popBackStack() },
+                            onCreated = { visit ->
+                                navController.navigate(VisitDetailRoute(visit.id).route) {
+                                    popUpTo(AppRoutes.visits.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+                }
+                // D20: agendar visita con roomId real (XOR roomId/propertyId).
+                composable(
+                    route = ScheduleRoomVisitRoute.PATTERN,
+                    arguments = listOf(navArgument(ScheduleRoomVisitRoute.ID_ARGUMENT) {
+                        type = NavType.StringType
+                    }),
+                ) { entry ->
+                    val roomId = entry.arguments?.getString(ScheduleRoomVisitRoute.ID_ARGUMENT).orEmpty()
+                    if (!isAuthenticated || !RoomDetailRoute.isValid(roomId)) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(if (!isAuthenticated) AppRoutes.login.route else AppRoutes.visits.route) {
+                                launchSingleTop = true
+                            }
+                        }
+                    } else {
+                        val roomScheduleFactory = remember(factory, roomId) { factory.scheduleRoomVisit(roomId) }
+                        ScheduleVisitDestination(
+                            propertyId = roomId,
+                            factory = roomScheduleFactory,
                             onBack = { navController.popBackStack() },
                             onCreated = { visit ->
                                 navController.navigate(VisitDetailRoute(visit.id).route) {

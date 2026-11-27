@@ -43,8 +43,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.catalog.CatalogLoadState
+import com.thehouse.app.presentation.catalog.RoomSearchState
 import com.thehouse.app.presentation.catalog.errorMessage
 import com.thehouse.app.presentation.components.PropertyCard
+import com.thehouse.app.presentation.components.RoomCard
 import com.thehouse.app.presentation.components.SectionHeader
 import com.thehouse.app.presentation.components.StatusChip
 import com.thehouse.app.presentation.components.StatusTone
@@ -56,17 +58,9 @@ import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
 
 /**
- * Home visual (D4 diseño + D5 datos reales, NV-05/NV-06/NV-07).
- *
- * - Universidad seleccionada REAL (lista backend + persistencia local;
- *   sin UTTT hardcodeada productiva).
- * - Propiedad destacada REAL = primera disponible (regla UI local,
- *   no marcada por el backend).
- * - Solo campos del contrato (sin Match/verificación/distancia inventados).
- * - Estados loading/empty/error + retry para universidades y propiedades.
- * - Guest y Auth comparten shell; acciones protegidas → Login.
- *
- * La barra inferior vive en el shell (MainActivity D4).
+ * Home visual (D4/D5 + D19.1 + D20). Diseño aprobado preservado: un solo header
+ * en el shell, saludo, universidad, buscador, Smart Match, recomendados, bottom nav.
+ * D20: los recomendados son habitaciones reales de `rooms/search` con roomId real.
  */
 @Composable
 fun HomeScreen(
@@ -78,6 +72,9 @@ fun HomeScreen(
     onPropertyClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     factory: U2ViewModelFactory,
+    roomsEnabled: Boolean = true,
+    onRoomClick: (String) -> Unit = {},
+    onFavoriteRoomClick: (String) -> Unit = {},
     onOpenRequests: () -> Unit = {},
     onOpenConversations: () -> Unit = {},
     onOpenLandlordRequests: () -> Unit = {},
@@ -92,7 +89,6 @@ fun HomeScreen(
     onOpenQuickSetup: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = factory)
-    // Lifecycle-aware: sin colección (ni trabajo) mientras la UI no esté visible.
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showUniversityPicker by remember { mutableStateOf(false) }
 
@@ -101,6 +97,7 @@ fun HomeScreen(
             when (effect) {
                 HomeEffect.LoggedOut -> onLoggedOut()
                 HomeEffect.RequireLogin -> onRequireLogin()
+                is HomeEffect.Message -> Unit
             }
         }
     }
@@ -127,57 +124,56 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Spacing.xl),
         ) {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    Text(
-                        text = if (state.isGuest) {
-                            "Hola, invitado 👋"
-                        } else if (displayName.isNotBlank()) {
-                            "Hola, $displayName 👋"
-                        } else {
-                            "Hola 👋"
-                        },
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Saludo de inicio"
-                        },
-                    )
-                    Text(
-                        text = if (state.isGuest) {
-                            "Explorando como invitado. Inicia sesión para guardar favoritos y contactar."
-                        } else {
-                            "Encuentra tu próximo espacio cerca de tu universidad."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                TheHouseSearchBar(
-                    hint = "Busca rentas por título o ciudad",
-                    onClick = onNavigateToExplore,
-                )
-
-                UniversitySection(
-                    state = state,
-                    showPicker = showUniversityPicker,
-                    onTogglePicker = { showUniversityPicker = !showUniversityPicker },
-                    onSelect = { id ->
-                        viewModel.onEvent(HomeEvent.UniversitySelected(id))
-                        showUniversityPicker = false
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text(
+                    text = if (state.isGuest) {
+                        "Hola, invitado 👋"
+                    } else if (displayName.isNotBlank()) {
+                        "Hola, $displayName 👋"
+                    } else {
+                        "Hola 👋"
                     },
-                    onRetry = { viewModel.onEvent(HomeEvent.RetryUniversitiesClicked) },
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.semantics { contentDescription = "Saludo de inicio" },
                 )
-
-                SmartMatchPromo(onClick = onNavigateToSmartMatch)
-
-                SectionHeader(
-                    title = "Recomendados para ti",
-                    subtitle = "Opciones reales cerca de tu universidad",
-                    actionLabel = "Ver todas",
-                    onAction = onNavigateToExplore,
+                Text(
+                    text = if (state.isGuest) {
+                        "Explorando como invitado. Inicia sesión para guardar favoritos y contactar."
+                    } else {
+                        "Encuentra tu próximo espacio cerca de tu universidad."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
 
+            TheHouseSearchBar(
+                hint = "Busca rentas por título o ciudad",
+                onClick = onNavigateToExplore,
+            )
+
+            UniversitySection(
+                state = state,
+                showPicker = showUniversityPicker,
+                onTogglePicker = { showUniversityPicker = !showUniversityPicker },
+                onSelect = { id ->
+                    viewModel.onEvent(HomeEvent.UniversitySelected(id))
+                    showUniversityPicker = false
+                },
+                onRetry = { viewModel.onEvent(HomeEvent.RetryUniversitiesClicked) },
+            )
+
+            SmartMatchPromo(onClick = onNavigateToSmartMatch)
+
+            SectionHeader(
+                title = "Recomendados para ti",
+                subtitle = "Opciones reales cerca de tu universidad",
+                actionLabel = "Ver todas",
+                onAction = onNavigateToExplore,
+            )
+
+            if (!roomsEnabled) {
                 when (val properties = state.properties) {
                     CatalogLoadState.Loading -> LoadingRow(text = "Buscando rentas…")
                     CatalogLoadState.Empty -> EmptyMessage("Sin propiedades disponibles.")
@@ -186,8 +182,7 @@ fun HomeScreen(
                         onRetry = { viewModel.onEvent(HomeEvent.RetryPropertiesClicked) },
                     )
                     is CatalogLoadState.Success -> {
-                        val featured = state.featuredProperty
-                        if (featured != null) {
+                        state.featuredProperty?.let { featured ->
                             PropertyCard(
                                 property = featured,
                                 onFavoriteClick = { viewModel.onEvent(HomeEvent.FavoriteClicked) },
@@ -197,35 +192,59 @@ fun HomeScreen(
                         }
                     }
                 }
-
-                TheHouseSecondaryButton(
-                    text = "Publicar mi renta",
-                    onClick = { viewModel.onEvent(HomeEvent.PublishClicked) },
-                )
-
-                // D15: el panel "Tu cuenta" y sus 12 acciones viven ahora en el
-                // drawer global del shell. Home conserva solo su contenido y la
-                // tarjeta pública de privacidad.
-
-                // NV-15: acceso a privacidad, disponible también como invitado
-                // (sin sesión no hay eliminación de cuenta).
-                TheHouseCard(onClick = onOpenPrivacy) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        ActionIcon(Icons.Outlined.PrivacyTip)
-                        Text(
-                            text = "Privacidad",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f),
-                        )
+            } else {
+                when (val rooms = state.rooms) {
+                    RoomSearchState.Loading -> LoadingRow(text = "Buscando alojamientos…")
+                    RoomSearchState.Empty -> {
+                        EmptyMessage("Selecciona una universidad para ver alojamientos cerca de ti.")
+                    }
+                    is RoomSearchState.Error -> ErrorMessage(
+                        message = rooms.errorMessage() ?: "Algo salió mal.",
+                        onRetry = { viewModel.onEvent(HomeEvent.RefreshRoomsClicked) },
+                    )
+                    is RoomSearchState.Content -> {
+                        rooms.items.take(3).forEach { room ->
+                            RoomCard(
+                                room = room,
+                                onRoomClick = { onRoomClick(room.roomId) },
+                                onFavoriteClick = {
+                                    viewModel.onEvent(HomeEvent.FavoriteRoomClicked(room.roomId))
+                                    onFavoriteRoomClick(room.roomId)
+                                },
+                                isFavorite = room.roomId in state.favoriteRoomIds,
+                            )
+                        }
+                        if (rooms.page < rooms.totalPages) {
+                            TextButton(onClick = { viewModel.onEvent(HomeEvent.LoadMoreRoomsClicked) }) {
+                                Text("Ver más alojamientos")
+                            }
+                        }
                     }
                 }
             }
+
+            TheHouseSecondaryButton(
+                text = "Publicar mi renta",
+                onClick = { viewModel.onEvent(HomeEvent.PublishClicked) },
+            )
+
+            TheHouseCard(onClick = onOpenPrivacy) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    ActionIcon(Icons.Outlined.PrivacyTip)
+                    Text(
+                        text = "Privacidad",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
+    }
 }
 
 @Composable
@@ -291,10 +310,7 @@ private fun UniversitySection(
                                         onClick = { onSelect(university.id) },
                                     )
                                     Column {
-                                        Text(
-                                            text = university.name,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                        )
+                                        Text(text = university.name, style = MaterialTheme.typography.bodyLarge)
                                         Text(
                                             text = university.city,
                                             style = MaterialTheme.typography.bodySmall,
@@ -339,7 +355,6 @@ private fun SmartMatchPromo(onClick: () -> Unit) {
     }
 }
 
-
 @Composable
 private fun ActionIcon(
     icon: ImageVector,
@@ -365,43 +380,24 @@ private fun ActionIcon(
 @Composable
 private fun LoadingRow(text: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = Spacing.md),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(IconSizes.md),
-            strokeWidth = 2.dp,
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        CircularProgressIndicator(modifier = Modifier.size(IconSizes.md), strokeWidth = 2.dp)
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun EmptyMessage(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
 private fun ErrorMessage(message: String, onRetry: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-        TextButton(onClick = onRetry) {
-            Text("Reintentar")
-        }
+        Text(text = message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        TextButton(onClick = onRetry) { Text("Reintentar") }
     }
 }
