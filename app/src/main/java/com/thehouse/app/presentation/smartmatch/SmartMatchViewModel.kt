@@ -373,6 +373,7 @@ class SmartMatchViewModel(
          */
         private fun com.thehouse.app.data.remote.dto.smartmatch.SmartMatchRecommendationDto.toDomain(): SmartMatchResult {
             val score = (matchScore ?: 0).coerceIn(0, 100)
+            val scoreMissing = matchScore == null
             val property = Property(
                 id = roomId,
                 title = title ?: "",
@@ -404,6 +405,15 @@ class SmartMatchViewModel(
                 },
                 source = SmartMatchSource.BACKEND,
                 modelVersion = SmartMatchModelVersions.SERVER_MODEL_VERSION,
+                scoreUnavailable = scoreMissing,
+                // DTO público no expone estos campos: no se inventan.
+                distanceKm = null,
+                walkingMinutes = null,
+                roomType = null,
+                buildingType = null,
+                allowedTenants = null,
+                services = emptyList(),
+                thumbnailUrl = null,
             )
         }
 
@@ -440,6 +450,14 @@ class SmartMatchViewModel(
                 },
                 source = SmartMatchSource.BACKEND,
                 modelVersion = SmartMatchModelVersions.SERVER_MODEL_VERSION,
+                scoreUnavailable = false,
+                distanceKm = room.distanceKm,
+                walkingMinutes = room.walkingMinutes,
+                roomType = room.roomType,
+                buildingType = room.buildingType,
+                allowedTenants = room.allowedTenants,
+                services = room.services,
+                thumbnailUrl = room.thumbnailUrl,
             )
         }
     }

@@ -83,6 +83,9 @@ class HomeViewModel(
     private val selectUniversity: SelectUniversityUseCase? = null,
     private val getUnreadNotificationsCount: GetUnreadNotificationsCountUseCase? = null,
     private val pushRefreshSignals: Flow<Unit> = emptyFlow(),
+    /** D19.1: universidad guardada en Perfil (fuente de verdad remota). */
+    private val profileUniversityState: Flow<com.thehouse.app.domain.model.University?>? = null,
+    private val refreshProfile: suspend () -> Unit = {},
 ) : BaseViewModel<HomeUiState, HomeEvent, HomeEffect>(HomeUiState()) {
 
     private var unreadEtag: String? = null
@@ -108,6 +111,19 @@ class HomeViewModel(
             launch {
                 selectedRepository.loadSelected()
                 updateState { it.copy(selectedUniversityId = selectedRepository.selectedUniversityId.value) }
+            }
+        }
+        // D19.1: la universidad guardada en Perfil manda sobre la copia local
+        // cuando hay sesión activa. Se recarga al entrar para no depender de una
+        // copia desactualizada tras guardar cambios en Mi perfil.
+        if (sessionState.value is com.thehouse.app.domain.model.SessionState.Active) {
+            launch {
+                runCatching { refreshProfile() }
+                profileUniversityState?.collect { university ->
+                    if (university != null) {
+                        updateState { it.copy(selectedUniversityId = university.id) }
+                    }
+                }
             }
         }
         loadUniversities()

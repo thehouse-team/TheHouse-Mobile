@@ -198,7 +198,7 @@ class D19AccountUxCoreTest {
         assertEquals("2026-11", state.legalInfo?.privacyVersion)
         assertNull(state.legalInfo?.privacyUrl)
         assertEquals(
-            "El aviso de privacidad está disponible dentro de la aplicación.",
+            "El aviso de privacidad aún no ha sido publicado.",
             state.privacyStatus,
         )
     }
