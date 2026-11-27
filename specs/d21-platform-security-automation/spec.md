@@ -136,18 +136,33 @@ contratos HTTP, DTOs, repositorios, casos de uso, lógica de sesión, navegació
 
 **Alcance visual autorizado:**
 
+**Alcance visual CORREGIDO (estricto,tras rechazo del usuario):**
+
 | ID | Requisito visual | Criterio |
 |---|---|---|
-| D21-V01 | "Publicar mi renta" más visible en Home | CTA de acento con icono, ubicado antes del bloque de recomendados; sin FAB; conserva `HomeEvent.PublishClicked` |
-| D21-V02 | "Privacidad" mejor integrada en Home | Acceso secundario discreto conservando `onOpenPrivacy` |
-| D21-V03 | Composición general de Home | Espaciados/jerarquía consistentes; sin elementos "tirados" al final |
-| D21-V04 | Tarjetas de Favoritos más atractivas | Jerarquía título/ubicación/precio, metadata en chips, "Demo" como chip, CTA limpio; sin tocar lógica del corazón ni endpoints |
-| D21-V05 | Conversación más cuidada | Burbujas, espaciado, separación del header, composer, contador y estado vacío; sin cambiar eventos ni límite de 1000 caracteres |
+| D21-V01 | Reubicar "Publicar mi renta" | MISMO botón `TheHouseSecondaryButton` original; solo cambia su posición (antes del listado de alojamientos). Sin tarjeta nueva, subtítulo, icono ni color nuevo. Conserva `HomeEvent.PublishClicked` |
+| D21-V02 | Retirar "Privacidad" redundante de Inicio | Se elimina el acceso al final de Home; permanece en drawer y flujos legales existentes. Sin modificar drawer |
+| D21-V03 | Mejorar tarjetas de Favoritos | Solo `FavoriteCard`: título, precio, ubicación, acción quitar y distribución interna. Sin componentes compartidos ni lógica |
+| D21-V04 | Mejorar estética de Conversación | Solo burbujas, presentación de horas, campo de entrada y botón enviar. Sin tocar header, estructura, estados ni contratos |
+
+**Prohibido expresamente:** rediseño general de Home, cambios de espaciados/tipografía/colores
+generales, tarjetas nuevas, estados vacíos nuevos, divisores, chips compartidos, cambios en
+Smart Match Promo, buscador, catálogo, recomendaciones, header, tema global, componentes
+compartidos, Nuevo edificio, geolocalización, permisos, FCM, Backend, GenAI, ML, ONNX ni infra.
 
 **Restricciones de regresión:** se preservan las 645 pruebas existentes y todas las
 funcionalidades previamente certificadas (D19.1/D20/D21/NV-20). Los tests estructurales de
 Home exigen: sin `BrandMark(` propio, con `SmartMatchPromo(onClick = onNavigateToSmartMatch)`,
 `onOpenPrivacy`, `PublishClicked` y `TheHouseSearchBar`.
 
-**Estado:** APROBADO / IMPLEMENTADO / TESTED / EVIDENCIADO. RUNTIME VISUAL PENDIENTE de
-validación y aprobación humana. SIN MERGE.
+**Estado:** CORREGIDO AL ALCANCE ESTRICTO / IMPLEMENTADO / TESTED / EVIDENCIADO.
+RUNTIME VISUAL PENDIENTE de validación y aprobación humana. SIN MERGE.
+
+### Corrección de exceso de alcance (commit correctivo)
+
+La revisión humana rechazó el primer intento (`24a0686`) por modificar elementos visuales que
+estaban bien y no fueron solicitados: tarjeta CTA nueva con icono/subtítulo/borde, cambio de
+espaciado global de Home, acceso de Privacidad rediseñado, chips/divisor en Favoritos, estado
+vacío/divisor/cambios de espaciado general en Conversación. Se restauró cada archivo desde
+`735a697` (`git checkout 735a697 -- <archivo>`, sin `reset --hard` ni force push) y se reaplicaron
+únicamente los cuatro cambios autorizados. No se revirtió ninguna implementación funcional de D21.

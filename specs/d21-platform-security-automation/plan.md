@@ -29,14 +29,15 @@
 | P12 | D21-T12 | Presentación: iconos coherentes, texto del Backend, fallback genérico sin exponer enums | Tests de bandeja mixta |
 | P13 | D21-T13 | Pruebas HTTP locales (MockWebServer) para room 200/404 y regresiones; evidence y reporte adicional | Gates + reporte §8 |
 
-## ADENDA VISUAL (misma rama / PR #37)
+## ADENDA VISUAL (misma rama / PR #37) — ALCANCE ESTRICTO CORREGIDO
 
 | Fase | Task | Descripción | Verificación |
 |---|---|---|---|
-| P14 | D21-T14 | Home: CTA "Publicar mi renta" elevado a tarjeta de acento antes de recomendados; "Privacidad" como acceso secundario | Regresión estructural Home + gates |
-| P15 | D21-T15 | Favoritos: rediseño visual de `FavoriteCard` (jerarquía, chips, "Demo", CTA) sin tocar lógica | Compilación + gates + diff de dominio/cero |
-| P16 | D21-T16 | Conversación: burbujas, separación del header, composer y estado vacío; sin cambiar eventos | Compilación + gates + tests ViewModel intactos |
-| P17 | D21-T17 | Registro documental, 645 pruebas preservadas, gates locales + CI remoto del PR #37 | `gh pr checks 37` + evidence |
+| P14 | D21-T14 | Home: SOLO mover el botón original "Publicar mi renta" antes del listado; SOLO retirar la tarjeta de Privacidad del final | Diff contra `735a697`: 2 bloques, sin otros cambios |
+| P15 | D21-T15 | Favoritos: polish moderado exclusivamente en `FavoriteCard` (título, precio, ubicación, distribución, acción quitar) | Diff contra `735a697`: solo `FavoriteCard` |
+| P16 | D21-T16 | Conversación: SOLO burbujas, hora, campo de entrada y botón enviar | Diff contra `735a697`: 4 bloques; header/estructura intactos |
+| P17 | D21-T17 | Restaurar cambios no autorizados desde `735a697`, documentar, gates locales + CI remoto del PR #37 | `git diff 735a697`, 645 tests, `gh pr checks 37` |
 
-Reglas de la adenda: sin rama nueva, sin PR nuevo, sin merge, sin Backend/ML/GenAI/ONNX/infra,
-sin mover "Nuevo edificio", sin reducir umbrales, esperar aprobación humana de la validación visual.
+Reglas: sin rama nueva, sin PR nuevo, sin merge, sin force push ni reescritura de historial;
+sin Backend/GenAI/ML/ONNX/infra; sin mover "Nuevo edificio"; sin componentes compartidos ni tema
+global; sin mejoras por iniciativa propia; esperar aprobación humana de la validación visual.

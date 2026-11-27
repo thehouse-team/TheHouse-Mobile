@@ -31,17 +31,21 @@
 - [x] Pruebas de 6 tipos, bandeja mixta, 200/404, guest, push y regresiones
 - [ ] Despliegue productivo de los 6 tipos - NO CONFIRMADO (runtime pendiente)
 
-## ADENDA VISUAL — checklist
+## ADENDA VISUAL — checklist (ALCANCE ESTRICTO CORREGIDO)
 
 - [x] Misma rama `feature/platform-security-automation` y PR #37 (sin rama/PR nuevos)
-- [x] Home: "Publicar mi renta" elevado y visible; "Privacidad" como acceso secundario
-- [x] Home: sin BrandMark propio; SmartMatchPromo intacto; tests estructurales preservados
-- [x] Favoritos: tarjeta pulida sin cambios en lógica del corazón ni endpoints
-- [x] Conversación: burbujas/composer/contador/estado vacío sin cambiar eventos ni límite 1000
-- [x] Sin tocar Backend/GenAI/ML/ONNX/infra/contratos/DTOs/sesión/navegación/Drawer/MainActivity
+- [x] Cambios no autorizados restaurados desde `735a697` con `git checkout` (sin reset/force push)
+- [x] Home: SOLO botón original "Publicar mi renta" movido antes del listado (mismo diseño/callback)
+- [x] Home: SOLO tarjeta redundante de Privacidad retirada; disponible en drawer y flujos legales
+- [x] Home: espaciados, tipografía, colores, tarjetas, SmartMatchPromo, buscador y header = `735a697`
+- [x] Favoritos: SOLO `FavoriteCard` (título, precio, ubicación, distribución, acción quitar)
+- [x] Conversación: SOLO burbujas, hora, campo de entrada y botón enviar
+- [x] Sin estado vacío nuevo, divisor, chip compartido ni cambio de espaciado general
+- [x] Sin tocar Backend/GenAI/ML/ONNX/infra/contratos/DTOs/sesión/navegación/Drawer/MainActivity/theme/componentes compartidos
 - [x] Sin mover "Nuevo edificio" (pendiente del responsable de Backend)
-- [x] 645 pruebas existentes preservadas; incremento solo si hay nueva prueba visual
+- [x] 645 pruebas existentes preservadas
+- [x] `git diff 735a697` revisado bloque por bloque: cada cambio justificado por una de las 4 solicitudes
 - [x] Gates locales ejecutados (ver evidence.md)
-- [ ] CI remoto del PR #37 verificado
+- [ ] CI remoto del PR #37 verificado tras el commit correctivo
 - [ ] Validación visual y aprobación humana - PENDIENTE
 - [ ] Merge - NO AUTORIZADO (no ejecutar)

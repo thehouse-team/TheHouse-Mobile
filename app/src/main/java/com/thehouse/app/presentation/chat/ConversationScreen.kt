@@ -96,7 +96,7 @@ fun ConversationScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             when {
                 state.isLoadingInitial -> LoadingView(
@@ -119,31 +119,8 @@ fun ConversationScreen(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("conversation_messages"),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        if (state.messages.isEmpty()) {
-                            item {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = Spacing.xxxl),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                ) {
-                                    Text(
-                                        text = "Aún no hay mensajes",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        text = "Escribe el primero para iniciar la conversación.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
                         if (state.hasMoreHistory) {
                             item {
                                 Text(
@@ -212,9 +189,7 @@ private fun MessageBubble(
         )
     }
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = Spacing.xs),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = alignment,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
@@ -236,13 +211,12 @@ private fun MessageBubble(
                 MaterialTheme.colorScheme.onSurface
             },
             modifier = Modifier.widthIn(min = 96.dp, max = 320.dp),
-            shadowElevation = com.thehouse.app.ui.theme.Elevations.card,
         ) {
             Text(
                 text = message.text,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
-                    .padding(horizontal = Spacing.md, vertical = Spacing.sm)
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm + Spacing.xs)
                     .semantics {
                         contentDescription =
                             (if (message.mine) "Tú: " else "Mensaje: ") + message.text
@@ -253,7 +227,7 @@ private fun MessageBubble(
             Text(
                 text = formatInstant(createdAt),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
             )
         }
     }
@@ -270,11 +244,8 @@ private fun Composer(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        androidx.compose.material3.HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-        )
         if (isClosed) {
             Text(
                 text = "Esta conversación está cerrada.",
@@ -292,7 +263,7 @@ private fun Composer(
                 onValueChange = onTextChanged,
                 label = "Mensaje",
                 placeholder = "Escribe un mensaje…",
-                supportingText = "${text.length} / 1000 caracteres",
+                supportingText = "${text.length} / 1000",
                 enabled = !isClosed,
                 singleLine = false,
                 minLines = 1,

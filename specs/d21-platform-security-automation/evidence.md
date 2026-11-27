@@ -103,6 +103,54 @@ Conteo real desde `app/build/test-results/testDebugUnitTest/TEST-*.xml`:
 - Runs previos del commit `2d915e9` también pass: `46034528657` y `46034538488`.
 - `gh pr view 37` tras el push: `OPEN`, `MERGEABLE`, head `feature/platform-security-automation`. Sin merge.
 
-### Pendiente
+### Pendiente (registro anterior, supersedido por la corrección abajo)
 - Validación visual y aprobación humana: PENDIENTE.
 - Merge: NO AUTORIZADO / NO EJECUTADO.
+
+---
+
+## CORRECCIÓN POR EXCESO DE ALCANCE (2026-11-27)
+
+El usuario rechazó el primer intento (`24a0686`). Se restauró la base visual aprobada
+`735a697` y se reaplicaron SOLO las cuatro solicitudes autorizadas.
+
+### Restauración
+- `git checkout 735a697 -- HomeScreen.kt FavoritesScreen.kt ConversationScreen.kt`
+  (sin `git reset --hard`, sin force push, sin reescribir historial; la implementación
+  funcional D21 de `735a697` permanece intacta).
+- Se eliminaron: tarjeta CTA nueva con icono/subtítulo/borde/flecha, cambio de `Spacing.xl`→`lg`,
+  acceso de Privacidad rediseñado, `InfoChip`/`StatusChip`/`HorizontalDivider` en Favoritos,
+  estado vacío/divisor/`contentPadding`/cambio de espaciado general en Conversación.
+
+### Verificación bloque por bloque contra `735a697`
+| Archivo | Bloques modificados | Solicitud que lo justifica |
+|---|---|---|
+| `HomeScreen.kt` | 1) `TheHouseSecondaryButton("Publicar mi renta")` movido de la cola a antes del listado; 2) tarjeta `TheHouseCard(onClick = onOpenPrivacy)` eliminada | (1) Reubicar Publicar; (2) Retirar Privacidad redundante |
+| `FavoritesScreen.kt` | Solo `FavoriteCard`: `titleLarge`, alineación `Top`, `spacedBy(xs)` interno, `spacedBy(md)` externo; precio/ubicación/CTA sin cambios funcionales | (3) Mejorar tarjetas de Favoritos |
+| `ConversationScreen.kt` | 4 bloques: etiqueta `labelMedium`, `widthIn(min=96,max=320)` + padding vertical, hora con alpha 0.85, contador `N / 1000`, colores del botón enviar | (4) Mejorar estética de Conversación |
+
+- Todo lo demás de esos archivos es byte-idéntico a `735a697`.
+- `PrivacyTip`/`onOpenPrivacy` se conservan en la firma (test estructural `HomeAccountBlockRemovalTest`
+  exige `onOpenPrivacy`). Privacidad verificada en `DrawerItemCatalog` (guest + auth),
+  `DrawerNavigationCatalog`, `MainActivity` y `AppRoutes.privacy`; drawer NO modificado.
+- Sin componentes compartidos, tema global, ViewModels, DTOs, repositorios, casos de uso,
+  navegación, FCM, permisos, Backend, GenAI, ML, ONNX ni "Nuevo edificio".
+- `git diff --name-only 735a697 -- app/src/main` filtrado por
+  `ViewModel|Dtos|Repository|UseCase|MainActivity|AndroidManifest|ui/theme|Domain|data/|notification|device/|components/`
+  → **0 archivos**.
+
+### Gates tras la corrección
+| Comando | Resultado |
+|---|---|
+| `.\gradlew.bat compileDebugKotlin --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat testDebugUnitTest --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat lintDebug --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat assembleDebug --no-daemon` | BUILD SUCCESSFUL |
+| `git diff --check` | exit 0 |
+
+Conteo real: **645 tests, 0 failures, 0 errors** (baseline preservado).
+
+### Estado
+- Commit correctivo y CI remoto: ver registro final del reporte.
+- Validación visual y aprobación humana: **PENDIENTE**.
+- Merge: **NO AUTORIZADO / NO EJECUTADO**.
