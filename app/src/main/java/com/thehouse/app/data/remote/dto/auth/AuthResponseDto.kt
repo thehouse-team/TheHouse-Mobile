@@ -50,6 +50,16 @@ data class CurrentUserDto(
     val id: String,
     val email: String,
     val createdAt: String,
+    /** D19: aceptación legal vigente del usuario (puede ser null). */
+    val legal: LegalAcceptanceDto? = null,
+    val legalUpToDate: Boolean = true,
+)
+
+@Serializable
+data class LegalAcceptanceDto(
+    val termsVersion: String? = null,
+    val privacyVersion: String? = null,
+    val acceptedAt: String? = null,
 )
 
 /**

@@ -11,13 +11,18 @@ import okhttp3.Response
  * Interceptor Bearer: agrega `Authorization: Bearer <accessToken>` en memoria
  * cuando hay sesión y la solicitud aún no lleva header.
  *
- * - Nunca loguea el token (ver [com.thehouse.app.data.remote.SafeHttpLoggingInterceptor]).
  * - Omite endpoints de auth que no usan Bearer (`login`, `register`, `refresh`).
- *   `logout` SÍ lleva Bearer según contrato D3 (revoca access + familia refresh).
- *   `GET /users/me` SÍ lleva Bearer.
+ *   `logout` SÍ lleva Bearer según contrato D3; `GET /users/me` también.
+ * - D19: si la sesión está Activa pero el access token aún no se hidrató
+ *   (null/expirado), ejecuta un refresh single-flight ANTES de enviar la
+ *   request protegida. Si el refresh falla, se envía la request sin token
+ *   (Backend 401) y la sesión ya quedó limpia → la UI deriva a Login.
+ * - Reintento máximo UNO: el token se refresca una sola vez por request.
+ * - Nunca loguea el token (ver [SafeHttpLoggingInterceptor]).
  */
 class BearerTokenInterceptor(
     private val sessionStore: InMemorySessionStore,
+    private val tokenRefresher: TokenRefresher? = null,
 ) : Interceptor {
 
     private val json = JsonProvider.create()
@@ -42,7 +47,13 @@ class BearerTokenInterceptor(
         if (original.header("Authorization") != null) {
             return observeSuspension(chain.proceed(original))
         }
-        val token = sessionStore.accessToken
+
+        var token = sessionStore.accessToken
+        if (token.isNullOrBlank() && sessionStore.state.value is SessionState.Active) {
+            // D19: hidratación sin red duplicada: el refresher es single-flight
+            // y solo actúa cuando NO hay access token en memoria.
+            token = tokenRefresher?.refreshIfNeeded()
+        }
         if (token.isNullOrBlank()) {
             return observeSuspension(chain.proceed(original))
         }

@@ -181,6 +181,8 @@ class U2ViewModelFactory(
                 privacyPolicyUrl = container.config.privacyPolicyUrl,
                 sessionState = container.sessionStore.state,
                 deleteAccount = container.deleteAccount,
+                legalRepository = container.legalRepository,
+                legalUpToDateProvider = { container.legalUpToDate.value },
             )
         }
     }
@@ -354,6 +356,15 @@ class U2ViewModelFactory(
                 preferenceRepository = container.preferencesRepository,
                 getPreferences = container.getPreferences,
                 savePreferences = container.savePreferences,
+            ) as T
+
+        // HOTFIX: LandlordDashboardDestination crea este ViewModel con el factory
+        // genérico cuando el usuario aún no tiene perfil de arrendador. Sin este
+        // branch, `create()` lanza IllegalArgumentException y la app crashea al
+        // abrir "Mis alojamientos" (confirmado por dropbox data_app_crash).
+        modelClass.isAssignableFrom(com.thehouse.app.presentation.landlord.LandlordProfileViewModel::class.java) ->
+            com.thehouse.app.presentation.landlord.LandlordProfileViewModel(
+                activateLandlord = container.activateLandlord,
             ) as T
 
         modelClass.isAssignableFrom(QuickSetupViewModel::class.java) ->

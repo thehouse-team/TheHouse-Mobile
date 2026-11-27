@@ -1,5 +1,7 @@
 package com.thehouse.app.presentation.profile
 
+import com.thehouse.app.domain.error.DomainError
+import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.SessionState
 import com.thehouse.app.domain.model.University
 import com.thehouse.app.domain.model.UserProfile
@@ -56,8 +58,10 @@ sealed interface ProfileEvent : UiEvent {
     data object ClearMessages : ProfileEvent
 }
 
-/** La pantalla de perfil no necesita efectos one-shot: navega por callbacks. */
-sealed interface ProfileEffect : UiEffect
+/** Efectos one-shot del perfil (D19: 401 definitivo → login). */
+sealed interface ProfileEffect : UiEffect {
+    data object RequireLogin : ProfileEffect
+}
 
 class ProfileViewModel(
     private val profileRepository: ProfileRepository,
@@ -157,12 +161,16 @@ class ProfileViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {
+                val unauthorized = (throwable as? DomainException)?.error == DomainError.Unauthorized
                 updateState {
                     it.copy(
                         isLoading = false,
-                        error = throwable.toSafeUiMessage(),
+                        // D19: un 401 definitivo NO es un error genérico; la UI
+                        // navega a Login mediante el efecto RequireLogin.
+                        error = if (unauthorized) null else throwable.toSafeUiMessage(),
                     )
                 }
+                if (unauthorized) sendEffect(ProfileEffect.RequireLogin)
             }
         }
         loadUniversities()

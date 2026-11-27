@@ -74,6 +74,12 @@ class PrivacyViewModelTest {
         deleteAccount = DeleteAccountUseCase(accountRepository, purger, session),
     )
 
+    /** D19: rellena password y confirmación explícita antes de confirmar. */
+    private fun fillDeleteForm(viewModel: PrivacyViewModel) {
+        viewModel.onEvent(PrivacyEvent.DeletePasswordChanged("clave-correcta"))
+        viewModel.onEvent(PrivacyEvent.DeleteConfirmationChanged(PrivacyViewModel.CONFIRMATION))
+    }
+
     private fun TestScope.recordEffects(viewModel: PrivacyViewModel): Pair<MutableList<PrivacyEffect>, Job> {
         val effects = mutableListOf<PrivacyEffect>()
         val job = backgroundScope.launch {
@@ -186,6 +192,8 @@ class PrivacyViewModelTest {
         val (effects, _) = recordEffects(viewModel)
 
         viewModel.onEvent(PrivacyEvent.DeleteAccountClicked)
+        runCurrent()
+        fillDeleteForm(viewModel)
         viewModel.onEvent(PrivacyEvent.ConfirmDeleteClicked)
         runCurrent()
 
@@ -218,6 +226,8 @@ class PrivacyViewModelTest {
         assertTrue(viewModel.uiState.value.isAuthenticated)
 
         viewModel.onEvent(PrivacyEvent.DeleteAccountClicked)
+        runCurrent()
+        fillDeleteForm(viewModel)
         viewModel.onEvent(PrivacyEvent.ConfirmDeleteClicked)
         runCurrent()
 
@@ -244,6 +254,8 @@ class PrivacyViewModelTest {
         val (effects, _) = recordEffects(viewModel)
 
         viewModel.onEvent(PrivacyEvent.DeleteAccountClicked)
+        runCurrent()
+        fillDeleteForm(viewModel)
         viewModel.onEvent(PrivacyEvent.ConfirmDeleteClicked)
         runCurrent()
 
@@ -294,6 +306,8 @@ class PrivacyViewModelTest {
         val (effects, _) = recordEffects(viewModel)
 
         viewModel.onEvent(PrivacyEvent.DeleteAccountClicked)
+        runCurrent()
+        fillDeleteForm(viewModel)
         viewModel.onEvent(PrivacyEvent.ConfirmDeleteClicked)
         runCurrent()
 

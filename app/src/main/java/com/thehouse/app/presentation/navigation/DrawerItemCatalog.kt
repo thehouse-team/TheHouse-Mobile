@@ -15,7 +15,7 @@ object DrawerItemCatalog {
     /** Guest: solo acciones públicas; nunca rutas protegidas que terminen en 401. */
     fun guestItems(): List<Item> = listOf(
         Item("Iniciar sesión o registrarse", "drawer_login", Section.Session),
-        Item("Privacidad", "drawer_privacy", Section.Session),
+        Item("Aviso de privacidad", "drawer_privacy", Section.Session),
     )
 
     /**
@@ -34,6 +34,9 @@ object DrawerItemCatalog {
         Item("Mis alojamientos", "drawer_landlord_dashboard", Section.Landlord),
         Item("Solicitudes recibidas", "drawer_landlord_requests", Section.Landlord),
         Item("Mis acuerdos", "drawer_agreements", Section.Landlord),
+        // D19: el aviso de privacidad también debe estar accesible al usuario
+        // autenticado (decisión UX definitiva).
+        Item("Aviso de privacidad", "drawer_privacy", Section.Session),
         Item(
             if (isLoggingOut) "Cerrando sesión…" else "Cerrar sesión",
             "drawer_logout",
