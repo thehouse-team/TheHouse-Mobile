@@ -106,6 +106,18 @@ object AppRoutes {
         override val route: String = "preferencias"
     }
 
+    /**
+     * D19.1: ruta con los campos que el Backend reportó como incompletos en el
+     * 422 de Smart Match. Los códigos son contractuales, sin PII.
+     */
+    const val MISSING_ARGUMENT = "missing"
+    const val PREFERENCES_PATTERN = "preferencias?missing={missing}"
+
+    fun preferencesWithMissing(missing: List<String>): String {
+        if (missing.isEmpty()) return preferences.route
+        return preferences.route + "?$MISSING_ARGUMENT=" + missing.joinToString(",")
+    }
+
     /** D11: configuración inicial (Quick Setup). */
     val quickSetup: AppRoute = object : AppRoute {
         override val route: String = "configuracion_inicial"

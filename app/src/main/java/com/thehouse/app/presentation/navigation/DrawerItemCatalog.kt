@@ -8,14 +8,26 @@ package com.thehouse.app.presentation.navigation
  */
 object DrawerItemCatalog {
 
-    data class Item(val label: String, val tag: String, val section: Section)
+    /** Clave de icono abstracta: la UI la resuelve a un ImageVector Material 3. */
+    enum class IconKey {
+        Login, Privacy, Profile, Preferences, QuickSetup, Notifications,
+        Requests, Conversations, Rental, Code, Landlord, LandlordRequests,
+        Agreements, Logout,
+    }
+
+    data class Item(
+        val label: String,
+        val tag: String,
+        val section: Section,
+        val icon: IconKey = IconKey.Login,
+    )
 
     enum class Section { Account, Landlord, Session }
 
     /** Guest: solo acciones públicas; nunca rutas protegidas que terminen en 401. */
     fun guestItems(): List<Item> = listOf(
-        Item("Iniciar sesión o registrarse", "drawer_login", Section.Session),
-        Item("Aviso de privacidad", "drawer_privacy", Section.Session),
+        Item("Iniciar sesión o registrarse", "drawer_login", Section.Session, IconKey.Login),
+        Item("Aviso de privacidad", "drawer_privacy", Section.Session, IconKey.Privacy),
     )
 
     /**
@@ -23,24 +35,25 @@ object DrawerItemCatalog {
      * (sin señal de rol inventada) y logout.
      */
     fun authItems(isLoggingOut: Boolean): List<Item> = listOf(
-        Item("Mi perfil", "drawer_profile", Section.Account),
-        Item("Preferencias", "drawer_preferences", Section.Account),
-        Item("Configuración inicial", "drawer_quick_setup", Section.Account),
-        Item("Notificaciones", "drawer_notifications", Section.Account),
-        Item("Mis solicitudes", "drawer_requests", Section.Account),
-        Item("Conversaciones", "drawer_conversations", Section.Account),
-        Item("Mi renta", "drawer_my_rental", Section.Account),
-        Item("Introducir código", "drawer_rental_code", Section.Landlord),
-        Item("Mis alojamientos", "drawer_landlord_dashboard", Section.Landlord),
-        Item("Solicitudes recibidas", "drawer_landlord_requests", Section.Landlord),
-        Item("Mis acuerdos", "drawer_agreements", Section.Landlord),
+        Item("Mi perfil", "drawer_profile", Section.Account, IconKey.Profile),
+        Item("Preferencias", "drawer_preferences", Section.Account, IconKey.Preferences),
+        Item("Configuración inicial", "drawer_quick_setup", Section.Account, IconKey.QuickSetup),
+        Item("Notificaciones", "drawer_notifications", Section.Account, IconKey.Notifications),
+        Item("Mis solicitudes", "drawer_requests", Section.Account, IconKey.Requests),
+        Item("Conversaciones", "drawer_conversations", Section.Account, IconKey.Conversations),
+        Item("Mi renta", "drawer_my_rental", Section.Account, IconKey.Rental),
+        Item("Introducir código", "drawer_rental_code", Section.Landlord, IconKey.Code),
+        Item("Mis alojamientos", "drawer_landlord_dashboard", Section.Landlord, IconKey.Landlord),
+        Item("Solicitudes recibidas", "drawer_landlord_requests", Section.Landlord, IconKey.LandlordRequests),
+        Item("Mis acuerdos", "drawer_agreements", Section.Landlord, IconKey.Agreements),
         // D19: el aviso de privacidad también debe estar accesible al usuario
         // autenticado (decisión UX definitiva).
-        Item("Aviso de privacidad", "drawer_privacy", Section.Session),
+        Item("Aviso de privacidad", "drawer_privacy", Section.Session, IconKey.Privacy),
         Item(
             if (isLoggingOut) "Cerrando sesión…" else "Cerrar sesión",
             "drawer_logout",
             Section.Session,
+            IconKey.Logout,
         ),
     )
 

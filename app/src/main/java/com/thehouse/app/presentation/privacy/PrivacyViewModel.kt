@@ -125,15 +125,22 @@ class PrivacyViewModel(
                 updateState {
                     it.copy(
                         legalInfo = info,
-                        privacyPolicyUrl = PrivacyPolicyUrl.normalize(info.privacyUrl)
-                            ?: it.privacyPolicyUrl,
+                        // D19.1: si el Backend no publica URL, NO se mantiene una
+                        // URL local previa: se muestra explícitamente que el aviso
+                        // aún no está publicado. Nunca se abre una URL inventada.
+                        privacyPolicyUrl = PrivacyPolicyUrl.normalize(info.privacyUrl),
                         privacyStatus = info.privacyStatus,
                         info = null,
                     )
                 }
             },
             onFailure = {
-                updateState { it.copy(privacyStatus = MESSAGE_PRIVACY_BLOCKED) }
+                updateState {
+                    it.copy(
+                        privacyPolicyUrl = null,
+                        privacyStatus = MESSAGE_PRIVACY_BLOCKED,
+                    )
+                }
             },
         )
     }

@@ -13,5 +13,16 @@
 | D19.1-T09 | Gates locales + evidencia + memoria | DONE — 524 tests, lint, assemble, diff-check |
 | D19.1-T10 | Commit, push y PR nuevo; verificar CI remoto | IN PROGRESS |
 | D19.1-T11 | Certificación runtime o `RUNTIME_PENDING` con pasos exactos | DONE — RUNTIME_PENDING sin credenciales |
+| D19.1-T12 | Cierre funcional/visual integral (autorización humana 2026-11-27, PR #35 OPEN) | DONE |
+| D19.1-T13 | CTA de Preferencias fijo + selectores contractuales (P0) | DONE |
+| D19.1-T14 | Smart Match: mostrar `missing` real y ruta a Perfil/Preferencias (P0) | DONE |
+| D19.1-T15 | Detalle de cuarto con roomId real (D18 preservado) | DONE — sin cambios; ruta/factory/DTOs verificados |
+| D19.1-T16 | Privacidad desde registro sin URL obsoleta (P1) | DONE |
+| D19.1-T17 | Mis alojamientos: factory y estados 404/200/403 (P1) | DONE — código verificado; runtime PENDING |
+| D19.1-T18 | Logo único en Inicio + tarjeta Smart Match navegable (P1) | DONE |
+| D19.1-T19 | Drawer Material 3 con iconos, secciones y selección (P1) | DONE |
+| D19.1-T20 | Sincronización de universidad guardada en Inicio (P1) | DONE |
+| D19.1-T21 | 10 regresiones nuevas + gates + evidencia + memoria | DONE — 534 tests, lint/assemble/diff-check verdes |
+| D19.1-T22 | Reinstalar APK y capturas en dispositivo | DONE — RUNTIME_PASS parcial; auth PENDING |
 
 Regla: ninguna tarea se marca DONE sin evidencia real. `BLOCKED` nunca equivale a `DONE`.

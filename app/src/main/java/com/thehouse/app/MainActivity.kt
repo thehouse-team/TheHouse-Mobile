@@ -198,6 +198,7 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                     onOpenLandlordAgreements = { navigate(AppRoutes.landlordAgreements.route) },
                     onOpenPrivacy = { navigate(AppRoutes.privacy.route) },
                     onLogout = logoutFromDrawer,
+                    selectedRoute = currentRoute,
                 )
             }
         },
@@ -341,6 +342,9 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onNavigateToExplore = {
                             navController.navigateToTab(BottomTab.Explorar)
                         },
+                        onNavigateToSmartMatch = {
+                            navController.navigateToTab(BottomTab.SmartMatch)
+                        },
                         onPropertyClick = { id ->
                             navController.navigate(PropertyDetailRoute(id).route) {
                                 launchSingleTop = true
@@ -452,11 +456,20 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         onRequireLogin = {
                             navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                         },
-                        onConfigurePreferences = {
+                        onConfigurePreferences = { missing ->
                             if (!isAuthenticated) {
                                 navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                             } else {
-                                navController.navigate(AppRoutes.preferences.route) { launchSingleTop = true }
+                                navController.navigate(AppRoutes.preferencesWithMissing(missing)) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                        onOpenProfile = {
+                            if (!isAuthenticated) {
+                                navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            } else {
+                                navController.navigate(AppRoutes.profile.route) { launchSingleTop = true }
                             }
                         },
                         // D18: el id de Smart Match es un roomId real.
@@ -966,15 +979,33 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         )
                     }
                 }
-                composable(AppRoutes.preferences.route) {
+                composable(
+                    route = AppRoutes.PREFERENCES_PATTERN,
+                    arguments = listOf(navArgument(AppRoutes.MISSING_ARGUMENT) {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }),
+                ) { entry ->
                     if (!isAuthenticated) {
                         LaunchedEffect(Unit) {
                             navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                         }
                     } else {
+                        val missing = entry.arguments?.getString(AppRoutes.MISSING_ARGUMENT)
+                            ?.split(',')
+                            ?.map { it.trim() }
+                            ?.filter { it.isNotBlank() }
+                            ?: emptyList()
                         PreferencesDestination(
                             factory = factory,
                             onBack = { navController.popBackStack() },
+                            onOpenProfile = {
+                                navController.navigate(AppRoutes.profile.route) { launchSingleTop = true }
+                            },
+                            onOpenQuickSetup = {
+                                navController.navigate(AppRoutes.quickSetup.route) { launchSingleTop = true }
+                            },
+                            missingFields = missing,
                         )
                     }
                 }

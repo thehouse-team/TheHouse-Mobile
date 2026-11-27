@@ -262,6 +262,8 @@ class U2ViewModelFactory(
                 selectUniversity = container.selectUniversity,
                 getUnreadNotificationsCount = container.getUnreadNotificationsCount,
                 pushRefreshSignals = container.pushRefreshSignals,
+                profileUniversityState = container.profileRepository.universityState,
+                refreshProfile = { container.profileRepository.loadProfile() },
             ) as T
 
         modelClass.isAssignableFrom(ExploreViewModel::class.java) ->

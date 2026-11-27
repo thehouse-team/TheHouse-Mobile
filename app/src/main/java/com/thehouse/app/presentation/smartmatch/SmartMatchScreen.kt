@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,7 +48,8 @@ import com.thehouse.app.ui.theme.Spacing
 fun SmartMatchScreen(
     factory: U2ViewModelFactory,
     onRequireLogin: () -> Unit,
-    onConfigurePreferences: () -> Unit,
+    onConfigurePreferences: (List<String>) -> Unit,
+    onOpenProfile: () -> Unit = {},
     onRoomClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
     onContactClick: (String) -> Unit,
@@ -55,6 +57,7 @@ fun SmartMatchScreen(
 ) {
     val vm: SmartMatchViewModel = viewModel(factory = factory)
     val state by vm.uiState.collectAsStateWithLifecycle()
+    val missingFields by vm.profileMissing.collectAsStateWithLifecycle()
 
     SmartMatchScreenExitLogger.logEnter()
     LaunchedEffect(Unit) {
@@ -108,15 +111,48 @@ fun SmartMatchScreen(
                 }
 
                 SmartMatchUiState.NoPreferences -> {
+                    // D19.1: el Backend报告a los campos reales en el 422.
+                    // Nunca se inventan valores ni se activa fallback local por 422.
+                    val missingLabels = missingFields.map(::labelForMissingField)
                     EmptyStateView(
-                        title = "Configura tus preferencias",
-                        message = "Para generar Smart Match necesitamos tus preferencias de búsqueda.",
+                        title = "Completa tu perfil para Smart Match",
+                        message = if (missingLabels.isEmpty()) {
+                            "Para generar Smart Match necesitamos tus preferencias de búsqueda."
+                        } else {
+                            "Faltan: ${missingLabels.joinToString(", ")}. " +
+                                "Completa estos datos para ver recomendaciones."
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        ctaLabel = "Configurar preferencias",
-                        onCtaClick = onConfigurePreferences,
+                        ctaLabel = if (missingFields.contains("university")) {
+                            "Completar mi perfil"
+                        } else {
+                            "Configurar preferencias"
+                        },
+                        onCtaClick = {
+                            if (missingFields.contains("university")) {
+                                onOpenProfile()
+                            } else {
+                                onConfigurePreferences(missingFields)
+                            }
+                        },
                     )
+                    if (missingLabels.isNotEmpty()) {
+                        Text(
+                            text = "Campos pendientes: ${missingLabels.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = "smart.match.missing.$missingFields" },
+                        )
+                    }
+                    if (missingFields.any { it != "university" } && missingFields.contains("university")) {
+                        TextButton(onClick = { onConfigurePreferences(missingFields.filter { it != "university" }) }) {
+                            Text("Configurar preferencias")
+                        }
+                    }
                 }
 
                 SmartMatchUiState.Empty -> {
@@ -165,6 +201,16 @@ fun SmartMatchScreen(
 
 /** Contrato real: matchScore entero 0..100 → "73%". Nunca "73.0%". */
 internal fun formatMatchScore(score: Int): String = "$score%"
+
+/** Etiquetas legibles de los campos que el Backend reporta como incompletos. */
+internal fun labelForMissingField(field: String): String = when (field) {
+    "university" -> "universidad"
+    "budget.max" -> "presupuesto máximo"
+    "budget" -> "presupuesto"
+    "livingWith" -> "con quién vivir"
+    "placeType" -> "tipo de lugar"
+    else -> field
+}
 
 @Composable
 private fun SmartMatchResultCard(

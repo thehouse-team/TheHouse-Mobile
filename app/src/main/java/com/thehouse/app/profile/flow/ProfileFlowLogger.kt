@@ -1,6 +1,7 @@
 package com.thehouse.app.profile.flow
 
 import android.util.Log
+import com.thehouse.app.BuildConfig
 
 /**
  * Instrumentación DEBUG del flujo de Perfil (D19.1).
@@ -25,11 +26,14 @@ object ProfileFlowLogger {
 
     const val TAG = "ProfileFlow"
 
+    /** Activo en DEBUG (sin PII); los tests pueden forzarlo o silenciarlo. */
     @Volatile
-    var enabled: Boolean = false
+    var enabled: Boolean = BuildConfig.DEBUG
 
     @Volatile
-    var logger: (String) -> Unit = { message -> Log.d(TAG, message) }
+    var logger: (String) -> Unit = { message ->
+        runCatching { Log.d(TAG, message) }
+    }
 
     fun enterScreen() = emit("enter_screen")
     fun loadStart() = emit("load_start")

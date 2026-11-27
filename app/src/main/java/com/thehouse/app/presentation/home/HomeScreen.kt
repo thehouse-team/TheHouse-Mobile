@@ -44,7 +44,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.presentation.U2ViewModelFactory
 import com.thehouse.app.presentation.catalog.CatalogLoadState
 import com.thehouse.app.presentation.catalog.errorMessage
-import com.thehouse.app.presentation.components.BrandMark
 import com.thehouse.app.presentation.components.PropertyCard
 import com.thehouse.app.presentation.components.SectionHeader
 import com.thehouse.app.presentation.components.StatusChip
@@ -75,6 +74,7 @@ fun HomeScreen(
     onLoggedOut: () -> Unit,
     onRequireLogin: () -> Unit,
     onNavigateToExplore: () -> Unit,
+    onNavigateToSmartMatch: () -> Unit = {},
     onPropertyClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     factory: U2ViewModelFactory,
@@ -127,14 +127,6 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Spacing.xl),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                BrandMark()
-            }
-
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Text(
                         text = if (state.isGuest) {
@@ -177,7 +169,7 @@ fun HomeScreen(
                     onRetry = { viewModel.onEvent(HomeEvent.RetryUniversitiesClicked) },
                 )
 
-                SmartMatchPromo()
+                SmartMatchPromo(onClick = onNavigateToSmartMatch)
 
                 SectionHeader(
                     title = "Recomendados para ti",
@@ -320,8 +312,11 @@ private fun UniversitySection(
 }
 
 @Composable
-private fun SmartMatchPromo() {
-    TheHouseCard {
+private fun SmartMatchPromo(onClick: () -> Unit) {
+    TheHouseCard(
+        onClick = onClick,
+        modifier = Modifier.testTag("home_smart_match_promo"),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
