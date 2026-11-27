@@ -120,7 +120,7 @@ class D21ImagePipelineTest {
     fun `catalogo usa etiquetas en espanol solicitadas`() {
         assertEquals("Individual", RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, "single"))
         assertEquals("Doble", RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, "double"))
-        assertEquals("Compartido/a", RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, "shared"))
+        assertEquals("Compartido o Compartida", RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, "shared"))
         assertEquals("Casa con habitaciones", RoomSearchCatalog.label(RoomSearchCatalog.Kind.BUILDING_TYPE, "house_rooms"))
         assertEquals("Cuartos en edificio", RoomSearchCatalog.label(RoomSearchCatalog.Kind.BUILDING_TYPE, "rooms_building"))
         assertEquals("Departamento completo", RoomSearchCatalog.label(RoomSearchCatalog.Kind.BUILDING_TYPE, "full_apartment"))

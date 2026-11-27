@@ -181,8 +181,18 @@ private fun RoomDetailContent(
             item {
                 TheHouseCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
                     Text("Servicios y mobiliario", style = MaterialTheme.typography.titleMedium)
-                    room.building.services.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
-                    room.furniture.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                    room.building.services.forEach {
+                        Text(
+                            "• ${RoomSearchCatalog.label(RoomSearchCatalog.Kind.SERVICE, it)}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    room.furniture.forEach {
+                        Text(
+                            "• ${RoomSearchCatalog.label(RoomSearchCatalog.Kind.FURNITURE, it)}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         }
@@ -191,7 +201,9 @@ private fun RoomDetailContent(
                 TheHouseCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
                     Text("Disponibilidad", style = MaterialTheme.typography.titleMedium)
                     room.availableFrom?.let { Text("Desde: $it") }
-                    room.minContract?.let { Text("Contrato mínimo: $it") }
+                    room.minContract?.let {
+                        Text("Contrato mínimo: ${RoomSearchCatalog.label(RoomSearchCatalog.Kind.MIN_CONTRACT, it)}")
+                    }
                 }
             }
         }

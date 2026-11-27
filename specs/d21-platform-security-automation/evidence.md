@@ -216,3 +216,52 @@ Sin merge, sin rama/PR nuevo, sin Backend/GenAI/ML/ONNX/infra, sin Nuevo edifici
 - Pruebas nuevas: `D21PublishNavigationTest` (4) y `D21ImagePipelineTest` (8), incluyendo Retrofit/MockWebServer real para verificar que el cliente de imágenes **no envía Authorization** a un dominio externo.
 - HTTP productivo verificado en solo lectura con `Invoke-WebRequest`; sin credenciales, sin tokens, sin exponer contraseñas.
 - RUNTIME PENDING: renderizado real en dispositivo y validación visual humana siguen pendientes. Una prueba de deserialización NO equivale a una fotografía renderizada.
+
+---
+
+## D21 — Hotfix exclusivo de etiquetas en español (2026-11-27)
+
+Autorización humana individual sobre el MISMO PR #37, rama `feature/platform-security-automation`,
+base `d11c3f18fe28ade4510a95bdb3bcc2cbbab8c6f2`. Congelación visual total; sin merge.
+
+### Validación humana
+- **10/11 validaciones runtime APROBADAS.** El usuario confirma que diseño anterior, navegación,
+  fotografías, galerías, placeholders, Favoritos y Conversaciones funcionan correctamente.
+- Único FAIL: las características de los alojamientos todavía mostraban códigos en inglés.
+- La adenda visual NO se declara aprobada más allá de lo ya confirmado por el usuario.
+
+### TRANSLATION_ROOT_CAUSE
+- El hotfix anterior (`d11c3f1`) tradujo solo `roomType`, `buildingType`, `bathroom` y
+  `allowedTenants` mediante `RoomSearchCatalog`. Quedaron rutas de presentación que renderizaban
+  códigos del contrato directamente:
+  - `RoomCard` (Home/Explore): `room.services` sin mapear.
+  - `PropertyCard` (Home/Explore legacy): `property.services` sin mapear.
+  - `ExploreScreen.ServicesChips`: `code.replaceFirstChar` en lugar del catálogo.
+  - `SmartMatchRecommendationCard`: `readableCode()` solo capitalizaba (`hot_water` ? «Hot Water»).
+  - `RoomDetailScreen`: `building.services`, `furniture` y `minContract` sin mapear.
+- Catálogo Backend verificado en solo lectura (`ListingRules.cs`): 11 servicios, 8 muebles,
+  3 duraciones de contrato. Sin cambios en DTOs, peticiones, filtros ni lógica.
+
+### Corrección (solo textos visibles)
+- `RoomSearchCatalog`: mapas `SERVICE`, `FURNITURE`, `MIN_CONTRACT`; `shared` ? «Compartido o Compartida».
+- `label()` con fallback seguro: código desconocido se devuelve tal cual, sin traducción inventada.
+- Aplicado en Home, Explorar, Smart Match, Detalle del cuarto y Favoritos (Favoritos ya usaba el catálogo).
+- Títulos, descripciones y contenido escrito por usuarios NO traducidos.
+- Sin cambios en DTOs/códigos serializados, HTTP, filtros, VIEWModels, navegación ni contratos.
+
+### Verificación de congelación
+- `git diff d11c3f1` revisado bloque por bloque: **solo expresiones de texto**. Cero cambios en
+  modificadores, colores, tipografías, tamaños, márgenes, espaciados, tarjetas, iconos, fotos,
+  galerías, placeholders, header, drawer, navegación, conversaciones ni posición de botones.
+
+### Gates
+| Comando | Resultado |
+|---|---|
+| `.\gradlew.bat compileDebugKotlin --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat testDebugUnitTest --no-daemon` | BUILD SUCCESSFUL — **669 tests, 0 failures, 0 errors** (657 + 12 nuevos) |
+| `.\gradlew.bat lintDebug --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat assembleDebug --no-daemon` | BUILD SUCCESSFUL |
+| `git diff --check` | exit 0 |
+
+- Nuevos tests: `D21SpanishLabelsTest` (6) y `D21LabelsWiringTest` (6): 21 combinaciones de
+  servicios, 8 de mobiliario, 3 de contrato, códigos base y fallback desconocido.

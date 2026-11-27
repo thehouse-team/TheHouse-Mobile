@@ -131,7 +131,9 @@ fun RoomCard(
                 )
                 if (room.services.isNotEmpty()) {
                     Text(
-                        text = room.services.take(3).joinToString(" · "),
+                        text = room.services.take(3).joinToString(" · ") {
+                            RoomSearchCatalog.label(RoomSearchCatalog.Kind.SERVICE, it)
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

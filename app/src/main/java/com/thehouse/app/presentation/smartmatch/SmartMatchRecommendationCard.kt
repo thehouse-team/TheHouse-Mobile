@@ -309,7 +309,9 @@ private fun RealInfoRow(result: SmartMatchResult) {
     }
     if (result.services.isNotEmpty()) {
         Text(
-            text = "Servicios: ${result.services.joinToString(", ") { readableCode(it) }}",
+            text = "Servicios: ${result.services.joinToString(", ") {
+                RoomSearchCatalog.label(RoomSearchCatalog.Kind.SERVICE, it)
+            }}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
@@ -317,10 +319,6 @@ private fun RealInfoRow(result: SmartMatchResult) {
         )
     }
 }
-
-private fun readableCode(code: String): String = code
-    .replace('_', ' ')
-    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
 private fun formatPrice(value: Double): String =
     if (value % 1.0 == 0.0) value.toLong().toString() else String.format(java.util.Locale.US, "%.2f", value)

@@ -270,7 +270,11 @@ fun PropertyCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = property.services.joinToString(" · "),
+                    text = property.services.joinToString(" · ") {
+                        com.thehouse.app.domain.room.RoomSearchCatalog.label(
+                            com.thehouse.app.domain.room.RoomSearchCatalog.Kind.SERVICE, it,
+                        )
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
