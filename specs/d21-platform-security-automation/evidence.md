@@ -1,4 +1,4 @@
-# D21 — Evidencia
+﻿# D21 — Evidencia
 
 ## Baseline
 - `git rev-parse HEAD` = `54ece77747d5f3416bdf189ee1ede597c6a40f8f`
@@ -31,3 +31,13 @@ Baseline 602 → +29 nuevos (27 D21 device/moderation/coordinator + 2 GenAI).
 - `connectedDebugAndroidTest`: **RUNTIME_PENDING**.
 - FCM real delivery: **EXTERNAL_BLOCKER** (Backend no expone endpoint de envío; requiere `FIREBASE_SERVICE_ACCOUNT`).
 - Eliminación real: **RUNTIME_PENDING** (sin cuenta desechable autorizada).
+
+## ADENDA NV-20 v1.3.0 — evidencia
+
+- PR Backend #103: `MERGED`, head `d23bb3cd63ede2b515c01efd1e1317068ab8f51a`, título «docs(NV-20): 1.3.0 propuesta — 6 avisos nuevos». Documento leído en modo solo lectura (§6.1, §9.1).
+- Contrato propuesto ≠ mergeado ≠ productivo: el documento marca 1.3.0 como PROPUESTA pendiente de T09–T12; Backend main expone `Type`/`Kind` como `string`; despliegue de los 6 tipos NO confirmado (`health/live` OK, sin credenciales para bandeja).
+- Seis tipos literales extraídos del contrato (no de etiquetas): `agreement_proposed`, `agreement_cancelled`, `review_received`, `review_hidden`, `favorite_unavailable`, `report_resolved`.
+- `targetKind` nuevos: `room` (targetId id cuarto → `GET /rooms/{id}`, `RoomDetailRoute`), `none` (bandeja, sin exigir targetId).
+- Sin enums estrictos en DTO (`String`), por lo que no hay `SerializationException` por valores futuros; los tipos se mapean a destino tipado con fallback.
+- Tests nuevos: 14 (10 compatibilidad NV-20 + 4 room target HTTP). Total 645 / 0 failures / 0 errors (631 + 14).
+- Gates tras adenda: `compileDebugKotlin`, `testDebugUnitTest`, `lintDebug`, `assembleDebug`, `assembleDebugAndroidTest` — todos SUCCESS.

@@ -1,4 +1,4 @@
-# D21 — Platform, Security and Automation
+﻿# D21 — Platform, Security and Automation
 
 | Campo | Valor |
 |---|---|
@@ -91,3 +91,31 @@ No existe endpoint HTTP para enviar push. El push se dispara como efecto secunda
 - Gates: `clean compileDebugKotlin`, `testDebugUnitTest`, `lintDebug`, `assembleDebug`, `compileDebugAndroidTestKotlin`, `assembleDebugAndroidTest`, `git diff --check`.
 - Tests nuevos: installationId persistente, PUT/DELETE devices con MockWebServer, dedup, guest, logout/switch, red, deep links inválidos, moderación 422/503, eliminación 204, sesión concurrente, GenAI vs template.
 - Matriz OWASP y de permisos, reporte final, PR OPEN/MERGEABLE sin merge.
+
+---
+
+## ADENDA — Compatibilidad NV-20 Notifications v1.3.0 (PR #103 Backend)
+
+Autorizada dentro de la misma spec/rama/PR. Contrato leído en modo solo lectura de
+`thehouse-team/TheHouse-Backend` PR #103 (`d23bb3c`) §6.1 y §9.1.
+
+**Estado del contrato:** PR #103 MERGED en Backend; versión 1.3.0 marcada como
+PROPUESTA pendiente de T09–T12 y aprobación humana en el documento. Backend main
+expone `NotificationResponse.Type` y `NotificationTarget.Kind` como `string`
+(no enums estrictos), por lo que no existe `SerializationException` por valores
+desconocidos en Mobile. Despliegue productivo de los 6 tipos: NO CONFIRMADO.
+
+### Seis tipos literales (no derivados de etiquetas españolas)
+
+| Tipo | Categoría | targetKind | targetId | Prioridad | Título | Cuerpo |
+|---|---|---|---|---|---|---|
+| `agreement_proposed` | requests | rental | id convenio | Alta | Convenio por aceptar | «{Arrendador} preparó el convenio de {cuarto}. Pídele el código de cierre para aceptarlo.» |
+| `agreement_cancelled` | requests | rental | id convenio | Normal | Convenio cancelado | «{Arrendador} canceló el convenio de {cuarto}.» |
+| `review_received` | system | room | id cuarto | Normal | Nueva reseña | «{Estudiante} dejó una reseña de {cuarto}.» |
+| `review_hidden` | system | room | id cuarto | Normal | Reseña ocultada | «Tu reseña de {cuarto} se ocultó porque no cumple las reglas de la comunidad.» |
+| `favorite_unavailable` | system | room | id cuarto | Normal | Favorito no disponible | «{Cuarto} ya no está disponible.» |
+| `report_resolved` | system | none | id reporte (informativo) | Normal | Reporte revisado | «Revisamos tu reporte. Gracias por ayudarnos a cuidar la comunidad.» |
+
+`none` abre la bandeja; no exige targetId. `room` valida targetId y navega a
+`RoomDetailRoute(targetId)` + `GET /rooms/{id}`. Tipo o targetKind desconocido,
+o targetId inválido/ausente cuando es obligatorio → bandeja, sin petición HTTP.

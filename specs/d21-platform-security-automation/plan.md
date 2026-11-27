@@ -1,4 +1,4 @@
-# D21 — Plan
+﻿# D21 — Plan
 
 | Fase | Task | Descripción | Verificación |
 |---|---|---|---|
@@ -19,3 +19,12 @@
 - No tocar Backend/GenAI/ML/ONNX/infra.
 - No reducir thresholds de CI.
 - Si no hay dispositivo autorizado (`adb` no disponible), marcar RUNTIME_PENDING sin simular execución.
+
+## ADENDA NV-20 v1.3.0 (misma spec)
+
+| Fase | Task | Descripción | Verificación |
+|---|---|---|---|
+| P10 | D21-T10 | Enums tolerantes: ROOM/NONE en `NotificationTargetKind`, `NotificationDestination.Room`, resolver centralizado con validación de id | Tests de 6 tipos + desconocidos |
+| P11 | D21-T11 | MainActivity: ruta `RoomDetailRoute` desde notificación (in-app y push), sin `{roomId}` literal, sin propertyId | Tests de navegación y regresión |
+| P12 | D21-T12 | Presentación: iconos coherentes, texto del Backend, fallback genérico sin exponer enums | Tests de bandeja mixta |
+| P13 | D21-T13 | Pruebas HTTP locales (MockWebServer) para room 200/404 y regresiones; evidence y reporte adicional | Gates + reporte §8 |

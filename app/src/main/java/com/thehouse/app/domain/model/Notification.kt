@@ -20,6 +20,10 @@ enum class NotificationTargetKind(val api: String) {
     AGREEMENT("agreement"),
     RENTAL("rental"),
     BUILDING("building"),
+    /** NV-20 v1.3.0: review_received / review_hidden / favorite_unavailable. */
+    ROOM("room"),
+    /** NV-20 v1.3.0: report_resolved. Abre bandeja, targetId informativo. */
+    NONE("none"),
     UNKNOWN("unknown");
 
     companion object {

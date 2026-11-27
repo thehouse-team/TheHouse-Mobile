@@ -1,4 +1,4 @@
-# D21 — Checklist
+﻿# D21 — Checklist
 
 - [x] Gobernanza leída (constitution, AGENTS, memoria) y declaración de autorización
 - [x] PR #36 verificado MERGED, base `54ece77`, rama creada desde origin/main
@@ -22,3 +22,11 @@
 - [ ] FCM real delivery — EXTERNAL_BLOCKER (Backend sin envío / secreto)
 - [ ] Eliminación en cuenta desechable — sin autorización de cuenta
 - [ ] CI remoto del PR — pendiente de push/PR
+- [x] NV-20 §9.1 leído desde PR #103 (solo lectura); 6 tipos literales extraídos
+- [x] Contrato propuesto vs mergeado vs productivo distinguido
+- [x] DTOs/NotificationType tolerantes (String, sin enum estricto)
+- [x] targetKind room + none + desconocido + targetId inválido → bandeja
+- [x] Navegación RoomDetailRoute real; sin PropertyDetail ni propertyId
+- [x] Push e in-app comparten el mismo resolver centralizado
+- [x] Pruebas de 6 tipos, bandeja mixta, 200/404, guest, push y regresiones
+- [ ] Despliegue productivo de los 6 tipos — NO CONFIRMADO (runtime pendiente)

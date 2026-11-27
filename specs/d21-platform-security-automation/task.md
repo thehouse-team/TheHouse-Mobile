@@ -1,4 +1,4 @@
-# D21 — Tasks
+﻿# D21 — Tasks
 
 Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2026-11-27).
 
@@ -12,3 +12,7 @@ Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2
 - [x] D21-T07 — Reparación androidTest
 - [x] D21-T08 — Scripts PowerShell + CI
 - [x] D21-T09 — Gates, trazabilidad, memoria, PR
+- [x] D21-T10 — Compatibilidad NV-20 v1.3.0 (tipos, room/none, fallback)
+- [x] D21-T11 — Navegación RoomDetail desde notificación y push
+- [x] D21-T12 — Presentación de bandeja con tipos nuevos/desconocidos
+- [x] D21-T13 — Pruebas y reporte adicional NV20

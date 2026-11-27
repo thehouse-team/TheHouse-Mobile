@@ -111,3 +111,15 @@ Fuente: instrucción humana FASE C §21. Criterio de estado: `IMPLEMENTED` (cód
 - Agentes: `explore` (auditorías dirigidas de FCM, Backend, androidTest, seguridad/ML/GenAI).
 - Skills: `sdd-compliance`, `android-architecture`, `compose-quality`, `networking`, `mobile-security`, `mobile-devsecops`, `testing`, `push-notifications` (consultados como procedimiento; no sustituyen specs).
 - MCP: **ninguno ejecutado**. Firebase MCP permanece deshabilitado (`opencode.json`); GitHub se usa vía CLI (`gh`), no vía MCP.
+
+### Adenda NV-20 v1.3.0 (FASE C)
+
+| Requisito | Estado | Evidencia |
+|---|---|---|
+| Seis nuevos tipos | TESTED (6/6) | `D21Nv20CompatibilityTest` |
+| targetKind room → RoomDetail | TESTED | `D21RoomTargetHttpTest` (200/404/401) + resolver |
+| targetKind none → bandeja | TESTED | `D21Nv20CompatibilityTest` |
+|Tipo/destino desconocido → bandeja | TESTED | `D21Nv20CompatibilityTest` |
+| targetId inválido → bandeja sin HTTP | TESTED | `D21Nv20CompatibilityTest` |
+| Push e in-app centralizados | TESTED | `PushNavigationIntentParser`, `NotificationsScreen` |
+| Despliegue Backend de los 6 tipos | RUNTIME_PENDING | `D21_NV20_PR103_REPORT.md` |
