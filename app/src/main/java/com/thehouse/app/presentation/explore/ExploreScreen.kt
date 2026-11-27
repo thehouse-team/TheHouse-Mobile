@@ -45,9 +45,8 @@ import com.thehouse.app.presentation.components.TheHouseSearchField
 import com.thehouse.app.ui.theme.Spacing
 
 /**
- * Explorar real D5 + D20.
- * - Habitaciones reales de `rooms/search`, filtros contractuales y paginación.
- * - Búsqueda textual LOCAL sobre resultados cargados (el Backend no admite `q`).
+ * Explorar real D5 + D20 (hotfix): catálogo de habitaciones con filtros
+ * SIEMPRE accesibles, búsqueda textual local etiquetada y scroll completo.
  */
 @Composable
 fun ExploreScreen(
@@ -57,9 +56,7 @@ fun ExploreScreen(
     modifier: Modifier = Modifier,
     factory: U2ViewModelFactory? = null,
     roomsEnabled: Boolean = true,
-    selectedUniversityId: String? = null,
     onRoomClick: (String) -> Unit = {},
-    onFavoriteRoomClick: (String) -> Unit = {},
 ) {
     val viewModel: ExploreViewModel? = if (factory != null) {
         viewModel(factory = factory)
@@ -69,13 +66,7 @@ fun ExploreScreen(
     val properties = state.properties
     val query = state.query
     val roomsState = state.rooms
-    val showRooms = roomsEnabled && selectedUniversityId != null
-
-    androidx.compose.runtime.LaunchedEffect(selectedUniversityId) {
-        if (showRooms && state.filters.universityId != selectedUniversityId) {
-            viewModel?.onEvent(ExploreEvent.UniversityChanged(selectedUniversityId!!))
-        }
-    }
+    val showRooms = roomsEnabled
 
     Scaffold(
         modifier = modifier,
@@ -90,11 +81,7 @@ fun ExploreScreen(
         ) {
             TheHouseHeader(
                 title = "Explora alojamientos",
-                subtitle = if (showRooms) {
-                    "Resultados reales de rooms/search. La búsqueda por texto es local."
-                } else {
-                    "Búsqueda por título o ciudad."
-                },
+                subtitle = "Resultados reales de rooms/search. Búsqueda por texto limitada a lo cargado.",
                 modifier = Modifier.semantics { contentDescription = "Título Explorar" },
             )
 
@@ -109,13 +96,14 @@ fun ExploreScreen(
             TheHouseSearchField(
                 value = query,
                 onValueChange = { viewModel?.onEvent(ExploreEvent.QueryChanged(it)) },
-                placeholder = if (showRooms) "Filtrar resultados cargados" else "Busca por título o ciudad",
+                placeholder = if (showRooms) "Filtrar resultados cargados (local)" else "Busca por título o ciudad",
             )
 
             if (showRooms) {
                 FilterBar(
                     filters = state.filters,
                     expanded = state.showFilters,
+                    universities = state.universities,
                     onToggle = { viewModel?.onEvent(ExploreEvent.ToggleFilters) },
                     onFiltersChange = { viewModel?.onEvent(ExploreEvent.FilterChanged(it)) },
                 )
@@ -125,7 +113,7 @@ fun ExploreScreen(
                 when (properties) {
                     CatalogLoadState.Loading -> LoadingView(message = "Buscando rentas…", modifier = Modifier.weight(1f))
                     CatalogLoadState.Empty -> EmptyStateView(
-                        title = if (query.isBlank()) "Aún no hay rentas" else "Sin resultados",
+                        title = "Aún no hay rentas",
                         message = "No hay alojamientos disponibles por ahora.",
                         modifier = Modifier.weight(1f),
                         ctaLabel = "Reintentar",
@@ -159,11 +147,17 @@ fun ExploreScreen(
                 when (val rooms = roomsState) {
                     RoomSearchState.Loading -> LoadingView(
                         message = "Buscando alojamientos…",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                     )
                     RoomSearchState.Empty -> EmptyStateView(
-                        title = "Sin alojamientos",
-                        message = "Prueba con otros filtros o amplía la distancia.",
+                        title = if (state.filters.universityId.isNullOrBlank()) {
+                            "Selecciona tu universidad"
+                        } else "Sin alojamientos",
+                        message = if (state.filters.universityId.isNullOrBlank()) {
+                            "Elige una universidad para ver habitaciones reales cerca de ti."
+                        } else {
+                            "Prueba con otros filtros o amplía la distancia (máx. 30 km)."
+                        },
                         modifier = Modifier.weight(1f),
                         ctaLabel = "Reintentar",
                         onCtaClick = { viewModel?.onEvent(ExploreEvent.RefreshRoomsClicked) },
@@ -177,7 +171,11 @@ fun ExploreScreen(
                     is RoomSearchState.Content -> {
                         val visible = state.visibleRooms()
                         Text(
-                            text = "${visible.size} de ${rooms.totalItems} alojamientos",
+                            text = if (query.isBlank()) {
+                                "${visible.size} de ${rooms.totalItems} alojamientos"
+                            } else {
+                                "${visible.size} resultados locales de ${rooms.items.size} cargados"
+                            },
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -190,7 +188,10 @@ fun ExploreScreen(
                                 RoomCard(
                                     room = room,
                                     onRoomClick = { onRoomClick(room.roomId) },
-                                    onFavoriteClick = { onFavoriteRoomClick(room.roomId) },
+                                    onFavoriteClick = {
+                                        viewModel?.onEvent(ExploreEvent.FavoriteRoomClicked(room.roomId))
+                                        onFavoriteClick()
+                                    },
                                     isFavorite = room.roomId in state.favoriteRoomIds,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
@@ -205,6 +206,15 @@ fun ExploreScreen(
                                     }
                                 }
                             }
+                            if (rooms.paginationError != null) {
+                                item {
+                                    Text(
+                                        text = "No se pudo cargar la siguiente página. Reintentá.",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -217,23 +227,22 @@ fun ExploreScreen(
 private fun FilterBar(
     filters: ExploreFiltersUi,
     expanded: Boolean,
+    universities: List<com.thehouse.app.domain.model.University>,
     onToggle: () -> Unit,
     onFiltersChange: (ExploreFiltersUi) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            FilterChip(
-                selected = expanded,
-                onClick = onToggle,
-                label = { Text("Filtros") },
-            )
+            FilterChip(selected = expanded, onClick = onToggle, label = { Text("Filtros") })
             FilterChip(
                 selected = filters.roomType != null,
                 onClick = {
                     val next = if (filters.roomType != null) null else RoomSearchCatalog.ROOM_TYPES.first()
                     onFiltersChange(filters.copy(roomType = next))
                 },
-                label = { Text(filters.roomType?.let { RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, it) } ?: "Tipo cuarto") },
+                label = {
+                    Text(filters.roomType?.let { RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, it) } ?: "Tipo cuarto")
+                },
             )
             FilterChip(
                 selected = filters.sort != "distance",
@@ -246,6 +255,13 @@ private fun FilterBar(
             )
         }
         if (expanded) {
+            ClosedDropdown(
+                label = "Universidad",
+                options = universities.map { it.id },
+                labels = universities.associate { it.id to it.name },
+                selected = filters.universityId,
+                kind = null,
+            ) { onFiltersChange(filters.copy(universityId = it)) }
             ClosedDropdown(
                 label = "Tipo de inmueble",
                 options = RoomSearchCatalog.BUILDING_TYPES,
@@ -264,7 +280,28 @@ private fun FilterBar(
                 selected = filters.allowedTenants,
                 kind = RoomSearchCatalog.Kind.ALLOWED_TENANTS,
             ) { onFiltersChange(filters.copy(allowedTenants = it)) }
+            ClosedDropdown(
+                label = "Servicios (multi-selección simple)",
+                options = listOf("wifi", "parking", "laundry", "kitchen"),
+                selected = filters.services.firstOrNull(),
+                kind = null,
+            ) { code ->
+                onFiltersChange(filters.copy(services = if (code == null) emptyList() else listOf(code)))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                OutlinedTextField(
+                    value = filters.minPrice?.toString().orEmpty(),
+                    onValueChange = { value ->
+                        val parsed = value.toIntOrNull()
+                        onFiltersChange(
+                            filters.copy(
+                                minPrice = if (parsed != null && parsed in RoomSearchCatalog.MIN_PRICE..RoomSearchCatalog.MAX_PRICE) parsed else null,
+                            ),
+                        )
+                    },
+                    label = { Text("Precio mín. MXN") },
+                    modifier = Modifier.weight(1f),
+                )
                 OutlinedTextField(
                     value = filters.maxPrice?.toString().orEmpty(),
                     onValueChange = { value ->
@@ -278,22 +315,22 @@ private fun FilterBar(
                     label = { Text("Precio máx. MXN") },
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedTextField(
-                    value = filters.maxDistanceKm.toString(),
-                    onValueChange = { value ->
-                        val parsed = value.toDoubleOrNull()
-                        onFiltersChange(
-                            filters.copy(
-                                maxDistanceKm = if (parsed != null && parsed in RoomSearchCatalog.MIN_DISTANCE_KM..RoomSearchCatalog.MAX_DISTANCE_KM) {
-                                    parsed
-                                } else RoomSearchCatalog.DEFAULT_DISTANCE_KM,
-                            ),
-                        )
-                    },
-                    label = { Text("Distancia km") },
-                    modifier = Modifier.weight(1f),
-                )
             }
+            OutlinedTextField(
+                value = filters.maxDistanceKm.toString(),
+                onValueChange = { value ->
+                    val parsed = value.toDoubleOrNull()
+                    onFiltersChange(
+                        filters.copy(
+                            maxDistanceKm = if (parsed != null && parsed in RoomSearchCatalog.MIN_DISTANCE_KM..RoomSearchCatalog.MAX_DISTANCE_KM) {
+                                parsed
+                            } else RoomSearchCatalog.DEFAULT_DISTANCE_KM,
+                        ),
+                    )
+                },
+                label = { Text("Distancia máx. km (0.5–30)") },
+                modifier = Modifier.fillMaxWidth(),
+            )
             TextButton(onClick = {
                 onFiltersChange(ExploreFiltersUi(universityId = filters.universityId))
             }) { Text("Limpiar filtros") }
@@ -307,32 +344,31 @@ private fun ClosedDropdown(
     label: String,
     options: List<String>,
     selected: String?,
-    kind: RoomSearchCatalog.Kind,
+    kind: RoomSearchCatalog.Kind?,
+    labels: Map<String, String> = emptyMap(),
     onSelect: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val display = selected?.let { code -> labels[code] ?: kind?.let { RoomSearchCatalog.label(it, code) } ?: code } ?: "Todos"
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
     ) {
         OutlinedTextField(
-            value = selected?.let { RoomSearchCatalog.label(kind, it) } ?: "Todos",
+            value = display,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                .fillMaxWidth(),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text("Todos") },
-                onClick = { onSelect(null); expanded = false },
-            )
+            DropdownMenuItem(text = { Text("Todos") }, onClick = { onSelect(null); expanded = false })
             options.forEach { code ->
-                DropdownMenuItem(
-                    text = { Text(RoomSearchCatalog.label(kind, code)) },
-                    onClick = { onSelect(code); expanded = false },
-                )
+                val text = labels[code] ?: kind?.let { RoomSearchCatalog.label(it, code) } ?: code
+                DropdownMenuItem(text = { Text(text) }, onClick = { onSelect(code); expanded = false })
             }
         }
     }

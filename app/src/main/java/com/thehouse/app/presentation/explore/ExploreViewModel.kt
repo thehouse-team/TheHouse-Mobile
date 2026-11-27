@@ -2,6 +2,9 @@ package com.thehouse.app.presentation.explore
 
 import com.thehouse.app.domain.connectivity.ConnectivityObserver
 import com.thehouse.app.domain.model.Property
+import com.thehouse.app.domain.model.SessionState
+import com.thehouse.app.domain.model.University
+import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.room.RoomSearchCatalog
 import com.thehouse.app.domain.room.RoomSearchFilters
 import com.thehouse.app.domain.usecase.FavoriteStateStore
@@ -10,22 +13,24 @@ import com.thehouse.app.domain.usecase.GetPropertiesUseCase
 import com.thehouse.app.domain.usecase.SearchPropertiesUseCase
 import com.thehouse.app.domain.usecase.SearchRoomsUseCase
 import com.thehouse.app.presentation.catalog.CatalogLoadState
+import com.thehouse.app.presentation.catalog.CatalogFlowLogger
 import com.thehouse.app.presentation.catalog.RoomSearchState
 import com.thehouse.app.presentation.catalog.toCatalogState
 import com.thehouse.app.presentation.catalog.toRoomSearchStateError
 import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * MVVM + UDF de Explorar (D5 + D20).
- * - D20: `rooms/search` real con filtros contractuales, paginación y estados.
- * - Búsqueda textual: SOLO local sobre resultados cargados (Backend rooms/search
- *   no admite `q`); etiquetada como limitada en la UI.
- * - Legacy `properties` se mantiene para tests que inyectan `getProperties`.
+ * MVVM + UDF de Explorar (D5 + D20 + hotfix).
+ * D20 hotfix: la universidad se resuelve desde el repositorio local y desde el
+ * Perfil remoto (auth), con observación continua. Nunca se queda en Loading:
+ * sin universidad → Empty con selector; con universidad → rooms/search real.
  */
 data class ExploreFiltersUi(
     val universityId: String? = null,
@@ -42,15 +47,17 @@ data class ExploreFiltersUi(
 
 data class ExploreUiState(
     val query: String = "",
-    val properties: CatalogLoadState<Property> = CatalogLoadState.Loading,
+    val properties: CatalogLoadState<Property> = CatalogLoadState.Empty,
     val allProperties: List<Property> = emptyList(),
     val isSearching: Boolean = false,
     val rooms: RoomSearchState = RoomSearchState.Loading,
     val filters: ExploreFiltersUi = ExploreFiltersUi(),
     val favoriteRoomIds: Set<String> = emptySet(),
     val showFilters: Boolean = false,
+    val universitySource: String = "none",
+    val isAuthenticated: Boolean = false,
+    val universities: List<University> = emptyList(),
 ) {
-    /** Resultados visibles para la búsqueda textual local (D20). */
     fun visibleRooms(): List<com.thehouse.app.domain.room.RoomSearchItem> {
         val items = (rooms as? RoomSearchState.Content)?.items.orEmpty()
         val q = query.trim()
@@ -87,39 +94,110 @@ class ExploreViewModel(
     private val searchRooms: SearchRoomsUseCase? = null,
     private val favoriteStateStore: FavoriteStateStore? = null,
     private val toggleFavorite: ToggleFavoriteUseCase? = null,
+    private val selectedRepository: SelectedUniversityRepository? = null,
+    private val profileUniversityState: Flow<University?>? = null,
+    private val sessionState: StateFlow<SessionState> = MutableStateFlow(SessionState.Anonymous),
+    private val getUniversities: com.thehouse.app.domain.usecase.GetUniversitiesUseCase? = null,
 ) : BaseViewModel<ExploreUiState, ExploreEvent, ExploreEffect>(ExploreUiState()) {
 
     val isOnline: StateFlow<Boolean> = connectivityObserver?.isOnline ?: MutableStateFlow(true)
     private var roomsJob: Job? = null
+    private var sessionJob: Job? = null
     private var searchGeneration = 0
+    private var lastLoadedFiltersKey: String? = null
+    private val searchEnabled = searchRooms != null
 
     init {
-        if (searchRooms == null) load()
+        CatalogFlowLogger.explore("viewmodel_created", "searchEnabled", searchEnabled)
+        if (!searchEnabled) load()
+
         favoriteStateStore?.roomIds?.let { flow ->
             launch { flow.collect { ids -> updateState { it.copy(favoriteRoomIds = ids) } } }
         }
+
+        // Universidad local (guest): StateFlow + carga inicial.
+        if (selectedRepository != null) {
+            launch {
+                selectedRepository.loadSelected()
+                selectedRepository.selectedUniversityId.collect { id ->
+                    if (!id.isNullOrBlank()) {
+                        CatalogFlowLogger.explore("university_available", "source", "local_preference")
+                        applyUniversity(id, "local_preference")
+                    }
+                }
+            }
+        }
+
+        // Universidad remota (Perfil auth): observada siempre, con sesión asíncrona.
+        if (profileUniversityState != null) {
+            launch {
+                profileUniversityState.collect { university ->
+                    if (university != null && university.id.isNotBlank()) {
+                        CatalogFlowLogger.explore("university_available", "source", "profile")
+                        applyUniversity(university.id, "profile")
+                    }
+                }
+            }
+        }
+
+        sessionJob = launch {
+            sessionState.collect { session ->
+                val active = session is SessionState.Active
+                updateState { it.copy(isAuthenticated = active) }
+                CatalogFlowLogger.explore("session_state", "active", active)
+            }
+        }
+
+        if (searchEnabled && uiState.value.filters.universityId.isNullOrBlank()) {
+            CatalogFlowLogger.explore("state_transition", "to", "Empty", "reason", "no_university")
+            updateState { it.copy(rooms = RoomSearchState.Empty) }
+        }
+
+        if (getUniversities != null) {
+            launch {
+                val result = getUniversities()
+                result.onSuccess { page ->
+                    updateState { it.copy(universities = page.items) }
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        roomsJob?.cancel()
+        sessionJob?.cancel()
+        super.onCleared()
     }
 
     override fun onEvent(event: ExploreEvent) {
+        CatalogFlowLogger.explore("load_trigger", "event", event::class.simpleName.orEmpty())
         when (event) {
-            ExploreEvent.RetryClicked -> if (searchRooms != null) loadRooms() else load()
+            ExploreEvent.RetryClicked -> if (searchEnabled) loadRooms(refresh = true) else load()
             is ExploreEvent.QueryChanged -> {
                 updateState { it.copy(query = event.query) }
-                if (searchRooms == null) applyQuery(event.query)
+                if (!searchEnabled) applyQuery(event.query)
             }
             is ExploreEvent.UniversityChanged -> {
-                updateState { it.copy(filters = it.filters.copy(universityId = event.universityId)) }
-                loadRooms()
+                applyUniversity(event.universityId, "user_selection")
             }
             is ExploreEvent.FilterChanged -> {
                 updateState { it.copy(filters = event.filters) }
-                loadRooms()
+                loadRooms(refresh = true)
             }
             ExploreEvent.ToggleFilters -> updateState { it.copy(showFilters = !it.showFilters) }
             ExploreEvent.RefreshRoomsClicked -> loadRooms(refresh = true)
             ExploreEvent.LoadMoreRoomsClicked -> loadMoreRooms()
             is ExploreEvent.FavoriteRoomClicked -> toggleRoomFavorite(event.roomId)
         }
+    }
+
+    private fun applyUniversity(id: String, source: String) {
+        val current = uiState.value
+        if (current.filters.universityId == id && lastLoadedFiltersKey?.startsWith(id) == true) return
+        updateState {
+            it.copy(universitySource = source, filters = it.filters.copy(universityId = id))
+        }
+        loadRooms(refresh = true)
     }
 
     fun load() {
@@ -134,16 +212,27 @@ class ExploreViewModel(
     }
 
     fun loadRooms(refresh: Boolean = false) {
-        val useCase = searchRooms ?: return
-        val universityId = uiState.value.filters.universityId
-        if (universityId.isNullOrBlank()) {
+        val useCase = searchRooms
+        if (useCase == null) {
             updateState { it.copy(rooms = RoomSearchState.Empty) }
             return
         }
-        if (roomsJob?.isActive == true && !refresh) return
+        CatalogFlowLogger.explore("repository_available", "value", true)
+        val filters = uiState.value.filters
+        if (filters.universityId.isNullOrBlank()) {
+            CatalogFlowLogger.explore("state_transition", "to", "Empty", "reason", "no_university")
+            updateState { it.copy(rooms = RoomSearchState.Empty) }
+            return
+        }
+        val key = filtersKey(filters, 1)
+        if (!refresh && key == lastLoadedFiltersKey && roomsJob?.isActive == true) return
         roomsJob?.cancel()
         val generation = ++searchGeneration
-        val filters = uiState.value.filters
+        lastLoadedFiltersKey = key
+        CatalogFlowLogger.explore(
+            "search_start", "source", uiState.value.universitySource,
+            "roomType", filters.roomType ?: "null", "sort", filters.sort, "refresh", refresh,
+        )
         updateState {
             val previous = it.rooms
             it.copy(
@@ -153,23 +242,39 @@ class ExploreViewModel(
             )
         }
         roomsJob = launch {
-            val result = useCase(filters.toDomain(page = 1))
-            if (generation != searchGeneration) return@launch
-            result.fold(
-                onSuccess = { page ->
-                    updateState {
-                        it.copy(
-                            rooms = if (page.items.isEmpty()) RoomSearchState.Empty else RoomSearchState.Content(
-                                items = page.items,
-                                page = page.page,
-                                totalPages = page.totalPages,
-                                totalItems = page.totalItems,
-                            ),
-                        )
-                    }
-                },
-                onFailure = { updateState { it.copy(rooms = result.toRoomSearchStateError()) } },
-            )
+            try {
+                val result = useCase(filters.toDomain(page = 1))
+                if (generation != searchGeneration) {
+                    CatalogFlowLogger.search("search_cancelled", "generation", generation)
+                    return@launch
+                }
+                CatalogFlowLogger.search(
+                    "deserialization_result", "success", result.isSuccess,
+                    "exception_type", result.exceptionOrNull()?.let { it::class.simpleName } ?: "none",
+                )
+                result.fold(
+                    onSuccess = { page ->
+                        CatalogFlowLogger.search("result_count", "count", page.items.size, "total", page.totalItems)
+                        updateState {
+                            it.copy(
+                                rooms = if (page.items.isEmpty()) RoomSearchState.Empty else RoomSearchState.Content(
+                                    items = page.items,
+                                    page = page.page,
+                                    totalPages = page.totalPages,
+                                    totalItems = page.totalItems,
+                                ),
+                            )
+                        }
+                    },
+                    onFailure = {
+                        CatalogFlowLogger.search("state_transition", "to", "Error", "exception_type", it::class.simpleName.orEmpty())
+                        updateState { it.copy(rooms = result.toRoomSearchStateError()) }
+                    },
+                )
+            } catch (ce: CancellationException) {
+                CatalogFlowLogger.search("search_cancelled", "reason", "cancellation")
+                throw ce
+            }
         }
     }
 
@@ -201,7 +306,12 @@ class ExploreViewModel(
                 onFailure = {
                     updateState {
                         val state = it.rooms as? RoomSearchState.Content ?: return@updateState it
-                        it.copy(rooms = state.copy(isPaginating = false, paginationError = result.toRoomSearchStateError().error))
+                        it.copy(
+                            rooms = state.copy(
+                                isPaginating = false,
+                                paginationError = result.toRoomSearchStateError().error,
+                            ),
+                        )
                     }
                 },
             )
@@ -243,6 +353,12 @@ class ExploreViewModel(
         }
     }
 }
+
+private fun filtersKey(filters: ExploreFiltersUi, page: Int): String = listOf(
+    filters.universityId, filters.minPrice, filters.maxPrice, filters.roomType,
+    filters.bathroom, filters.buildingType, filters.allowedTenants,
+    filters.services.joinToString(","), filters.maxDistanceKm, filters.sort, page,
+).joinToString("|")
 
 private fun ExploreFiltersUi.toDomain(page: Int) = RoomSearchFilters(
     universityId = universityId.orEmpty(),

@@ -43,6 +43,7 @@ import com.thehouse.app.domain.repository.OnboardingRepository
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
+import com.thehouse.app.presentation.catalog.CatalogFlowLogger
 
 import com.thehouse.app.domain.repository.VisitsRepository
 import com.thehouse.app.data.smartmatch.SmartMatchRepository
@@ -237,13 +238,26 @@ class AppContainer(context: Context) {
         )
     }
 
-    /** D20: sincroniza favoritos desde el Backend tras iniciar sesión. */
-    fun syncFavorites() {
-        if (sessionStore.state.value !is SessionState.Active) {
+    /** D20 hotfix: single-flight de sincronía de favoritos por sesión. */
+    private var favoritesSyncJob: kotlinx.coroutines.Job? = null
+    private var favoritesSyncOwner: String? = null
+
+    fun syncFavorites(force: Boolean = false) {
+        val session = sessionStore.state.value
+        if (session !is SessionState.Active) {
+            favoritesSyncJob?.cancel()
+            favoritesSyncJob = null
+            favoritesSyncOwner = null
             favoriteStateStore.clear()
             return
         }
-        applicationScope.launch {
+        val owner = session.session.userId
+        // Evita dos GET /favorites/ids simultáneos por recomposición/LaunchedEffect.
+        if (!force && favoritesSyncJob?.isActive == true && favoritesSyncOwner == owner) return
+        favoritesSyncJob?.cancel()
+        favoritesSyncOwner = owner
+        favoritesSyncJob = applicationScope.launch {
+            CatalogFlowLogger.home("load_trigger", "event", "favorites_sync", "force", force)
             getFavoriteIds().onSuccess { favoriteStateStore.setAll(it) }
         }
     }

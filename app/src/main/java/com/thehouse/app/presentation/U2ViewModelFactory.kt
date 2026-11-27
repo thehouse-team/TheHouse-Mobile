@@ -290,6 +290,10 @@ class U2ViewModelFactory(
                 searchRooms = container.searchRooms,
                 favoriteStateStore = container.favoriteStateStore,
                 toggleFavorite = container.toggleFavorite,
+                selectedRepository = container.selectedUniversityRepository,
+                profileUniversityState = container.profileRepository.universityState,
+                sessionState = container.sessionStore.state,
+                getUniversities = container.getUniversities,
             ) as T
 
         modelClass.isAssignableFrom(FavoritesViewModel::class.java) ->
@@ -353,6 +357,8 @@ class U2ViewModelFactory(
                 runSmartMatch = container.runSmartMatch,
                 dispatchers = container.dispatchers,
                 connectivityObserver = container.connectivityObserver,
+                favoriteStateStore = container.favoriteStateStore,
+                toggleFavorite = container.toggleFavorite,
             ) as T
 
         modelClass.isAssignableFrom(com.thehouse.app.presentation.notifications.NotificationsViewModel::class.java) ->

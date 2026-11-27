@@ -59,17 +59,28 @@ class FavoritesViewModel(
         }
     }
 
-    fun load() {
-        if (sessionState.value !is SessionState.Active) {
+    private var loadJob: kotlinx.coroutines.Job? = null
+    private var loadedOwner: String? = null
+
+    fun load(force: Boolean = false) {
+        val session = sessionState.value
+        if (session !is SessionState.Active) {
             updateState { it.copy(isLoading = false, items = emptyList(), error = null) }
             return
         }
+        val owner = (session as? com.thehouse.app.domain.model.SessionState.Active)?.session?.userId
+        // D20 hotfix: init + LaunchedEffect(isAuthenticated) llegaban juntos → dos GET.
+        if (!force && loadJob?.isActive == true && loadedOwner == owner) return
+        loadJob?.cancel()
+        loadedOwner = owner
         updateState { it.copy(isLoading = true, error = null) }
-        launch {
+        loadJob = launch {
             val result = getFavorites()
             result.fold(
                 onSuccess = { page ->
                     updateState { it.copy(isLoading = false, items = page.items, error = null) }
+                    // GET /favorites ya incluye roomIds; el reconcile con /ids solo
+                    // se hace en la sincronía única de AppContainer (evita duplicado).
                     favoriteIdsStore.setAll(page.items.map { it.roomId }.toSet())
                 },
                 onFailure = { throwable ->
@@ -77,8 +88,6 @@ class FavoritesViewModel(
                     updateState { it.copy(isLoading = false, error = error.toUiError()) }
                 },
             )
-            // La lista puede quedar desactualizada frente a /ids; reconcile.
-            getFavoriteIds?.invoke()?.onSuccess { favoriteIdsStore.setAll(it) }
         }
     }
 

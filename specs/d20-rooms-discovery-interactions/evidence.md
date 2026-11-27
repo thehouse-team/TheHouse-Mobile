@@ -62,3 +62,41 @@ Compatibilidad necessary con rentas (D13.1), visitas históricas y respuestas de
 
 ## RUNTIME
 Pendiente. No se inventan capturas ni respuestas; sin credenciales de prueba autorizadas para solicitudes/visitas reales en producción.
+
+## D20 HOTFIX — Catálogo, imágenes, favoritos y Smart Match (2026-11-27)
+
+Autorización humana individual sobre el mismo PR #36 (base `7e6cc27`). Sin merge, sin Backend/GenAI/ML/ONNX/infra, sin Fase C.
+
+### HOME_ROOT_CAUSE / EXPLORE_ROOT_CAUSE (demostrados)
+- Inyección de producción correcta: `U2ViewModelFactory` pasa `container.searchRooms`, `container.selectedUniversityRepository`, `container.profileRepository.universityState` y `container.sessionStore.state`.
+- `HomeViewModel` solo observaba `profileUniversityState` **dentro de un `if (sessionState.value is Active)` evaluado en `init`**. Como la sesión se restaura de forma asíncrona, el VM se creaba como Anonymous y nunca se suscribía al Perfil; su única universidad era la preferencia local de guest (null en el usuario autenticado). Ninguna llamada a `rooms/search`.
+- `ExploreViewModel` no observaba ninguna fuente de universidad: dependía de un parámetro de `MainActivity` leído de la preferencia local. Al ser null, `showRooms=false` y entraba en la rama legacy con `getProperties=null`, cuyo `load()` retorna anticipadamente dejando `properties` en `Loading` eterno («Buscando rentas...»). No se emitía `GET /rooms/search`.
+
+### CATALOG_LOAD_FIX
+- Home: observa SIEMPRE `profileUniversityState` (sin condición de sesión inicial), observa `selectedUniversityRepository.selectedUniversityId` como StateFlow y observa `sessionState` (refresh de perfil al pasar a Active). `applyUniversity()` dispara `loadRooms(refresh=true)`; ninguna validación deja Loading: sin universidad escribe `Empty`.
+- Explore: mismas tres fuentes + `getUniversities` para el selector; `applyUniversity()` dispara búsqueda real. Sin universidad → `Empty` con selector. Sin branch legacy en producción.
+- Ambos: single-flight por generación, `filtersKey` anti-duplicados, reintento explícito (`RefreshRoomsClicked`/`RetryClicked`), paginación con acumulación, logs DEBUG `HomeFlow`/`ExploreFlow`/`RoomSearchFlow` sin PII.
+
+### LOGS DEBUG
+`viewmodel_created`, `load_trigger`, `session_state`, `university_available`, `university_source`, `repository_available`, `search_start`, `http_status` (vía `TheHouseHttp` existente), `result_count`, `deserialization_result`, `search_cancelled`, `exception_type`, `state_transition`, `requestId`. `CatalogFlowLogger` usa `runCatching` para no fallar en tests JVM (`android.util.Log` no mocked).
+
+### FILTROS_UI / FILTROS_HTTP
+Filtros siempre accesibles (Chip «Filtros» + panel): universidad (catálogo real), precio mín/máx (500..50000), distancia (0.5..30, default 10), tipo de cuarto (`single|double|shared`), tipo de inmueble (`rooms_building|house_rooms|full_apartment`), baño (`private|shared`), convivencia (`women|men|any`), servicios, orden (`distance|price|newest`) y «Limpiar filtros». Códigos confirmados de nuevo contra `SearchContracts.cs`/`ListingRules.cs`. La búsqueda textual está etiquetada «limitada a lo cargado»: `rooms/search` no admite `q`.
+
+### FOTOGRAFÍAS — DIAGNÓSTICO REAL (solo lectura, Backend productivo)
+- `GET /api/v1/universities` → 10 universidades; `GET /api/v1/rooms/search?universityId=<id>&pageSize=50` para las 10 → **27 habitaciones, 0 con `thumbnailUrl` no nulo, 27 con `demo=true`**.
+- El placeholder azul es correcto: el Backend no publica fotos en los registros disponibles. No se inventaron URLs ni se desactivó TLS; se mantiene el cargador Coil compartido. `IMAGE_EXTERNAL_BLOCKER` = dependencia de datos DEMO sin fotografías (no defecto Mobile).
+
+### SMART_MATCH
+- `onFavoriteClick`/`onContactClick` reciben `result.roomId` (antes `result.property.id`).
+- `SmartMatchViewModel` inyecta `FavoriteStateStore` + `ToggleFavoriteUseCase`; `SmartMatchResult.isFavorite` se deriva del store compartido. Botones habilitados: «Guardar favorito»/«Quitar favorito» y «Contactar» → `CreateRequestRoute(roomId)` real. Sin tocar modelo, score, breakdown, indicador, autoridad Backend ni fallback D16.
+
+### FAVORITOS DEDUPLICACIÓN
+- `AppContainer.syncFavorites()` usa `Job` single-flight con propietario `userId`; `LaunchedEffect(isAuthenticated)` y recomposiciones no generan dos `GET /favorites/ids`.
+- `FavoritesViewModel.load()` usa `Job` single-flight con propietario; `init` + `LaunchedEffect` no duplican `GET /favorites`; se eliminó el reconcile extra que hacía un segundo `GET /ids`.
+
+### GATES
+`clean compileDebugKotlin`, `testDebugUnitTest` **567 tests / 0 failures / 0 errors** (baseline 562 + 5 regresiones D20 hotfix), `lintDebug` 0 errores SARIF, `assembleDebug`, `git diff --check` exit 0.
+
+### TEST DE REGRESIÓN P0
+`D20HotfixCatalogTest.P0 home dispara search cuando perfil emite universidad con sesion restaurada despues`: crea el VM con sesión Anonymous, emite la universidad del Perfil después de la restauración y exige `calls > 0` con `RoomSearchState.Content`. Antes del fix: `calls == 0` (falla). Después: pasa.

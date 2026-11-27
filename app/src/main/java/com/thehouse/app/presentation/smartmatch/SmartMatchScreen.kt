@@ -172,8 +172,10 @@ fun SmartMatchScreen(
                             SmartMatchRecommendationCard(
                                 result = result,
                                 onRoomClick = { onRoomClick(result.roomId) },
-                                onFavoriteClick = { onFavoriteClick(result.property.id) },
-                                onContactClick = { onContactClick(result.property.id) },
+                                // D20: el id de Smart Match es roomId real, nunca propertyId.
+                                // D20: toggle real vía ViewModel (PUT/DELETE con roomId).
+                                onFavoriteClick = { vm.onFavoriteClick(result.roomId) },
+                                onContactClick = { onContactClick(result.roomId) },
                             )
                         }
                     }

@@ -49,9 +49,42 @@ class SmartMatchViewModel(
     private val runSmartMatch: RunSmartMatchUseCase,
     private val dispatchers: DispatcherProvider,
     private val connectivityObserver: ConnectivityObserver? = null,
+    /** D20: favoritos compartidos por roomId (sin lógica en la UI). */
+    private val favoriteStateStore: com.thehouse.app.domain.usecase.FavoriteStateStore? = null,
+    private val toggleFavorite: com.thehouse.app.domain.usecase.ToggleFavoriteUseCase? = null,
 ) : ViewModel() {
 
     private var localEstimateActive = false
+
+    init {
+        favoriteStateStore?.roomIds?.let { flow ->
+            viewModelScope.launch {
+                flow.collect { ids ->
+                    val current = _uiState.value
+                    if (current is SmartMatchUiState.Content) {
+                        _uiState.value = current.copy(
+                            results = current.results.map { it.copy(isFavorite = it.roomId in ids) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /** D20: alterna favorito con el mismo flujo PUT/DELETE que Home/Explore/Detail. */
+    fun onFavoriteClick(roomId: String) {
+        val useCase = toggleFavorite ?: return
+        if (sessionState.value !is SessionState.Active) return
+        viewModelScope.launch {
+            val result = useCase(roomId)
+            // El store compartido actualiza los resultados vía collect.
+            if (result is com.thehouse.app.domain.usecase.FavoriteToggleResult.Failed) {
+                com.thehouse.app.presentation.catalog.CatalogFlowLogger.search(
+                    "favorite_toggle_failed", "exception_type", result.error::class.simpleName.orEmpty(),
+                )
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow<SmartMatchUiState>(SmartMatchUiState.Loading)
     val uiState: StateFlow<SmartMatchUiState> = _uiState.asStateFlow()
@@ -258,8 +291,12 @@ class SmartMatchViewModel(
     }
 
     private fun updateState(state: SmartMatchUiState) {
-        _uiState.value = state
-        SmartMatchFlowLogger.state(state)
+        val decorated = if (state is SmartMatchUiState.Content) {
+            val ids = favoriteStateStore?.roomIds?.value.orEmpty()
+            state.copy(results = state.results.map { it.copy(isFavorite = it.roomId in ids) })
+        } else state
+        _uiState.value = decorated
+        SmartMatchFlowLogger.state(decorated)
     }
 
     /**

@@ -54,6 +54,8 @@ data class SmartMatchResult(
     val allowedTenants: String? = null,
     val services: List<String> = emptyList(),
     val thumbnailUrl: String? = null,
+    /** D20: estado de favorito compartido, derivado del store por roomId. */
+    val isFavorite: Boolean = false,
 )
 
 /** Versiones: el artefacto local NO se declara equivalente al modelo productivo. */

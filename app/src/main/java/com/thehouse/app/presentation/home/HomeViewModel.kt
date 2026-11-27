@@ -17,6 +17,7 @@ import com.thehouse.app.domain.usecase.SearchRoomsUseCase
 import com.thehouse.app.domain.usecase.SelectUniversityUseCase
 import com.thehouse.app.domain.usecase.ToggleFavoriteUseCase
 import com.thehouse.app.presentation.catalog.CatalogLoadState
+import com.thehouse.app.presentation.catalog.CatalogFlowLogger
 import com.thehouse.app.presentation.catalog.RoomSearchState
 import com.thehouse.app.presentation.catalog.toCatalogState
 import com.thehouse.app.presentation.catalog.toRoomSearchStateError
@@ -34,11 +35,13 @@ import kotlinx.coroutines.flow.emptyFlow
 /**
  * MVVM + UDF del Home (D4/D5 + D19.1 + D20).
  *
- * - Universidad guardada en Perfil o seleccionada en modo guest (sin hardcode).
- * - D20: recommended reales vía `GET /api/v1/rooms/search` (roomId real).
- * - Legacy `properties` se mantiene SOLO para tests/previa que aún inyectan
- *   `getProperties`; producción usa `rooms`.
- * - Estado compartido de favoritos por roomId; guest → RequireLogin.
+ * D20 hotfix: la universidad se resuelve desde TRES fuentes observables:
+ * 1. Perfil remoto (auth; fuente de verdad), observado SIEMPRE (no solo si la
+ *    sesión era Active al crear el VM: la restauración es asíncrona).
+ * 2. Preferencia local (guest), observada como StateFlow.
+ * 3. Selección explícita del usuario (UniversitySelected).
+ * Ninguna salida anticipada deja `rooms` en Loading: toda validación que
+ * impide la búsqueda escribe un estado terminal Empty/Error.
  */
 data class HomeUiState(
     val displayName: String = "",
@@ -50,6 +53,7 @@ data class HomeUiState(
     val properties: CatalogLoadState<Property> = CatalogLoadState.Loading,
     val rooms: RoomSearchState = RoomSearchState.Loading,
     val selectedUniversityId: String? = null,
+    val universitySource: String = "none",
     val featuredProperty: Property? = null,
     val propertiesVersion: Int = 0,
     val universitiesVersion: Int = 0,
@@ -88,10 +92,9 @@ class HomeViewModel(
     private val selectUniversity: SelectUniversityUseCase? = null,
     private val getUnreadNotificationsCount: GetUnreadNotificationsCountUseCase? = null,
     private val pushRefreshSignals: Flow<Unit> = emptyFlow(),
-    /** D19.1: universidad guardada en Perfil (fuente de verdad remota). */
-    private val profileUniversityState: Flow<com.thehouse.app.domain.model.University?>? = null,
+    /** Universidad remota del Perfil (auth). Se observa SIEMPRE. */
+    private val profileUniversityState: Flow<University?>? = null,
     private val refreshProfile: suspend () -> Unit = {},
-    /** D20: búsqueda real de habitaciones. */
     private val searchRooms: SearchRoomsUseCase? = null,
     private val favoriteStateStore: FavoriteStateStore? = null,
     private val toggleFavorite: ToggleFavoriteUseCase? = null,
@@ -101,47 +104,88 @@ class HomeViewModel(
     private var unreadPollingJob: Job? = null
     private var unreadRefreshJob: Job? = null
     private var roomsJob: Job? = null
+    private var sessionJob: Job? = null
     private var searchGeneration = 0
     private var lastLoadedUniversity: String? = null
+    private var lastLoadedFiltersKey: String? = null
     private val searchEnabled = searchRooms != null
 
     override fun onCleared() {
         unreadPollingJob?.cancel()
+        unreadRefreshJob?.cancel()
         roomsJob?.cancel()
+        sessionJob?.cancel()
         super.onCleared()
     }
 
     init {
+        CatalogFlowLogger.home("viewmodel_created", "searchEnabled", searchEnabled)
         updateState {
             val isGuest = sessionState.value is SessionState.Anonymous
-            it.copy(isGuest = isGuest, isAuthenticated = !isGuest, favoriteRoomIds = favoriteStateStore?.roomIds?.value.orEmpty())
+            it.copy(
+                isGuest = isGuest,
+                isAuthenticated = !isGuest,
+                favoriteRoomIds = favoriteStateStore?.roomIds?.value.orEmpty(),
+            )
         }
+
+        // 1. Preferencia local (guest): StateFlow observable, no solo loadSelected().
         if (selectedRepository != null) {
             launch {
                 selectedRepository.loadSelected()
-                updateState { it.copy(selectedUniversityId = selectedRepository.selectedUniversityId.value) }
-                onUniversityResolved()
-            }
-        }
-        if (sessionState.value is com.thehouse.app.domain.model.SessionState.Active) {
-            launch {
-                runCatching { refreshProfile() }
-                profileUniversityState?.collect { university ->
-                    if (university != null) {
-                        updateState { it.copy(selectedUniversityId = university.id) }
-                        onUniversityResolved()
+                selectedRepository.selectedUniversityId.collect { id ->
+                    if (!id.isNullOrBlank()) {
+                        CatalogFlowLogger.home(
+                            "university_available", "source", "local_preference", "hasId", true,
+                        )
+                        applyUniversity(id, "local_preference")
                     }
                 }
             }
         }
+
+        // 2. Perfil remoto: SIEMPRE observado; la sesión puede restaurarse después.
+        if (profileUniversityState != null) {
+            launch {
+                profileUniversityState.collect { university ->
+                    if (university != null && university.id.isNotBlank()) {
+                        CatalogFlowLogger.home(
+                            "university_available", "source", "profile", "hasId", true,
+                        )
+                        applyUniversity(university.id, "profile")
+                    }
+                }
+            }
+        }
+
+        // 3. Sesión: al pasar a Active se refresca el perfil (restauración tardía).
+        sessionJob = launch {
+            sessionState.collect { session ->
+                val active = session is SessionState.Active
+                CatalogFlowLogger.home("session_state", "active", active)
+                updateState { it.copy(isGuest = !active, isAuthenticated = active) }
+                if (active) {
+                    val refreshed = runCatching { refreshProfile() }.isSuccess
+                    CatalogFlowLogger.home("load_trigger", "event", "profile_refresh", "success", refreshed)
+                } else if (searchEnabled) {
+                    favoriteStateStore?.clear()
+                }
+            }
+        }
+
         favoriteStateStore?.roomIds?.let { flow ->
             launch { flow.collect { ids -> updateState { it.copy(favoriteRoomIds = ids) } } }
         }
+
+        // Estado inicial terminal: nunca Loading sin búsqueda posible.
         if (searchEnabled && uiState.value.selectedUniversityId.isNullOrBlank()) {
+            CatalogFlowLogger.home("state_transition", "to", "Empty", "reason", "no_university")
             updateState { it.copy(rooms = RoomSearchState.Empty) }
         }
+
         loadUniversities()
         if (!searchEnabled) loadProperties()
+
         launch {
             pushRefreshSignals.collect {
                 if (sessionState.value is SessionState.Active) refreshUnread()
@@ -150,6 +194,7 @@ class HomeViewModel(
     }
 
     override fun onEvent(event: HomeEvent) {
+        CatalogFlowLogger.home("load_trigger", "event", event::class.simpleName.orEmpty())
         when (event) {
             HomeEvent.LogoutClicked -> logout()
             HomeEvent.FavoriteClicked -> guard(ProtectedAction.SaveFavorite)
@@ -167,6 +212,14 @@ class HomeViewModel(
             HomeEvent.StartUnreadPolling -> startUnreadPolling()
             HomeEvent.StopUnreadPolling -> stopUnreadPolling()
         }
+    }
+
+    /** Aplica una universidad resuelta y dispara la búsqueda si cambió. */
+    private fun applyUniversity(id: String, source: String) {
+        val current = uiState.value
+        if (current.selectedUniversityId == id && lastLoadedUniversity == id) return
+        updateState { it.copy(selectedUniversityId = id, universitySource = source) }
+        if (searchEnabled) loadRooms(refresh = true)
     }
 
     private fun refreshUnread() {
@@ -257,19 +310,30 @@ class HomeViewModel(
         }
     }
 
-    /** D20: carga/refresca habitaciones reales para la universidad vigente. */
     fun loadRooms(refresh: Boolean = false) {
-        val useCase = searchRooms ?: return
-        val universityId = uiState.value.selectedUniversityId
-        if (universityId.isNullOrBlank()) {
+        val useCase = searchRooms
+        if (useCase == null) {
+            // Sin repositorio: estado terminal, nunca Loading (D19.1 branch legacy).
             updateState { it.copy(rooms = RoomSearchState.Empty) }
             return
         }
-        // Single-flight + generación: evita duplicados y respuestas obsoletas.
-        if (roomsJob?.isActive == true && !refresh) return
+        CatalogFlowLogger.home("repository_available", "value", true)
+        val universityId = uiState.value.selectedUniversityId
+        if (universityId.isNullOrBlank()) {
+            CatalogFlowLogger.home("state_transition", "to", "Empty", "reason", "no_university")
+            updateState { it.copy(rooms = RoomSearchState.Empty) }
+            return
+        }
+        val filtersKey = "$universityId|default"
+        if (!refresh && filtersKey == lastLoadedFiltersKey && roomsJob?.isActive == true) return
         roomsJob?.cancel()
         val generation = ++searchGeneration
         lastLoadedUniversity = universityId
+        lastLoadedFiltersKey = filtersKey
+        CatalogFlowLogger.home(
+            "search_start", "universityId_set", true, "source", uiState.value.universitySource,
+            "refresh", refresh,
+        )
         updateState {
             val previous = it.rooms
             it.copy(
@@ -279,23 +343,45 @@ class HomeViewModel(
             )
         }
         roomsJob = launch {
-            val result = useCase(RoomSearchFilters(universityId = universityId))
-            if (generation != searchGeneration) return@launch
-            result.fold(
-                onSuccess = { page ->
-                    updateState {
-                        it.copy(
-                            rooms = if (page.items.isEmpty()) RoomSearchState.Empty else RoomSearchState.Content(
-                                items = page.items,
-                                page = page.page,
-                                totalPages = page.totalPages,
-                                totalItems = page.totalItems,
-                            ),
+            try {
+                val result = useCase(RoomSearchFilters(universityId = universityId))
+                if (generation != searchGeneration) {
+                    CatalogFlowLogger.search("search_cancelled", "generation", generation)
+                    return@launch
+                }
+                CatalogFlowLogger.search(
+                    "deserialization_result",
+                    "success", result.isSuccess,
+                    "exception_type", result.exceptionOrNull()?.let { it::class.simpleName } ?: "none",
+                )
+                result.fold(
+                    onSuccess = { page ->
+                        CatalogFlowLogger.search(
+                            "result_count", "count", page.items.size, "total", page.totalItems,
                         )
-                    }
-                },
-                onFailure = { updateState { it.copy(rooms = result.toRoomSearchStateError()) } },
-            )
+                        updateState {
+                            it.copy(
+                                rooms = if (page.items.isEmpty()) RoomSearchState.Empty else RoomSearchState.Content(
+                                    items = page.items,
+                                    page = page.page,
+                                    totalPages = page.totalPages,
+                                    totalItems = page.totalItems,
+                                ),
+                            )
+                        }
+                    },
+                    onFailure = {
+                        CatalogFlowLogger.search(
+                            "state_transition", "to", "Error",
+                            "exception_type", it::class.simpleName.orEmpty(),
+                        )
+                        updateState { it.copy(rooms = result.toRoomSearchStateError()) }
+                    },
+                )
+            } catch (ce: CancellationException) {
+                CatalogFlowLogger.search("search_cancelled", "reason", "cancellation")
+                throw ce
+            }
         }
     }
 
@@ -307,9 +393,7 @@ class HomeViewModel(
         val generation = searchGeneration
         updateState { it.copy(rooms = current.copy(isPaginating = true, paginationError = null)) }
         launch {
-            val result = useCase(
-                RoomSearchFilters(universityId = universityId, page = current.page + 1),
-            )
+            val result = useCase(RoomSearchFilters(universityId = universityId, page = current.page + 1))
             if (generation != searchGeneration) return@launch
             result.fold(
                 onSuccess = { page ->
@@ -329,16 +413,16 @@ class HomeViewModel(
                 onFailure = {
                     updateState {
                         val state = it.rooms as? RoomSearchState.Content ?: return@updateState it
-                        it.copy(rooms = state.copy(isPaginating = false, paginationError = result.toRoomSearchStateError().error))
+                        it.copy(
+                            rooms = state.copy(
+                                isPaginating = false,
+                                paginationError = result.toRoomSearchStateError().error,
+                            ),
+                        )
                     }
                 },
             )
         }
-    }
-
-    private fun onUniversityResolved() {
-        val id = uiState.value.selectedUniversityId
-        if (searchEnabled && !id.isNullOrBlank() && id != lastLoadedUniversity) loadRooms()
     }
 
     private fun toggleRoomFavorite(roomId: String) {
@@ -370,10 +454,8 @@ class HomeViewModel(
     private fun select(universityId: String) {
         launch {
             selectUniversity?.invoke(universityId)
-            selectedRepository?.selectedUniversityId?.value?.let { id ->
-                updateState { it.copy(selectedUniversityId = id) }
-            } ?: updateState { it.copy(selectedUniversityId = universityId) }
-            onUniversityResolved()
+            val id = selectedRepository?.selectedUniversityId?.value ?: universityId
+            applyUniversity(id, "user_selection")
         }
     }
 

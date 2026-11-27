@@ -149,9 +149,6 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
     val isAuthenticated = sessionState is SessionState.Active
     val isAccountSuspended = sessionState is SessionState.Suspended
     val displayName = (sessionState as? SessionState.Active)?.session?.displayName.orEmpty()
-    val selectedUniversityId by container.selectedUniversityRepository.selectedUniversityId
-        .collectAsStateWithLifecycle()
-
     LaunchedEffect(Unit) {
         rootViewModel.collect(container.sessionStore.state)
     }
@@ -425,7 +422,6 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         },
                         factory = factory,
                         roomsEnabled = true,
-                        selectedUniversityId = selectedUniversityId,
                         onRoomClick = { roomId ->
                             if (currentRoute != RoomDetailRoute.PATTERN && RoomDetailRoute.isValid(roomId)) {
                                 navController.navigate(RoomDetailRoute(roomId).route) { launchSingleTop = true }
@@ -501,14 +497,17 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             }
                         },
                         onFavoriteClick = {
+                            // D20: el toggle real lo ejecuta SmartMatchViewModel con roomId.
                             if (!isAuthenticated) {
                                 navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
                             }
-                            // Toggle de favoritos reutiliza flujo existente vía detalle/listas; no se duplica lógica aquí.
                         },
-                        onContactClick = {
+                        onContactClick = { roomId ->
                             if (!isAuthenticated) {
                                 navController.navigate(AppRoutes.login.route) { launchSingleTop = true }
+                            } else if (RoomDetailRoute.isValid(roomId)) {
+                                // D20: formulario real de solicitudes con roomId.
+                                navController.navigate(CreateRequestRoute(roomId).route) { launchSingleTop = true }
                             }
                         },
                     )
