@@ -124,3 +124,67 @@ Tests nuevos: (1) `preferences form applies scroll modifier...` — el modifier 
 - **RUNTIME_PENDING**: desplazamiento real con sesión y teclado, HTTP autenticado de recomendaciones, Room Detail desde recomendaciones. Sin credenciales autorizadas no se inventaron datos ni se modificaron preferencias.
 
 Resultado: **`D19.1-FINAL-LAYOUT-FIXED`** (código); no `RUNTIME-CERTIFIED`.
+
+## HOTFINAL — SMART MATCH UX + ROOM DETAIL CRASH (2026-11-27)
+
+### CRASH REAL RECUPERADO (antes de limpiar logcat)
+
+Comandos ejecutados: `adb logcat -b crash -d -v threadtime` y `adb logcat -d -s AndroidRuntime:E`.
+
+```
+11-27 08:27:18.361 16024 16024 E AndroidRuntime: FATAL EXCEPTION: main
+java.lang.IllegalArgumentException: Navigation destination that matches route
+cuarto/{roomId}/6aef802d406d73585006cfc1 cannot be found in the navigation graph
+  at androidx.navigation.NavController.navigate(NavController.android.kt:1025)
+  at com.thehouse.app.MainActivityKt.TheHouseRoot$lambda$488... (MainActivity.kt:478)
+  at ...SmartMatchScreenKt$SmartMatchScreen$4$1$7$1$2$1$1.invoke(SmartMatchScreen.kt:190)
+  at androidx.compose.foundation.AbstractClickableNode.performClick
+```
+
+- **EXCEPTION_TYPE:** `java.lang.IllegalArgumentException`
+- **EXCEPTION_MESSAGE:** `Navigation destination that matches route cuarto/{roomId}/<roomId> cannot be found in the navigation graph`
+- **FIRST_APP_STACK_FRAME:** `MainActivity.kt:478` (`TheHouseRoot` → `navController.navigate`)
+- **CAUSED_BY:** ninguno (`Caused by` ausente)
+- **FILE:** `RoomDetailRoute.kt` (origen), manifestado en `MainActivity.kt:478`
+- **LINE:** `RoomDetailRoute.kt:7` / `MainActivity.kt:478`
+
+### CRASH_ROOT_CAUSE (demostrado)
+
+`RoomDetailRoute` construía la ruta como `"$PATTERN/" + id`, es decir `cuarto/{roomId}/6aef...`, mientras el NavHost registra `RoomDetailRoute.PATTERN = "cuarto/{roomId}"`. El marcador literal quedaba en la ruta concreta y Navigation no encontraba destino. No era factory, DTO, serialización ni roomId inválido: el `roomId` era real y correcto; la ruta estaba mal formada.
+
+### CRASH_FIX
+
+`RoomDetailRoute.route = "cuarto/" + URLEncoder.encode(roomId, "UTF-8")...`. Regresión endurecida en `D18RoomDetailTest`: `assertEquals("cuarto/room-xyz", route.route)` y ausencia de `{`. Guardia anti doble navegación en `MainActivity` (`currentRoute != RoomDetailRoute.PATTERN` + `launchSingleTop`). Sin renombrar rutas ni usar `propertyId`.
+
+### REDISEÑO SMART MATCH
+
+Tarjeta integrada nueva (`SmartMatchRecommendationCard.kt`): foto real si `thumbnailUrl` válido, placeholder TheHouse si no; título y precio reales; indicador circular Canvas (sin librerías); un solo porcentaje; información real de `RoomSearchItem` (distancia, minutos caminando, tipo de cuarto/edificio, inquilinos permitidos, servicios); CTA «Ver alojamiento»; sección desplegable «¿Por qué es compatible contigo?». Favoritos/Contactar se conservan como controles **deshabilitados** y etiquetados «próximamente» (PR B), sin afirmar que funcionan. LazyColumn con clave estable `roomId` y `contentPadding(bottom = Spacing.xxl)` para no recortar con bottom navigation.
+
+### INDICADOR CIRCULAR Y BREAKDOWN
+
+- Rangos visuales: 80–100 verde, 60–79 azul, 40–59 ámbar, 0–39 gris; `scoreUnavailable` → «Sin porcentaje» (nunca 0% inventado). Clamp solo en el dibujo.
+- `factorProgress(points,maxPoints)`: `points/maxPoints` con clamp 0..1, `maxPoints<=0`, NaN, infinito y negativos → 0.0. Sin máximos hardcodeados y sin recalcular `matchScore`.
+- Descripción semántica del porcentaje y de cada factor. Backend sigue siendo autoridad de orden/score; D16 fallback etiquetado intacto.
+
+### CAMPOS REALES
+
+Se eliminaron «0 habitaciones», «0 baños» y «0 m²»: `SmartMatchResult` incorpora campos opcionales (`distanceKm`, `walkingMinutes`, `roomType`, `buildingType`, `allowedTenants`, `services`, `thumbnailUrl`) con defaults null/vacío, poblados desde `RoomSearchItem`. La UI muestra solo lo que existe.
+
+### GATES
+
+| Comando | Resultado |
+|---|---|
+| `clean compileDebugKotlin --offline` | BUILD SUCCESSFUL |
+| `testDebugUnitTest --offline` | BUILD SUCCESSFUL — **547 tests / 0 failures / 0 errors** (536 + 11 nuevos) |
+| `lintDebug --offline` | BUILD SUCCESSFUL (0 errores) |
+| `assembleDebug --offline` | BUILD SUCCESSFUL |
+| `git diff --check` | exit 0 |
+
+Tests nuevos: ruta exacta y roomId real (2), rangos visuales y score no disponible (2), breakdown decimal/maxPoints=0/NaN/fuera de rango (2), deserialización de payload real con 93% (1), 200 vacío sin fallback (1), mapper sin ceros inventados (1), tarjeta con clave estable y un solo porcentaje (1), defaults del modelo (1), más el endurecimiento de `D18RoomDetailTest`.
+
+### RUNTIME
+
+- **RUNTIME_PASS**: APK instalado (`adb install -r`), arranque sin FATAL EXCEPTION, Smart Match guest muestra subtítulo/loading nuevos, crash buffer vacío tras la navegación disponible. Captura `d191-sm-ux.png`.
+- **RUNTIME_PENDING**: clic en recomendación real → `GET /rooms/{roomId}` → RoomDetail visible (sin credenciales en el emulador; el usuario reportó el crash en su sesión). Para reproducir: iniciar sesión con cuenta autorizada, abrir Smart Match, pulsar «Ver alojamiento» y ejecutar `adb logcat -d -s TheHouseHttp:D SmartMatchFlow:D AndroidRuntime:E`.
+
+Resultado: **`D19.1-SMART-MATCH-UX-ROOM-DETAIL-FIXED`** (código). No `RUNTIME-CERTIFIED`: falta la reproducción autenticada del clic en recomendación.

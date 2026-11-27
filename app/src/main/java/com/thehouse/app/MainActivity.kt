@@ -475,7 +475,10 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                         // D18: el id de Smart Match es un roomId real.
                         // NUNCA se reutiliza como propertyId (GET /properties/{id}).
                         onRoomClick = { roomId ->
-                            navController.navigate(RoomDetailRoute(roomId).route) { launchSingleTop = true }
+                            // Evita navegaciones duplicadas por pulsaciones rápidas.
+                            if (currentRoute != RoomDetailRoute.PATTERN && RoomDetailRoute.isValid(roomId)) {
+                                navController.navigate(RoomDetailRoute(roomId).route) { launchSingleTop = true }
+                            }
                         },
                         onFavoriteClick = {
                             if (!isAuthenticated) {

@@ -194,7 +194,10 @@ class D191FunctionalVisualCompletionTest {
         assertTrue(source.contains("Encuentra alojamientos compatibles con tus preferencias."))
         assertFalse(source.contains("ML on-device"))
         assertFalse(source.contains("Calculando recomendaciones con ML"))
-        assertTrue(source.contains("Estimación local"))
+        val card = sourceOf(
+            "src/main/java/com/thehouse/app/presentation/smartmatch/SmartMatchRecommendationCard.kt",
+        )
+        assertTrue(card.contains("Estimación local"))
     }
 
     @Test

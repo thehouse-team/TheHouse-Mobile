@@ -163,8 +163,11 @@ class D18RoomDetailTest {
         assertEquals("room-xyz", result.roomId)
 
         val route = RoomDetailRoute(result.roomId)
-        assertTrue(route.route.startsWith(RoomDetailRoute.PATTERN))
-        assertTrue(route.route.contains("room-xyz"))
+        // Regresión del crash 2026-11-27: el destino registrado es
+        // `cuarto/{roomId}`, por lo que la ruta concreta debe ser
+        // exactamente `cuarto/<id>` (sin el marcador literal ni un segmento extra).
+        assertEquals("cuarto/room-xyz", route.route)
+        assertFalse(route.route.contains("{"))
         assertFalse(route.route.contains("propiedad"))
         assertFalse(route.route.contains("property_detail"))
     }

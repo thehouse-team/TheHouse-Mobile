@@ -28,5 +28,10 @@
 | D19.1-T24 | Diagnóstico solo lectura de recomendaciones/count/search + logging DEBUG existente | DONE — EMPTY plausible, sin defecto Mobile demostrado |
 | D19.1-T25 | Texto Smart Match sin claim de ML on-device | DONE — RUNTIME_PASS en dispositivo |
 | D19.1-T26 | Favoritos diferido a PR B; 2 regresiones nuevas y gates | DONE — 536 tests, lint/assemble/diff-check verdes |
+| D19.1-T27 | Recuperar crash completo y determinar causa real | DONE — IllegalArgumentException, ruta `cuarto/{roomId}/<id>` |
+| D19.1-T28 | Corregir RoomDetailRoute y endurecer regresión D18 | DONE |
+| D19.1-T29 | Rediseñar tarjeta de recomendación + indicador circular + breakdown | DONE |
+| D19.1-T30 | Campos reales de RoomSearchItem sin ceros inventados | DONE |
+| D19.1-T31 | 11 tests nuevos, gates, evidencia y memoria | DONE — 547 tests, lint/assemble/diff-check verdes |
 
 Regla: ninguna tarea se marca DONE sin evidencia real. `BLOCKED` nunca equivale a `DONE`.

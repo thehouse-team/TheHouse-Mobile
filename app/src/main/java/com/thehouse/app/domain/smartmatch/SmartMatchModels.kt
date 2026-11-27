@@ -44,6 +44,16 @@ data class SmartMatchResult(
     val factors: List<SmartMatchFactor>,
     val source: SmartMatchSource = SmartMatchSource.BACKEND,
     val modelVersion: String = SmartMatchModelVersions.SERVER_MODEL_VERSION,
+    /** true cuando el Backend no entregó score: la UI NO debe mostrar 0%. */
+    val scoreUnavailable: Boolean = false,
+    /** Campos reales de RoomSearchItem; ausentes = null, nunca 0 inventado. */
+    val distanceKm: Double? = null,
+    val walkingMinutes: Int? = null,
+    val roomType: String? = null,
+    val buildingType: String? = null,
+    val allowedTenants: String? = null,
+    val services: List<String> = emptyList(),
+    val thumbnailUrl: String? = null,
 )
 
 /** Versiones: el artefacto local NO se declara equivalente al modelo productivo. */
