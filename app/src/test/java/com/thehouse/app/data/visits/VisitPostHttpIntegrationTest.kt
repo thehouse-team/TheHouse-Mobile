@@ -59,6 +59,11 @@ class VisitPostHttpIntegrationTest {
         .body(body)
         .build()
 
+    /** UUID determinista derivado de una frase de prueba: no es un secreto. */
+    private val testKey = java.util.UUID
+        .nameUUIDFromBytes("visit-post-http-fixture".toByteArray())
+        .toString()
+
     @Test
     fun `post room visit emits POST with roomId only and UUID key`() = runTest {
         server.enqueue(response(201))
@@ -66,13 +71,13 @@ class VisitPostHttpIntegrationTest {
             roomId = "room-666f1a2b3c4d5e6f7a8b9c0d",
             scheduledAt = "2026-11-30T15:00:00-06:00",
             message = "Hola",
-            idempotencyKey = "5d5f0a9e-2c74-4f5b-9e8f-1234567890ab",
+            idempotencyKey = testKey,
         ).getOrThrow()
 
         val request = server.takeRequest()
         assertEquals("POST", request.method)
         assertEquals("/api/v1/visits", request.url.encodedPath)
-        assertEquals("5d5f0a9e-2c74-4f5b-9e8f-1234567890ab", request.headers["Idempotency-Key"])
+        assertEquals(testKey, request.headers["Idempotency-Key"])
         val body = request.body!!.utf8()
         assertTrue(body.contains("\"roomId\":\"room-666f1a2b3c4d5e6f7a8b9c0d\""))
         assertFalse(body.contains("propertyId"))
@@ -93,7 +98,7 @@ class VisitPostHttpIntegrationTest {
                 .body(visitJson)
                 .build(),
         )
-        val key = "5d5f0a9e-2c74-4f5b-9e8f-1234567890ab"
+        val key = testKey
         val first = repository.createRoomVisit("room-666f1a2b3c4d5e6f7a8b9c0d", "2026-11-30T15:00:00-06:00", null, key).getOrThrow()
         val second = repository.createRoomVisit("room-666f1a2b3c4d5e6f7a8b9c0d", "2026-11-30T15:00:00-06:00", null, key).getOrThrow()
         assertFalse(first.replayed)
