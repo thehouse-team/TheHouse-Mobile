@@ -1,6 +1,5 @@
 package com.thehouse.app.presentation.roomdetail
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,27 +15,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Roofing
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider
-import coil3.compose.AsyncImage
 import com.thehouse.app.domain.room.RoomDetail
+import com.thehouse.app.domain.room.RoomSearchCatalog
 import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
@@ -44,6 +39,8 @@ import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.presentation.components.TheHouseHeader
 import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseImage
+import com.thehouse.app.presentation.components.TheHouseImagePlaceholder
 import com.thehouse.app.presentation.components.TheHouseSecondaryButton
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
@@ -144,8 +141,18 @@ private fun RoomDetailContent(
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                room.roomType?.let { Text("Tipo de cuarto: $it", style = MaterialTheme.typography.bodyMedium) }
-                room.bathroom?.let { Text("Baño: $it", style = MaterialTheme.typography.bodyMedium) }
+                room.roomType?.let {
+                    Text(
+                        "Tipo de cuarto: ${RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, it)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                room.bathroom?.let {
+                    Text(
+                        "Baño: ${RoomSearchCatalog.label(RoomSearchCatalog.Kind.BATHROOM, it)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 room.sizeM2?.let { Text("Tamaño: $it m²", style = MaterialTheme.typography.bodyMedium) }
                 Text("Distancia: ${room.distanceKm} km · ${room.walkingMinutes} min a pie (aprox.)")
                 Text("Ubicación aproximada: ${room.approxLocation.lat}, ${room.approxLocation.lng}")
@@ -162,7 +169,10 @@ private fun RoomDetailContent(
             TheHouseCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
                 Text("Edificio", style = MaterialTheme.typography.titleMedium)
                 Text(room.building.name)
-                Text("Tipo: ${room.building.type} · Inquilinos: ${room.building.allowedTenants}")
+                Text(
+                    "Tipo: ${RoomSearchCatalog.label(RoomSearchCatalog.Kind.BUILDING_TYPE, room.building.type)} · " +
+                        "Inquilinos: ${RoomSearchCatalog.label(RoomSearchCatalog.Kind.ALLOWED_TENANTS, room.building.allowedTenants)}",
+                )
                 room.nearestUniversity?.let { Text("Universidad cercana: ${it.name}") }
                 room.building.rules?.let { Text("Reglas: $it") }
             }
@@ -190,65 +200,54 @@ private fun RoomDetailContent(
 
 @Composable
 private fun RoomPhotos(room: RoomDetail) {
-    val photos = room.photos
-    when {
-        !room.thumbnailUrl.isNullOrBlank() -> {
-            val start = remember(room.thumbnailUrl) { System.nanoTime() }
-            AsyncImage(
-                model = room.thumbnailUrl,
-                contentDescription = "Foto de ${room.title}",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-            )
-            com.thehouse.app.perf.Perf.since("image.load.room_detail", start)
+    val urls = buildList {
+        room.thumbnailUrl?.takeIf { it.isNotBlank() }?.let(::add)
+        room.photos.forEach { photo ->
+            photo.url.takeIf { it.isNotBlank() }?.let(::add)
+                ?: photo.thumbUrl.takeIf { it.isNotBlank() }?.let(::add)
         }
-        photos.isNotEmpty() -> {
-            val firstUrl = photos.firstNotNullOfOrNull { photo ->
-                photo.url.takeIf { it.isNotBlank() } ?: photo.thumbUrl.takeIf { it.isNotBlank() }
-            }
-            if (!firstUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = firstUrl,
-                    contentDescription = "Foto de ${room.title}",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(16.dp)),
-                )
-            } else {
-                PhotoPlaceholder(room.title)
-            }
-        }
-        else -> PhotoPlaceholder(room.title)
-    }
-}
+    }.distinct().take(4)
 
-@Composable
-private fun PhotoPlaceholder(title: String) {
-    Box(
+    if (urls.isEmpty()) {
+        // Sin fotografías: placeholder compacto, sin reservar altura excesiva.
+        TheHouseImagePlaceholder(
+            title = room.title,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(96.dp)
+                .clip(RoundedCornerShape(16.dp)),
+        )
+        return
+    }
+
+    // Galería compacta: una foto principal y hasta tres miniaturas. Cada
+    // elemento muestra el placeholder si falla, sin dejar contenedores vacíos.
+    val primary = urls.first()
+    TheHouseImage(
+        url = primary,
+        title = room.title,
+        perfOperation = "image.load.room_detail",
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.secondaryContainer,
-                    ),
-                ),
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Roofing,
-            contentDescription = "Sin foto disponible para $title",
-            modifier = Modifier.size(44.dp),
-            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-        )
+            .height(200.dp)
+            .clip(RoundedCornerShape(16.dp)),
+    )
+    if (urls.size > 1) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            urls.drop(1).take(3).forEachIndexed { index, url ->
+                TheHouseImage(
+                    url = url,
+                    title = "${room.title} (${index + 2})",
+                    perfOperation = "image.load.room_detail_thumb",
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(72.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                )
+            }
+        }
     }
 }

@@ -23,15 +23,15 @@ object RoomSearchCatalog {
     private val roomTypeLabels = mapOf(
         "single" to "Individual",
         "double" to "Doble",
-        "shared" to "Compartido",
+        "shared" to "Compartido/a",
     )
     private val buildingTypeLabels = mapOf(
         "rooms_building" to "Cuartos en edificio",
-        "house_rooms" to "Cuartos en casa",
+        "house_rooms" to "Casa con habitaciones",
         "full_apartment" to "Departamento completo",
     )
-    private val bathroomLabels = mapOf("private" to "Privado", "shared" to "Compartido")
-    private val tenantLabels = mapOf("women" to "Mujeres", "men" to "Hombres", "any" to "Cualquiera")
+    private val bathroomLabels = mapOf("private" to "Privado", "shared" to "Compartido/a")
+    private val tenantLabels = mapOf("women" to "Solo mujeres", "men" to "Solo hombres", "any" to "Cualquiera")
     private val sortLabels = mapOf(
         "distance" to "Distancia",
         "price" to "Precio",

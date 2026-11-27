@@ -49,3 +49,16 @@
 - [ ] CI remoto del PR #37 verificado tras el commit correctivo
 - [ ] Validación visual y aprobación humana - PENDIENTE
 - [ ] Merge - NO AUTORIZADO (no ejecutar)
+
+## Hotfix regresiones/imágenes (2026-11-27)
+- [x] PR #37 verificado OPEN / MERGEABLE / CI SUCCESS antes de implementar.
+- [x] Comparación visual 54ece77 vs 735a697 vs 24a0686 vs a71ada3 documentada.
+- [x] Favoritos y Conversación restaurados a 735a697; Home con 3 bloques autorizados.
+- [x] Causa P0 Publicar demostrada (callback desconectado) y corregida con efecto de navegación.
+- [x] thumbnailUrl productivo verificado: relativo, HTTP 200, image/webp.
+- [x] URLs relativas resueltas; cliente de imágenes sin Bearer.
+- [x] Placeholder TheHouse en null/loading/error; galería compacta sin fotos.
+- [x] Etiquetas en español aplicadas sin tocar serialización.
+- [x] 657 tests / 0 failures; lint, assemble y androidTest SUCCESS; diff-check exit 0.
+- [ ] Validación visual humana y renderizado en dispositivo (RUNTIME_PENDING).
+- [ ] Merge de PR #37 (NO AUTORIZADO).

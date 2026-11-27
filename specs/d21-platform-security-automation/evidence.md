@@ -154,3 +154,65 @@ Conteo real: **645 tests, 0 failures, 0 errors** (baseline preservado).
 - Commit correctivo y CI remoto: ver registro final del reporte.
 - ValidaciÃ³n visual y aprobaciÃ³n humana: **PENDIENTE**.
 - Merge: **NO AUTORIZADO / NO EJECUTADO**.
+
+---
+
+## HOTFIX D21 — Regresiones visuales, Publicar mi renta y carga real de fotografías (2026-11-27)
+
+Autorización humana individual sobre el MISMO PR #37 (verificado OPEN / MERGEABLE / CI SUCCESS
+antes de tocar código), rama `feature/platform-security-automation`, HEAD inicial `a71ada3`.
+Sin merge, sin rama/PR nuevo, sin Backend/GenAI/ML/ONNX/infra, sin Nuevo edificio.
+
+### VISUAL_BASELINE_COMPARISON
+- `git diff 54ece77..735a697` sobre `presentation/home|favorites|chat` = **0 líneas**: la estética de `735a697` es BYTE-IDÉNTICA a D20.
+- `git diff 735a697..a71ada3` = cambios visuales NO aprobados únicamente en `HomeScreen.kt`, `FavoritesScreen.kt`, `ConversationScreen.kt`.
+- Cambios indirectos revisados: `NotificationsScreen.kt` (iconos NV-20) y `SmartMatchRecommendationCard.kt` (explicación GenAI) son funcionales D21, NO estéticos; se preservan.
+
+### UNAUTHORIZED_VISUAL_CHANGES_FOUND
+- Home: tarjeta CTA nueva y jerarquía alterada (24a0686), reubicación del botón con nuevo estilo (a71ada3).
+- Favoritos: `titleLarge`, `Alignment.Top`, `spacedBy(md/xs)` en `FavoriteCard` (24a0686 + a71ada3).
+- Conversación: `labelMedium`, `widthIn(min=96)`, padding vertical extra, alpha 0.85 en hora, `N / 1000`, botón enviar relleno (24a0686 + a71ada3).
+- NO se declara aprobada la adenda visual.
+
+### VISUAL_RESTORATION / FAVORITES / CONVERSATION
+- `git checkout 735a697 -- <3 archivos>` (sin reset --hard, sin force push, sin reescribir historial).
+- Favoritos y Conversación: byte-idénticos a `735a697` salvo etiquetas en español solicitadas en Favoritos.
+- Home: solo 3 bloques frente a `735a697`: (1) tarjeta de Privacidad eliminada — PASS humano conservado; (2) botón original `TheHouseSecondaryButton("Publicar mi renta")` antes de recomendados — requisito explícito; (3) `HomeEffect.OpenLandlord -> onOpenLandlord()` — fix P0 funcional. Sin cambios de tipografía, espaciado, color ni componentes compartidos.
+
+### P0 PUBLISH_RENT
+- Causa demostrada: `HomeEvent.PublishClicked -> guard(ProtectedAction.Publish)`; `guard()` solo emite `RequireLogin` para guest y **no emite ningún efecto para autenticado**. `onOpenLandlord` estaba cableado en `MainActivity` a `AppRoutes.landlordDashboard.route` pero **nunca era invocado por HomeScreen** (callback desconectado). La ruta sí está registrada. No existía condición de rol que bloqueara al autenticado.
+- Fix: `publishRental()` privado en `HomeViewModel`: guest ? `HomeEffect.RequireLogin`; autenticado ? `HomeEffect.OpenLandlord`; HomeScreen observa el efecto y llama `onOpenLandlord`. El destino existente decide entre alta de perfil y dashboard según estado real; NO se activa perfil ni se crea edificio. Sin rutas nuevas.
+
+### P0 IMÁGENES — diagnóstico con evidencia real
+- `GET /api/v1/rooms/search?universityId=6aeecc11...&pageSize=25` productivo: HTTP **200**, `totalItems=15`; 13 habitaciones `[PRUEBA Mobile]` con `thumbnailUrl` presente; 2 DEMO con `thumbnailUrl=null` (placeholder correcto, conservado).
+- Formato real del campo: **URL relativa** `/api/v1/media/{id}?size=thumb`, NO absoluta. Resuelta contra el origen: HTTP **200**, `Content-Type: image/webp`, 1666 bytes. No se imprimen URLs firmadas completas.
+- Causa raíz demostrada: Coil recibía la URL relativa como `String` modelo (sin esquema ni host) ? no podía resolverla; además `AppContainer.imageLoader` compartía el `OkHttpClient` de Retrofit con `BearerTokenInterceptor` + authenticator ? riesgo de enviar Bearer a dominios externos y refreshes por 401 de imagen.
+- Fix: `ImageUrlResolver` (puro), `ImageHttpClientFactory` (sin interceptor de autorización ni authenticator, timeouts acotados), `ImageLoaderFactory` con `OkHttpNetworkFetcherFactory` sobre ese cliente, `AppContainer.resolveImageUrl`. `TheHouseImage` reutiliza el placeholder TheHouse en loading/null/error con estados observables y mide solo el estado terminal. DTOs y mappers ya conservaban `thumbnailUrl` y `photos` (verificado, sin cambios).
+- RoomDetail: galería compacta con foto principal + hasta 3 miniaturas; sin fotos ? placeholder de 96 dp (antes espacio blanco excesivo). Contactar/Agendar visita intactos.
+- Coil 3.4.0 + `coil-network-okhttp` 3.4.0, WebP soportado. Network Security Config: cleartext deshabilitado, TLS intacto. Sin caché obsoleta introducida.
+
+### ETIQUETAS EN ESPAÑOL
+- `RoomSearchCatalog`: `single?Individual`, `double?Doble`, `shared?Compartido/a`, `house_rooms?Casa con habitaciones`, `rooms_building?Cuartos en edificio`, `full_apartment?Departamento completo`, `women?Solo mujeres`, `men?Solo hombres`, `any?Cualquiera`, `private?Privado`.
+- Aplicado en RoomCard, RoomDetailScreen, FavoritesScreen y SmartMatchRecommendationCard mediante el catálogo existente. Serialización y valores enviados al Backend intactos.
+
+### INFORMACIÓN NUEVA DEL BACKEND (reportada por el responsable, NO verificada en producción por Mobile)
+- Firebase Admin: `FIREBASE_SERVICE_ACCOUNT` configurado en producción; push real disponible para pruebas conjuntas con eventos de mensaje, visita y solicitud.
+- GenAI: operativo, escala a cero; primera consulta en frío puede devolver template ? calentar y repetir ~30 s después.
+- NV-20 v1.3.0: PR Backend #106 implementado, 1,401 pruebas aprobadas según reporte; **pendiente de merge y despliegue ? NO declarar disponible en producción**.
+- Moderación: Backend procesa fotografías al subirlas, máximo 4 por habitación; `landlord1` autorizado para pruebas coordinadas. GAP Mobile: `LandlordApi` ya declara POST/DELETE de fotos, pero no existe flujo de carga/eliminación en la UI; NO implementado en este hotfix.
+- Geolocalización: Backend valida universidades cercanas por coordenadas; endpoint/payload/geocodificación sin confirmar. **Nuevo edificio NO modificado**.
+
+### GATES DEL HOTFIX (salida real)
+| Comando | Resultado |
+|---|---|
+| `.\gradlew.bat clean compileDebugKotlin --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat testDebugUnitTest --no-daemon` | BUILD SUCCESSFUL — **657 tests, 0 failures, 0 errors** (645 baseline + 12 nuevos) |
+| `.\gradlew.bat lintDebug --no-daemon` | BUILD SUCCESSFUL, 0 errores SARIF |
+| `.\gradlew.bat assembleDebug --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat compileDebugAndroidTestKotlin --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat assembleDebugAndroidTest --no-daemon` | BUILD SUCCESSFUL |
+| `git diff --check` | exit 0 |
+
+- Pruebas nuevas: `D21PublishNavigationTest` (4) y `D21ImagePipelineTest` (8), incluyendo Retrofit/MockWebServer real para verificar que el cliente de imágenes **no envía Authorization** a un dominio externo.
+- HTTP productivo verificado en solo lectura con `Invoke-WebRequest`; sin credenciales, sin tokens, sin exponer contraseñas.
+- RUNTIME PENDING: renderizado real en dispositivo y validación visual humana siguen pendientes. Una prueba de deserialización NO equivale a una fotografía renderizada.

@@ -166,3 +166,19 @@ espaciado global de Home, acceso de Privacidad rediseñado, chips/divisor en Fav
 vacío/divisor/cambios de espaciado general en Conversación. Se restauró cada archivo desde
 `735a697` (`git checkout 735a697 -- <archivo>`, sin `reset --hard` ni force push) y se reaplicaron
 únicamente los cuatro cambios autorizados. No se revirtió ninguna implementación funcional de D21.
+
+### Hotfix de regresiones y carga real de imágenes (2026-11-27)
+
+Autorización humana individual, MISMO PR #37 y rama `feature/platform-security-automation`, HEAD `a71ada3`. NO MERGEAR.
+
+| ID | Requisito | Estado |
+|---|---|---|
+| D21-H01 | Restaurar estética aprobada (Favoritos/Conversación byte-idénticos a `735a697`; Home solo Privacidad eliminada + botón original antes de recomendados) | IMPLEMENTADO / TESTED |
+| D21-H02 | Publicar mi renta: guest → login, autenticado → flujo arrendador existente, sin auto-activación ni edificios automáticos | IMPLEMENTADO / TESTED |
+| D21-H03 | Mostrar thumbnails reales (URL relativas resueltas) y placeholder TheHouse en null/fallo, sin contenedores blancos | IMPLEMENTADO / TESTED |
+| D21-H04 | Galería RoomDetail con fotos reales y espacio compacto cuando no hay fotos; Contactar/Agendar visita intactos | IMPLEMENTADO / TESTED |
+| D21-H05 | Cliente de imágenes sin Bearer ni authenticator; TLS y Network Security Config intactos | IMPLEMENTADO / TESTED |
+| D21-H06 | Etiquetas visibles en español mediante catálogo existente, sin cambiar valores serializados | IMPLEMENTADO / TESTED |
+| D21-H07 | Backend FCM/GenAI/NV-20 #106/moderación/geolocalización documentados sin declarar producción no confirmada | EVIDENCIADO |
+
+**Estado:** IMPLEMENTADO / TESTED / EVIDENCIADO. RUNTIME PENDING (sin dispositivo; sin aprobación visual). SIN MERGE.

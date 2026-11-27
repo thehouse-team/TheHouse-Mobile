@@ -80,6 +80,8 @@ sealed interface HomeEvent : UiEvent {
 sealed interface HomeEffect : UiEffect {
     data object LoggedOut : HomeEffect
     data object RequireLogin : HomeEffect
+    /** D21 hotfix: publicar abre el flujo de arrendador existente. */
+    data object OpenLandlord : HomeEffect
     data class Message(val text: String) : HomeEffect
 }
 
@@ -200,7 +202,7 @@ class HomeViewModel(
             HomeEvent.FavoriteClicked -> guard(ProtectedAction.SaveFavorite)
             is HomeEvent.FavoriteRoomClicked -> toggleRoomFavorite(event.roomId)
             HomeEvent.ContactClicked -> guard(ProtectedAction.Contact)
-            HomeEvent.PublishClicked -> guard(ProtectedAction.Publish)
+            HomeEvent.PublishClicked -> publishRental()
             HomeEvent.RetryUniversitiesClicked -> loadUniversities()
             HomeEvent.RetryPropertiesClicked -> {
                 if (searchEnabled) loadRooms(refresh = true) else loadProperties()
@@ -465,6 +467,23 @@ class HomeViewModel(
         if (AccessPolicy.shouldRedirectToLogin(action, isAuthenticated)) {
             sendEffect(HomeEffect.RequireLogin)
         }
+    }
+
+    /**
+     * D21 hotfix: "Publicar mi renta" debe navegar al flujo de arrendador real.
+     *
+     * Guest → autenticación. Usuario autenticado → destino de arrendador
+     * existente, que ya decide entre alta de perfil y dashboard según su
+     * estado real. Aquí NO se activa un perfil ni se crea un edificio.
+     */
+    private fun publishRental() {
+        val isAuthenticated = sessionState.value is SessionState.Active
+        updateState { it.copy(isGuest = !isAuthenticated, isAuthenticated = isAuthenticated) }
+        if (AccessPolicy.shouldRedirectToLogin(ProtectedAction.Publish, isAuthenticated)) {
+            sendEffect(HomeEffect.RequireLogin)
+            return
+        }
+        sendEffect(HomeEffect.OpenLandlord)
     }
 
     fun logout() {

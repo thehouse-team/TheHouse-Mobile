@@ -11,7 +11,9 @@ import com.thehouse.app.data.config.AppConfig
 import com.thehouse.app.data.config.AppConfigProvider
 import com.thehouse.app.data.connectivity.AndroidConnectivityObserver
 import com.thehouse.app.data.dispatcher.DefaultDispatcherProvider
+import com.thehouse.app.data.image.ImageHttpClientFactory
 import com.thehouse.app.data.image.ImageLoaderFactory
+import com.thehouse.app.data.image.ImageUrlResolver
 import com.thehouse.app.data.preferences.DataStorePreferencesStore
 import com.thehouse.app.data.preferences.PreferencesStore
 import com.thehouse.app.data.preferences.appPreferencesDataStore
@@ -166,12 +168,19 @@ class AppContainer(context: Context) {
         )
     }
 
+    /** D21 hotfix: Coil NO comparte el cliente Bearer de Retrofit. */
+    val imageHttpClient: OkHttpClient by lazy { ImageHttpClientFactory.create() }
+
     val imageLoader: ImageLoader by lazy {
         ImageLoaderFactory.create(
             context = appContext,
-            okHttpClient = httpClient,
+            okHttpClient = imageHttpClient,
         )
     }
+
+    /** Resuelve URLs relativas del contrato de medios contra el origen real. */
+    fun resolveImageUrl(value: String?): String? =
+        ImageUrlResolver.resolve(value, config.apiBaseUrl)
 
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
 

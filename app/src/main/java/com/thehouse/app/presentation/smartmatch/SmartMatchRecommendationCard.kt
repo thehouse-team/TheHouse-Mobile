@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Roofing
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -39,19 +38,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Canvas
-import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
+import com.thehouse.app.domain.room.RoomSearchCatalog
 import com.thehouse.app.domain.smartmatch.SmartMatchFactor
 import com.thehouse.app.domain.smartmatch.SmartMatchResult
 import com.thehouse.app.domain.smartmatch.SmartMatchSource
-import com.thehouse.app.perf.Perf
+import com.thehouse.app.presentation.components.TheHouseImage
 import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
@@ -268,38 +265,14 @@ internal fun SmartMatchRecommendationCard(
 
 @Composable
 private fun RecommendationImage(result: SmartMatchResult) {
-    val thumb = result.thumbnailUrl?.takeIf { it.isNotBlank() }
-    if (thumb != null) {
-        val start = remember(thumb) { System.nanoTime() }
-        AsyncImage(
-            model = thumb,
-            contentDescription = "Foto de ${result.property.title}",
-            contentScale = ContentScale.Crop,
-            onState = { state ->
-                if (state is AsyncImagePainter.State.Success || state is AsyncImagePainter.State.Error) {
-                    Perf.since("image.load.smart_match", start)
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp),
-        )
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Roofing,
-                contentDescription = "Sin foto disponible",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(44.dp),
-            )
-        }
-    }
+    TheHouseImage(
+        url = result.thumbnailUrl,
+        title = result.property.title,
+        perfOperation = "image.load.smart_match",
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp),
+    )
 }
 
 @Composable
@@ -307,9 +280,12 @@ private fun RealInfoRow(result: SmartMatchResult) {
     val parts = mutableListOf<String>()
     result.distanceKm?.let { parts += "${formatDecimal(it)} km" }
     result.walkingMinutes?.let { parts += "$it min caminando" }
-    result.roomType?.takeIf { it.isNotBlank() }?.let { parts += readableCode(it) }
-    result.buildingType?.takeIf { it.isNotBlank() }?.let { parts += readableCode(it) }
-    result.allowedTenants?.takeIf { it.isNotBlank() }?.let { parts += readableCode(it) }
+    result.roomType?.takeIf { it.isNotBlank() }
+        ?.let { parts += RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, it) }
+    result.buildingType?.takeIf { it.isNotBlank() }
+        ?.let { parts += RoomSearchCatalog.label(RoomSearchCatalog.Kind.BUILDING_TYPE, it) }
+    result.allowedTenants?.takeIf { it.isNotBlank() }
+        ?.let { parts += RoomSearchCatalog.label(RoomSearchCatalog.Kind.ALLOWED_TENANTS, it) }
     if (parts.isNotEmpty()) {
         Row(
             modifier = Modifier.fillMaxWidth(),

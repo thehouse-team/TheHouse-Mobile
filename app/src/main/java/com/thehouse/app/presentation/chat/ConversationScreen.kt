@@ -195,7 +195,7 @@ private fun MessageBubble(
     ) {
         Text(
             text = if (message.mine) "Tú" else message.senderRole,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Surface(
@@ -210,13 +210,13 @@ private fun MessageBubble(
             } else {
                 MaterialTheme.colorScheme.onSurface
             },
-            modifier = Modifier.widthIn(min = 96.dp, max = 320.dp),
+            modifier = Modifier.widthIn(max = 320.dp),
         ) {
             Text(
                 text = message.text,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
-                    .padding(horizontal = Spacing.md, vertical = Spacing.sm + Spacing.xs)
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm)
                     .semantics {
                         contentDescription =
                             (if (message.mine) "Tú: " else "Mensaje: ") + message.text
@@ -227,7 +227,7 @@ private fun MessageBubble(
             Text(
                 text = formatInstant(createdAt),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -263,7 +263,7 @@ private fun Composer(
                 onValueChange = onTextChanged,
                 label = "Mensaje",
                 placeholder = "Escribe un mensaje…",
-                supportingText = "${text.length} / 1000",
+                supportingText = "${text.length}/1000",
                 enabled = !isClosed,
                 singleLine = false,
                 minLines = 1,
@@ -275,10 +275,6 @@ private fun Composer(
                 enabled = enabled && text.isNotBlank(),
                 modifier = Modifier.size(Heights.button),
                 shape = MaterialTheme.shapes.medium,
-                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.Send,

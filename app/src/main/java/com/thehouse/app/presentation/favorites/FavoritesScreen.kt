@@ -125,12 +125,12 @@ private fun FavoriteCard(
     onClick: () -> Unit,
 ) {
     TheHouseCard(onClick = onClick) {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = favorite.title,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     favorite.city?.takeIf { it.isNotBlank() }?.let { city ->
@@ -154,8 +154,17 @@ private fun FavoriteCard(
                 }
             }
             val details = buildString {
-                favorite.roomType?.let { append(it) }
-                favorite.bathroom?.let { if (isNotEmpty()) append(" · "); append(it) }
+                favorite.roomType?.let {
+                    append(com.thehouse.app.domain.room.RoomSearchCatalog.label(
+                        com.thehouse.app.domain.room.RoomSearchCatalog.Kind.ROOM_TYPE, it,
+                    ))
+                }
+                favorite.bathroom?.let {
+                    if (isNotEmpty()) append(" · ")
+                    append(com.thehouse.app.domain.room.RoomSearchCatalog.label(
+                        com.thehouse.app.domain.room.RoomSearchCatalog.Kind.BATHROOM, it,
+                    ))
+                }
             }
             if (details.isNotBlank()) {
                 Text(text = details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

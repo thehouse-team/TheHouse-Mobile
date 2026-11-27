@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material3.CircularProgressIndicator
@@ -97,6 +96,7 @@ fun HomeScreen(
             when (effect) {
                 HomeEffect.LoggedOut -> onLoggedOut()
                 HomeEffect.RequireLogin -> onRequireLogin()
+                HomeEffect.OpenLandlord -> onOpenLandlord()
                 is HomeEffect.Message -> Unit
             }
         }
