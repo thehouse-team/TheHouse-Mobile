@@ -119,3 +119,35 @@ desconocidos en Mobile. Despliegue productivo de los 6 tipos: NO CONFIRMADO.
 `none` abre la bandeja; no exige targetId. `room` valida targetId y navega a
 `RoomDetailRoute(targetId)` + `GET /rooms/{id}`. Tipo o targetKind desconocido,
 o targetId inválido/ausente cuando es obligatorio → bandeja, sin petición HTTP.
+
+---
+
+## ADENDA VISUAL — Visual Polish UI (Home / Favoritos / Conversación)
+
+Autorizada por corrección de gobernanza humana (2026-11-27) **dentro de la misma spec D21,
+rama `feature/platform-security-automation` y PR #37**. No se crea spec nueva, no se abre PR #38,
+no se crea rama nueva y **no se mergea**.
+
+**Naturaleza:** exclusivamente estética / presentación. Sin cambios funcionales, de backend,
+contratos HTTP, DTOs, repositorios, casos de uso, lógica de sesión, navegación base, Drawer ni
+ MainActivity. No se modifica la ubicación de "Nuevo edificio" (pendiente de información del
+ responsable de Backend). No se introducen dependencias, librerías ni servicios nuevos.
+ COST-001: $0.
+
+**Alcance visual autorizado:**
+
+| ID | Requisito visual | Criterio |
+|---|---|---|
+| D21-V01 | "Publicar mi renta" más visible en Home | CTA de acento con icono, ubicado antes del bloque de recomendados; sin FAB; conserva `HomeEvent.PublishClicked` |
+| D21-V02 | "Privacidad" mejor integrada en Home | Acceso secundario discreto conservando `onOpenPrivacy` |
+| D21-V03 | Composición general de Home | Espaciados/jerarquía consistentes; sin elementos "tirados" al final |
+| D21-V04 | Tarjetas de Favoritos más atractivas | Jerarquía título/ubicación/precio, metadata en chips, "Demo" como chip, CTA limpio; sin tocar lógica del corazón ni endpoints |
+| D21-V05 | Conversación más cuidada | Burbujas, espaciado, separación del header, composer, contador y estado vacío; sin cambiar eventos ni límite de 1000 caracteres |
+
+**Restricciones de regresión:** se preservan las 645 pruebas existentes y todas las
+funcionalidades previamente certificadas (D19.1/D20/D21/NV-20). Los tests estructurales de
+Home exigen: sin `BrandMark(` propio, con `SmartMatchPromo(onClick = onNavigateToSmartMatch)`,
+`onOpenPrivacy`, `PublishClicked` y `TheHouseSearchBar`.
+
+**Estado:** APROBADO / IMPLEMENTADO / TESTED / EVIDENCIADO. RUNTIME VISUAL PENDIENTE de
+validación y aprobación humana. SIN MERGE.

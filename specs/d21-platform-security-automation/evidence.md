@@ -1,4 +1,4 @@
-﻿# D21 — Evidencia
+# D21 — Evidencia
 
 ## Baseline
 - `git rev-parse HEAD` = `54ece77747d5f3416bdf189ee1ede597c6a40f8f`
@@ -41,3 +41,68 @@ Baseline 602 → +29 nuevos (27 D21 device/moderation/coordinator + 2 GenAI).
 - Sin enums estrictos en DTO (`String`), por lo que no hay `SerializationException` por valores futuros; los tipos se mapean a destino tipado con fallback.
 - Tests nuevos: 14 (10 compatibilidad NV-20 + 4 room target HTTP). Total 645 / 0 failures / 0 errors (631 + 14).
 - Gates tras adenda: `compileDebugKotlin`, `testDebugUnitTest`, `lintDebug`, `assembleDebug`, `assembleDebugAndroidTest` — todos SUCCESS.
+
+---
+
+## ADENDA VISUAL — evidencia (2026-11-27)
+
+Gobernanza corregida por instrucción humana: trabajar sobre la rama existente
+`feature/platform-security-automation` y el PR #37 abierto; sin rama nueva, sin PR #38,
+sin merge; registrar como adenda visual de D21.
+
+### Verificación previa del PR
+- `gh pr view 37 --json number,title,state,baseRefName,headRefName,mergeable,url` =
+  `37 | D21 — Platform, Security and Automation | OPEN | main | feature/platform-security-automation | MERGEABLE | https://github.com/thehouse-team/TheHouse-Mobile/pull/37`.
+- Rama local sincronizada: `git pull --ff-only origin feature/platform-security-automation` → Already up to date.
+- HEAD antes de la adenda: `735a697` (D21 NV-20 v1.3.0).
+- Se eliminó el intento preliminar de rama/spec D22: `git branch -D feature/d22-visual-polish-ui` y
+  `Remove-Item specs/d22-visual-polish-ui`. No quedan artefactos D22.
+
+### Cambios visuales (solo presentación)
+- Home (`HomeScreen.kt`): nuevo composable privado `PublishRentCta` (Surface de acento con
+  `primaryContainer`, borde `primary` suave, icono `AddHome` y flecha) ubicado después de
+  `SmartMatchPromo` y antes del header "Recomendados para ti"; el CTA secundario original al final
+  se eliminó. "Privacidad" pasó de tarjeta `TheHouseCard` a acceso secundario compacto con
+  `TheHouseTextAction` + icono, conservando `onOpenPrivacy`. Jerarquía de espaciado global
+  `Arrangement.spacedBy(Spacing.lg)`; CTA sin FAB, sin nueva dependencia.
+- Favoritos (`FavoritesScreen.kt`): `FavoriteCard` con título `titleLarge` y precio alineado a la
+  derecha, ubicación con icono, metadata en `InfoChip`, etiqueta "Demo" como `StatusChip`,
+  `HorizontalDivider` antes del CTA "Quitar de favoritos" (mismo `onRemove` / `removing`).
+- Conversación (`ConversationScreen.kt`): `LazyColumn` con `spacedBy(Spacing.sm)` y
+  `contentPadding`; estado vacío "Aún no hay mensajes" sin nuevo estado de ViewModel; burbujas con
+  `padding(vertical = Spacing.xs)`, `widthIn(min = 96.dp, max = 320.dp)`, elevación `Elevations.card`
+  del tema y etiqueta `labelMedium`; `HorizontalDivider` sobre el composer; contador
+  "N / 1000 caracteres" (mismo valor `text.length`, sin cambiar el límite `take(1000)` del ViewModel);
+  `FilledIconButton` con colores primarios explícitos.
+
+### Confirmación de alcance cero funcional
+- `git diff --name-only | Where-Object { $_ -match 'ViewModel|Dtos|Repository|UseCase|MainActivity|AndroidManifest|ui/theme|Domain|data/|notification|device/' }`
+  → 0 archivos.
+- Eventos preservados: `HomeEvent.PublishClicked`, `onOpenPrivacy`,
+  `SmartMatchPromo(onClick = onNavigateToSmartMatch)`, `TheHouseSearchBar`,
+  `Favorite.onRemove`, `ConversationEvent.ComposerChanged/Send`.
+- "Nuevo edificio": NO modificado (pendiente del responsable de Backend).
+- Sin Backend/GenAI/ML/ONNX/infra, contratos HTTP, secretos, permisos ni dependencias nuevas. COST-001 `$0`.
+
+### Gates ejecutados (salida real, tras la adenda)
+| Comando | Resultado |
+|---|---|
+| `.\gradlew.bat clean compileDebugKotlin --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat testDebugUnitTest --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat lintDebug --no-daemon` | BUILD SUCCESSFUL |
+| `.\gradlew.bat assembleDebug --no-daemon` | BUILD SUCCESSFUL |
+| `git diff --check` | exit 0 |
+
+Conteo real desde `app/build/test-results/testDebugUnitTest/TEST-*.xml`:
+**645 tests, 0 failures, 0 errors** (idéntico al baseline D21; ninguna prueba fue eliminada ni modificada).
+
+### CI remoto del PR #37 (verificado tras push)
+- `gh pr checks 37 --watch` → `Android quality gates` **pass** en ambos runs (commit final `2d7dd33`):
+  - `https://github.com/thehouse-team/TheHouse-Mobile/actions/runs/46035190075/job/140628693461` (3m28s)
+  - `https://github.com/thehouse-team/TheHouse-Mobile/actions/runs/46035185176/job/140628676266` (4m3s)
+- Runs previos del commit `2d915e9` también pass: `46034528657` y `46034538488`.
+- `gh pr view 37` tras el push: `OPEN`, `MERGEABLE`, head `feature/platform-security-automation`. Sin merge.
+
+### Pendiente
+- Validación visual y aprobación humana: PENDIENTE.
+- Merge: NO AUTORIZADO / NO EJECUTADO.

@@ -28,3 +28,15 @@
 | P11 | D21-T11 | MainActivity: ruta `RoomDetailRoute` desde notificación (in-app y push), sin `{roomId}` literal, sin propertyId | Tests de navegación y regresión |
 | P12 | D21-T12 | Presentación: iconos coherentes, texto del Backend, fallback genérico sin exponer enums | Tests de bandeja mixta |
 | P13 | D21-T13 | Pruebas HTTP locales (MockWebServer) para room 200/404 y regresiones; evidence y reporte adicional | Gates + reporte §8 |
+
+## ADENDA VISUAL (misma rama / PR #37)
+
+| Fase | Task | Descripción | Verificación |
+|---|---|---|---|
+| P14 | D21-T14 | Home: CTA "Publicar mi renta" elevado a tarjeta de acento antes de recomendados; "Privacidad" como acceso secundario | Regresión estructural Home + gates |
+| P15 | D21-T15 | Favoritos: rediseño visual de `FavoriteCard` (jerarquía, chips, "Demo", CTA) sin tocar lógica | Compilación + gates + diff de dominio/cero |
+| P16 | D21-T16 | Conversación: burbujas, separación del header, composer y estado vacío; sin cambiar eventos | Compilación + gates + tests ViewModel intactos |
+| P17 | D21-T17 | Registro documental, 645 pruebas preservadas, gates locales + CI remoto del PR #37 | `gh pr checks 37` + evidence |
+
+Reglas de la adenda: sin rama nueva, sin PR nuevo, sin merge, sin Backend/ML/GenAI/ONNX/infra,
+sin mover "Nuevo edificio", sin reducir umbrales, esperar aprobación humana de la validación visual.

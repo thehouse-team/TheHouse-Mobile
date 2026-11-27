@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -29,8 +30,11 @@ import com.thehouse.app.presentation.common.UiError
 import com.thehouse.app.presentation.common.UiErrorMessages
 import com.thehouse.app.presentation.components.EmptyStateView
 import com.thehouse.app.presentation.components.ErrorStateView
+import com.thehouse.app.presentation.components.InfoChip
 import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.OfflineStatusBanner
+import com.thehouse.app.presentation.components.StatusChip
+import com.thehouse.app.presentation.components.StatusTone
 import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.presentation.components.TheHouseHeader
 import com.thehouse.app.ui.theme.IconSizes
@@ -125,32 +129,48 @@ private fun FavoriteCard(
     onClick: () -> Unit,
 ) {
     TheHouseCard(onClick = onClick) {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Column(modifier = Modifier.weight(1f)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(
                         text = favorite.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
                     )
                     favorite.city?.takeIf { it.isNotBlank() }?.let { city ->
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        ) {
                             Icon(
                                 imageVector = Icons.Outlined.LocationOn,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(IconSizes.sm),
                             )
-                            Text(text = city, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = city,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }
-                favorite.price?.let { price ->
-                    Text(
-                        text = "$$price ${favorite.currency.orEmpty()}".trim(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    favorite.price?.let { price ->
+                        Text(
+                            text = "$$price ${favorite.currency.orEmpty()}".trim(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    if (favorite.demo) {
+                        StatusChip(label = "Demo", tone = StatusTone.Neutral)
+                    }
                 }
             }
             val details = buildString {
@@ -158,11 +178,11 @@ private fun FavoriteCard(
                 favorite.bathroom?.let { if (isNotEmpty()) append(" · "); append(it) }
             }
             if (details.isNotBlank()) {
-                Text(text = details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    InfoChip(label = details)
+                }
             }
-            if (favorite.demo) {
-                Text(text = "Demo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             TextButton(onClick = onRemove, enabled = !removing, modifier = Modifier.align(Alignment.End)) {
                 if (removing) {
                     CircularProgressIndicator(modifier = Modifier.size(IconSizes.sm), strokeWidth = 2.dp)

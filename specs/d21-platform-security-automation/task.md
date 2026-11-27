@@ -16,3 +16,7 @@ Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2
 - [x] D21-T11 — Navegación RoomDetail desde notificación y push
 - [x] D21-T12 — Presentación de bandeja con tipos nuevos/desconocidos
 - [x] D21-T13 — Pruebas y reporte adicional NV20
+- [x] D21-T14 — Adenda visual: Home (CTA Publicar + Privacidad secundaria + jerarquía)
+- [x] D21-T15 — Adenda visual: Favoritos (tarjeta pulida, chips, CTA limpio)
+- [x] D21-T16 — Adenda visual: Conversación (burbujas, composer, contador, estado vacío)
+- [x] D21-T17 — Adenda visual: documentación, gates locales y CI remoto del PR #37 (sin merge)

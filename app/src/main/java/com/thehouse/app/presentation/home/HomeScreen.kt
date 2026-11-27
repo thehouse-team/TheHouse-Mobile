@@ -1,5 +1,6 @@
 package com.thehouse.app.presentation.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,14 +14,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.AddHome
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,9 +55,9 @@ import com.thehouse.app.presentation.components.SectionHeader
 import com.thehouse.app.presentation.components.StatusChip
 import com.thehouse.app.presentation.components.StatusTone
 import com.thehouse.app.presentation.components.TheHouseCard
-import com.thehouse.app.presentation.components.TheHousePrimaryButton
 import com.thehouse.app.presentation.components.TheHouseSearchBar
-import com.thehouse.app.presentation.components.TheHouseSecondaryButton
+import com.thehouse.app.presentation.components.TheHouseTextAction
+import com.thehouse.app.ui.theme.Elevations
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
 
@@ -122,7 +126,7 @@ fun HomeScreen(
                 .padding(padding)
                 .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Text(
@@ -165,6 +169,8 @@ fun HomeScreen(
             )
 
             SmartMatchPromo(onClick = onNavigateToSmartMatch)
+
+            PublishRentCta(onClick = { viewModel.onEvent(HomeEvent.PublishClicked) })
 
             SectionHeader(
                 title = "Recomendados para ti",
@@ -223,26 +229,68 @@ fun HomeScreen(
                 }
             }
 
-            TheHouseSecondaryButton(
-                text = "Publicar mi renta",
-                onClick = { viewModel.onEvent(HomeEvent.PublishClicked) },
-            )
-
-            TheHouseCard(onClick = onOpenPrivacy) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                ) {
-                    ActionIcon(Icons.Outlined.PrivacyTip)
-                    Text(
-                        text = "Privacidad",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+            // Acceso secundario: disponible pero sin competir con el contenido principal.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PrivacyTip,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(IconSizes.sm),
+                )
+                TheHouseTextAction(text = "Privacidad", onClick = onOpenPrivacy)
             }
+        }
+    }
+}
+
+/**
+ * CTA destacado de "Publicar mi renta". Tarjeta de acento coherente con el lenguaje visual
+ * de TheHouse (sin FAB, sin nuevo estilo): superficie con borde primario suave e icono.
+ * Solo presenta la acción; el evento sigue siendo `HomeEvent.PublishClicked`.
+ */
+@Composable
+private fun PublishRentCta(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Publicar mi renta" },
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+        shadowElevation = Elevations.card,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            ActionIcon(
+                icon = Icons.Rounded.AddHome,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    text = "Publicar mi renta",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "Comparte tu espacio con estudiantes cerca de ti.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(IconSizes.md),
+            )
         }
     }
 }

@@ -29,4 +29,19 @@
 - [x] Navegación RoomDetailRoute real; sin PropertyDetail ni propertyId
 - [x] Push e in-app comparten el mismo resolver centralizado
 - [x] Pruebas de 6 tipos, bandeja mixta, 200/404, guest, push y regresiones
-- [ ] Despliegue productivo de los 6 tipos — NO CONFIRMADO (runtime pendiente)
+- [ ] Despliegue productivo de los 6 tipos - NO CONFIRMADO (runtime pendiente)
+
+## ADENDA VISUAL — checklist
+
+- [x] Misma rama `feature/platform-security-automation` y PR #37 (sin rama/PR nuevos)
+- [x] Home: "Publicar mi renta" elevado y visible; "Privacidad" como acceso secundario
+- [x] Home: sin BrandMark propio; SmartMatchPromo intacto; tests estructurales preservados
+- [x] Favoritos: tarjeta pulida sin cambios en lógica del corazón ni endpoints
+- [x] Conversación: burbujas/composer/contador/estado vacío sin cambiar eventos ni límite 1000
+- [x] Sin tocar Backend/GenAI/ML/ONNX/infra/contratos/DTOs/sesión/navegación/Drawer/MainActivity
+- [x] Sin mover "Nuevo edificio" (pendiente del responsable de Backend)
+- [x] 645 pruebas existentes preservadas; incremento solo si hay nueva prueba visual
+- [x] Gates locales ejecutados (ver evidence.md)
+- [ ] CI remoto del PR #37 verificado
+- [ ] Validación visual y aprobación humana - PENDIENTE
+- [ ] Merge - NO AUTORIZADO (no ejecutar)
