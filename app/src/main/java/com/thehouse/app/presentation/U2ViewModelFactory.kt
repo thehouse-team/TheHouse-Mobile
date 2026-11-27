@@ -148,6 +148,8 @@ class U2ViewModelFactory(
                 updateBuilding = container.updateBuilding,
                 getBuilding = container.getLandlordBuilding,
                 getUniversities = container.getUniversities,
+                searchNearbyUniversities = container.searchNearbyUniversities,
+                deviceLocationProvider = container.deviceLocationProvider,
             )
         }
     }

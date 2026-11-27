@@ -3,6 +3,7 @@ package com.thehouse.app.domain.usecase
 import com.thehouse.app.domain.model.PagedResult
 import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.model.University
+import com.thehouse.app.domain.repository.NearbyUniversity
 import com.thehouse.app.domain.repository.PropertyRepository
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
 import com.thehouse.app.domain.repository.UniversityRepository
@@ -13,6 +14,12 @@ class GetUniversitiesUseCase(private val repository: UniversityRepository) {
         page: Int = 1,
         pageSize: Int = 20,
     ): Result<PagedResult<University>> = repository.getUniversities(page, pageSize)
+}
+
+/** Búsqueda por cercanía real del Backend; sin cálculo local de distancias. */
+class SearchNearbyUniversitiesUseCase(private val repository: UniversityRepository) {
+    suspend operator fun invoke(lat: Double, lng: Double): Result<List<NearbyUniversity>> =
+        repository.searchNearbyUniversities(lat, lng)
 }
 
 class GetPropertiesUseCase(private val repository: PropertyRepository) {

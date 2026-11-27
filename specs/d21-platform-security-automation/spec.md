@@ -182,3 +182,22 @@ Autorización humana individual, MISMO PR #37 y rama `feature/platform-security-
 | D21-H07 | Backend FCM/GenAI/NV-20 #106/moderación/geolocalización documentados sin declarar producción no confirmada | EVIDENCIADO |
 
 **Estado:** IMPLEMENTADO / TESTED / EVIDENCIADO. RUNTIME PENDING (sin dispositivo; sin aprobación visual). SIN MERGE.
+
+---
+
+## ADENDA FINAL — Cierre técnico sin dispositivo y geolocalización (2026-11-27)
+
+Autorización humana explícita dentro del MISMO PR #37, rama `feature/platform-security-automation`, base visual `3bbd1db`. Sin merge, sin rama/PR nuevo, sin Backend/GenAI/ML/ONNX/infra, sin servicios nuevos (COST-001 $0).
+
+| ID | Requisito | Estado |
+|---|---|---|
+| D21-C01 | Fotos: contrato auditado, `PhotoResponseDto` correcto, multipart/headers/rutas/errores con MockWebServer, sin mutaciones productivas | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-C02 | Moderación 422/503 conectada a formularios de arrendador con mensajes en español | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-C03 | POST_NOTIFICATIONS: decisión persistida, una sola solicitud contextual, denegación permanente → Ajustes | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-C04 | Coordenadas: parser puro con normalización y rangos contractuales 14..33 / -118.5..-86 | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-C05 | «Usar mi ubicación actual»: LocationManager del sistema, permiso contextual, sin background ni proveedor comercial | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-C06 | `GET /universities/search?lat&lng`: API real, DTO espejo, preselección sin pisar elección manual, cancelación | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-C07 | JaCoCo: cobertura real 33.16 % líneas / 31.49 % ramas, sin exclusiones artificiales | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-C08 | Cierre OWASP/DevSecOps, trazabilidad y memoria | EVIDENCIADO |
+
+**Estado:** D21-OFFLINE-TECHNICAL-COMPLETION-CODE-READY + D21-BUILDING-GEOLOCATION-CODE-READY. RUNTIME_PENDING (sin dispositivo). SIN MERGE.

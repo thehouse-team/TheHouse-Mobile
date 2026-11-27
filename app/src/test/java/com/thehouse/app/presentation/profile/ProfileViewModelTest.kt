@@ -247,4 +247,7 @@ private class FakeUniversityRepository(
     override suspend fun getUniversityById(id: String): Result<University> =
         items.firstOrNull { it.id == id }?.let { Result.success(it) }
             ?: Result.failure(DomainException(DomainError.NotFound))
+
+    override suspend fun searchNearbyUniversities(lat: Double, lng: Double) =
+        error("no usado en ProfileViewModelTest")
 }

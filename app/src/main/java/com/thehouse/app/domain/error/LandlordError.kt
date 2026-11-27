@@ -22,6 +22,10 @@ enum class LandlordErrorCode {
     UNSUPPORTED_MEDIA,
     IMAGE_TOO_LARGE,
     PAYLOAD_TOO_LARGE,
+    /** 422 content_rejected: moderación del Backend rechazó el contenido. */
+    CONTENT_REJECTED,
+    /** 503 moderation_unavailable: servicio temporalmente no disponible. */
+    MODERATION_UNAVAILABLE,
     VALIDATION,
     UNKNOWN;
 
@@ -43,6 +47,8 @@ enum class LandlordErrorCode {
             "storage_limit" -> STORAGE_LIMIT
             "unsupported_media" -> UNSUPPORTED_MEDIA
             "image_too_large" -> IMAGE_TOO_LARGE
+            "content_rejected" -> CONTENT_REJECTED
+            "moderation_unavailable" -> MODERATION_UNAVAILABLE
             else -> UNKNOWN
         }
     }

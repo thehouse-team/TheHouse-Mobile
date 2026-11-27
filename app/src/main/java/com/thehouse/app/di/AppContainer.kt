@@ -117,6 +117,16 @@ class AppContainer(context: Context) {
         AndroidConnectivityObserver(appContext)
     }
 
+    /** D21 adenda: lectura puntual de ubicación, solo tras acción del usuario. */
+    val deviceLocationProvider: com.thehouse.app.domain.location.DeviceLocationProvider by lazy {
+        com.thehouse.app.data.location.AndroidDeviceLocationProvider(appContext)
+    }
+
+    /** D21 cierre: persistencia de la decisión de POST_NOTIFICATIONS. */
+    val notificationPermissionStore: com.thehouse.app.domain.repository.NotificationPermissionStore by lazy {
+        com.thehouse.app.data.notifications.DataStoreNotificationPermissionStore(preferences)
+    }
+
     private val currentUserIdProvider: () -> String? = {
         (sessionStore.state.value as? SessionState.Active)?.session?.userId
     }
@@ -336,6 +346,10 @@ class AppContainer(context: Context) {
 
     val getUniversities: GetUniversitiesUseCase by lazy {
         GetUniversitiesUseCase(universityRepository)
+    }
+
+    val searchNearbyUniversities: com.thehouse.app.domain.usecase.SearchNearbyUniversitiesUseCase by lazy {
+        com.thehouse.app.domain.usecase.SearchNearbyUniversitiesUseCase(universityRepository)
     }
 
     val getProperties: GetPropertiesUseCase by lazy { GetPropertiesUseCase(propertyRepository) }

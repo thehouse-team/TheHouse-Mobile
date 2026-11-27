@@ -62,3 +62,19 @@
 - [x] 657 tests / 0 failures; lint, assemble y androidTest SUCCESS; diff-check exit 0.
 - [ ] Validación visual humana y renderizado en dispositivo (RUNTIME_PENDING).
 - [ ] Merge de PR #37 (NO AUTORIZADO).
+
+## ADENDA FINAL — cierre técnico y geolocalización (2026-11-27)
+
+- [x] PR #37 verificado OPEN / MERGEABLE; base visual `3bbd1db` preservada.
+- [x] Contratos de fotos y `universities/search` auditados en Backend (solo lectura).
+- [x] Photo Picker gestionado por la UI existente de habitaciones (sin duplicar ni rediseñar).
+- [x] `PhotoResponseDto` corregido; multipart/DELETE/422/503/413/415/409 probados con MockWebServer.
+- [x] Moderación 422/503 conectada a formularios del arrendador con textos en español.
+- [x] POST_NOTIFICATIONS: `askedOnce` persistido, una sola solicitud contextual, Ajustes para denegación permanente.
+- [x] `CoordinateParser` con coma/Unicode/invisibles/límites/parcial; UI conserva texto original.
+- [x] «Usar mi ubicación actual» solo en Ubicación; permiso contextual; sin GPS en background.
+- [x] Universidades cercanas: Backend ordena y calcula distancia; sin Haversine local ni IDs inventados.
+- [x] JaCoCo sin exclusiones: 33.16 % líneas / 31.49 % ramas.
+- [x] 702 tests / 0 failures / 0 errors (669 + 33); 8 gates + cobertura SUCCESS.
+- [ ] GPS físico, renderizado y `connectedDebugAndroidTest` — PENDING (sin dispositivo).
+- [ ] Merge de PR #37 — NO AUTORIZADO.

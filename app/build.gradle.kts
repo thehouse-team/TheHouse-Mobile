@@ -1,7 +1,11 @@
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    // D21 cierre: herramienta de cobertura existente en el toolchain (sin descargas nuevas).
+    jacoco
 }
 
 // NV-14 Fase B: el plugin oficial de Google solo se aplica cuando el proyecto
@@ -52,6 +56,8 @@ android {
     buildTypes {
         debug {
             buildConfigField("boolean", "ENABLE_HTTP_LOGGING", "true")
+            // D21: instrumentación JVM para cobertura real ( JaCoCo ).
+            enableUnitTestCoverage = true
         }
         release {
             buildConfigField("boolean", "ENABLE_HTTP_LOGGING", "false")
@@ -149,4 +155,25 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+// D21: reporte verificable de cobertura de líneas/ramas/paquetes (JaCoCo).
+// Sin exclusiones artificiales; solo clases generadas por el toolchain.
+tasks.register<JacocoReport>("jacocoDebugTestReport") {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(true)
+    }
+    val mainSrc = "$projectDir/src/main/java"
+    sourceDirectories.setFrom(files(mainSrc))
+    // AGP 9.5 ubica las clases Kotlin en built_in_kotlinc (no en tmp/kotlin-classes).
+    val kotlinClassDir = "$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes"
+    val javaClassDir = "$buildDir/intermediates/javac/debug/compileDebugJavaWithJavac/classes"
+    classDirectories.setFrom(files(kotlinClassDir, javaClassDir))
+    executionData.setFrom(fileTree(mapOf(
+        "dir" to buildDir,
+        "includes" to listOf("jacoco/*.exec", "outputs/unit_test_code_coverage/debugUnitTest/*.exec"),
+    )))
 }

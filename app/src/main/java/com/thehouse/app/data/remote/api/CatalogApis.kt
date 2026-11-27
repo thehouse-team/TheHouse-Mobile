@@ -1,5 +1,6 @@
 package com.thehouse.app.data.remote.api
 
+import com.thehouse.app.data.remote.dto.catalog.NearbyUniversityResponseDto
 import com.thehouse.app.data.remote.dto.catalog.PropertyDetailDto
 import com.thehouse.app.data.remote.dto.catalog.PropertyListResponseDto
 import com.thehouse.app.data.remote.dto.catalog.UniversityDto
@@ -26,6 +27,18 @@ interface UniversityApi {
     suspend fun getUniversityById(
         @Path("id") id: String,
     ): Response<UniversityDto>
+
+    /**
+     * Búsqueda pública por cercanía. Confirmada en Backend:
+     * UniversitySearchEndpoint.Path = /api/v1/universities/search.
+     * Solo lat/lng (ambos obligatorios); sin page/pageSize en el contrato.
+     * Declaración abstracta real: nunca body default (D20/M-MOB-070).
+     */
+    @GET("api/v1/universities/search")
+    suspend fun searchNearbyUniversities(
+        @Query("lat") lat: Double,
+        @Query("lng") lng: Double,
+    ): Response<NearbyUniversityResponseDto>
 }
 
 /**

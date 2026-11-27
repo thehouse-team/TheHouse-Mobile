@@ -16,7 +16,19 @@ interface UniversityRepository {
     ): Result<PagedResult<University>>
 
     suspend fun getUniversityById(id: String): Result<University>
+
+    /** Universidades cercanas reales del Backend (distancia y orden calculados allí). */
+    suspend fun searchNearbyUniversities(lat: Double, lng: Double): Result<List<NearbyUniversity>>
 }
+
+/** Item del contrato GET /universities/search?lat=&lng= (distanceKm en km, 1 decimal). */
+data class NearbyUniversity(
+    val id: String,
+    val code: String,
+    val name: String,
+    val city: String,
+    val distanceKm: Double?,
+)
 
 /**
  * Catálogo de propiedades (NV-07 Explore, contrato real AllowAnonymous).

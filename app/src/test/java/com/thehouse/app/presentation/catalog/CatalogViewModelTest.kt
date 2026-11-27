@@ -61,6 +61,9 @@ private class FakeUniversityRepository(
 
     override suspend fun getUniversityById(id: String): Result<University> =
         Result.success(university)
+
+    override suspend fun searchNearbyUniversities(lat: Double, lng: Double) =
+        error("no usado en CatalogViewModelTest")
 }
 
 private class FakePropertyRepository(

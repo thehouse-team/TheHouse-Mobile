@@ -20,3 +20,9 @@ Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2
 - [x] D21-T15 — Favoritos: polish moderado solo en `FavoriteCard`
 - [x] D21-T16 — Conversación: solo burbujas, hora, campo y botón enviar
 - [x] D21-T17 — Corrección de exceso de alcance desde `735a697`, documentación, gates y CI del PR #37 (sin merge)
+- [x] D21-T18 — Parser de coordenadas (normalización/rangos/entrada parcial)
+- [x] D21-T19 — Universidades cercanas: API/DTO/repository/usecase + HTTP test
+- [x] D21-T20 — Ubicación contextual y UI exclusiva de la sección Ubicación de Nuevo edificio
+- [x] D21-T21 — Fotos: DTO de respuesta real, moderación 422/503 y pruebas de transporte
+- [x] D21-T22 — Permiso de notificaciones persistente y solicitud contextual única
+- [x] D21-T23 — JaCoCo, matrices, trazabilidad, memoria, gates y cierre sin merge

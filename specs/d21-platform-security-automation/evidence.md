@@ -265,3 +265,42 @@ base `d11c3f18fe28ade4510a95bdb3bcc2cbbab8c6f2`. Congelaci�n visual total; sin m
 
 - Nuevos tests: `D21SpanishLabelsTest` (6) y `D21LabelsWiringTest` (6): 21 combinaciones de
   servicios, 8 de mobiliario, 3 de contrato, c�digos base y fallback desconocido.
+
+---
+
+## ADENDA FINAL — cierre técnico sin dispositivo y geolocalización
+
+- `git rev-parse HEAD` antes de los cambios = `3bbd1dbe223ee2da7e11e05767dc842a7094552d`.
+- `gh pr view 37` = OPEN / MERGEABLE / `feature/platform-security-automation` → `main`.
+- Sin Backend/GenAI/ML/ONNX/infra, sin servicios nuevos (COST-001 $0), sin secretos.
+
+### Causas demostradas
+- Coordenadas: `BuildingFormUiState` usaba `toDoubleOrNull()` directo y rangos genéricos (-90..90/-180..180) en lugar de los rangos contractuales (14..33/-118.5..-86); una coma decimal localizada o un signo Unicode producía "Latitud inválida". El envío usaba `toDouble()` sin normalizar. Corregido con `CoordinateParser` puro.
+- Notificaciones: `askedOnce` era `rememberSaveable`, por lo que una denegación permanente se reclasificaba como primera negación tras morir el proceso; Android no vuelve a mostrar el diálogo y el usuario debía ir a Ajustes. Corregido con `NotificationPermissionStore` (DataStore).
+- Fotos: `LandlordApi` declaraba `Response<BuildingDto>`/`Response<RoomDto>` para cargas que el Backend responde con `PhotoResponse`; el ID real se descartaba. Corregido.
+- Ya existía UI de fotos en `RoomFormScreen` (galería, límite 4, progress, borrado); NO se duplicó.
+
+### Gates ejecutados (salida real)
+| Comando | Resultado |
+|---|---|
+| `.\gradlew.bat clean compileDebugKotlin` | BUILD SUCCESSFUL |
+| `.\gradlew.bat testDebugUnitTest` | BUILD SUCCESSFUL — 702 tests / 0 failures / 0 errors |
+| `.\gradlew.bat lintDebug` | BUILD SUCCESSFUL |
+| `.\gradlew.bat assembleDebug` | BUILD SUCCESSFUL |
+| `.\gradlew.bat compileDebugAndroidTestKotlin` | BUILD SUCCESSFUL |
+| `.\gradlew.bat assembleDebugAndroidTest` | BUILD SUCCESSFUL |
+| `.\gradlew.bat jacocoDebugTestReport` | BUILD SUCCESSFUL |
+| `git diff --check` | exit 0 |
+
+### Cobertura real (JaCoCo)
+- Líneas: 7262/21902 = 33.16 %. Ramas: 2810/8923 = 31.49 %.
+- `domain/location` 43/45, `data/catalog/repository` 103/147, `data/landlord/repository` 224/280.
+- Sin exclusiones artificiales. No se contabilizan pruebas no ejecutadas.
+
+### Evidencia humana incorporada
+- `ACCOUNT_DELETION_RUNTIME=PASS`: 200/403→204, requestId `9d1dc271075f46e4b7539a196b619ae3`, login 401 posterior.
+- GenAI: 200 en 8237 ms (`9a170e8db113424692b5b64342e4dcb4`) y 200 en 2220 ms (`c45db7b43beb401ab5ab707f95dacf93`); `generatedBy=genai` pendiente de confirmación Backend.
+
+### Pendiente
+- Sin dispositivo: GPS físico, UI de la nueva sección y `connectedDebugAndroidTest` → PENDING.
+- Push real → EXTERNAL_BLOCKER. Merge → NO AUTORIZADO.

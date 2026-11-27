@@ -17,10 +17,17 @@ Metodología: análisis estático dirigido + revisión de contratos + pruebas lo
 | MASVS-PLATFORM-1 (exported) | Sí | Solo MainActivity exported con MAIN/LAUNCHER; FCM service exported=false | PASS | Ninguno | — | — | — |
 | MASVS-PLATFORM-2 (deep links) | Sí | Sin ACTION_VIEW/BROWSABLE; allowlist de `NotificationTargetKind` + regex SAFE_ID + rutas tipadas | PASS | Ninguno | — | — | — |
 | MASVS-PLATFORM-3 (permisos) | Sí | Matriz `D21_PERMISSIONS_MATRIX.md`; `ACCESS_NETWORK_STATE` añadido por uso real | PASS | Permiso usado sin declarar | Medio | Declarado | — |
-| MASVS-CODE-1 (secretos) | Sí | Sin service-account en repo; `google-services.json` contiene API key **pública de cliente** restringida por package | WARN | API key versionada | Medio | Documentado; no imprimir valor; no añadir service account | Medio: es configuración Firebase estándar, no credencial Backend |
+| MASVS-CODE-1 (secretos) | Sí | Sin service-account en repo; `google-services.json` contiene API key **pública de cliente**. La restricción por package/SHA **no es verificable desde Mobile**. | WARN | API key versionada | Medio | Documentado; allowlist Gitleaks limitada a ese archivo; no imprimir valor; confirmar restricción con responsable Firebase | Medio: configuración Firebase estándar; depende de control externo no verificable aquí |
 | MASVS-CODE-2 (integridad release) | Parcial | Signing desde env `THEHOUSE_*`; `optimization.enable=false` | PASS | Sin Play App Signing (fuera de alcance) | Bajo | — | Medio: release no publicado |
 | MASVS-RESILIENCE-1 (ofuscación) | No evaluado | Sin R8 en release (optimization=false) | NOT_APPLICABLE | Alcance académico; sin secretos en cliente | — | — | Medio |
 | MASVS-CODE-3 (dependencias) | Sí | Trivy HIGH/CRITICAL en CI (informativo); Firebase BoM 35.2.0 | WARN | Trivy `exit-code=0` | Medio | Sin cambiar umbral (no autorizado) | Medio: hallazgos se reportan, no bloquean |
+
+## Detalle de las dos advertencias (WARN)
+
+| Control | Causa | Riesgo | Corrección viable en Mobile | Prueba | Riesgo residual |
+|---|---|---|---|---|---|
+| MASVS-CODE-1 — API key pública versionada en `app/google-services.json` | El plugin `google-services` requiere el archivo; es una clave de cliente, no service-account ni credencial Backend. La restricción por package/SHA no se puede comprobar desde el repositorio Mobile. | Medio: posible abuso de cuota del proyecto Firebase si la restricción externa no existe. | Mantener allowlist de Gitleaks **solo** para ese archivo, no imprimir el valor, no añadir service account, y reportar como pendiente de confirmación externa. No eliminar el archivo sin autorización (deshabilitaría FCM). | `gitleaks detect --config .gitleaks.toml` sin hallazgos fuera de allowlist; grep `AIza|private_key|service_account` → solo la entrada conocida. | Medio, aceptado y documentado. No es un secreto Backend. |
+| MASVS-CODE-3 — Trivy `exit-code=0` | Decisión deliberada: NV-02/NV-18 no autorizan cambiar umbrales ni crear allowlists nuevas. El escaneo HIGH/CRITICAL se ejecuta y publica tabla, pero no bloquea. | Medio: ventana entre detección y corrección de dependencias. | Ninguna corrección segura autorizada ahora. Proponer gate por severidad con excepción revisada en futura NV-02; NO subir `exit-code` por iniciativa propia. | CI del PR #37 con paso Trivy ejecutado; 0 CRITICAL/0 HIGH confirmados en alcance Mobile. | Medio, aceptado y documentado. |
 
 ## Hallazgos abiertos
 

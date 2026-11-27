@@ -41,3 +41,14 @@
 Reglas: sin rama nueva, sin PR nuevo, sin merge, sin force push ni reescritura de historial;
 sin Backend/GenAI/ML/ONNX/infra; sin mover "Nuevo edificio"; sin componentes compartidos ni tema
 global; sin mejoras por iniciativa propia; esperar aprobación humana de la validación visual.
+
+## ADENDA FINAL (misma rama / PR #37)
+
+| Fase | Task | Descripción | Verificación |
+|---|---|---|---|
+| P18 | D21-T18 | Parser de coordenadas + pruebas (coma, U+2212, U+2013, invisibles, límites, parcial) | 11 tests |
+| P19 | D21-T19 | Búsqueda `universities/search` real + DTO + repositorio + usecase + HTTP test | 3 tests MockWebServer |
+| P20 | D21-T20 | Ubicación contextual (`LocationManager`) + VM UDF + UI solo en sección Ubicación | 8 tests VM + permisos |
+| P21 | D21-T21 | Fotos: decidir UI existente, corregir DTO de respuesta, moderación 422/503 en formularios | 8 tests MockWebServer |
+| P22 | D21-T22 | POST_NOTIFICATIONS persistente + solicitud contextual única | 7 tests de política + 1 store |
+| P23 | D21-T23 | JaCoCo, matrices, trazabilidad, evidencia, gates y push al PR #37 | 702 tests, `git diff --check`, CI SUCCESS |

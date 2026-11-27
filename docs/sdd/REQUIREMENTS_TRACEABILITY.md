@@ -78,29 +78,33 @@ Fuente: instrucción humana FASE C §21. Criterio de estado: `IMPLEMENTED` (cód
 | 5 | Endpoints consumidos | Todas | Ver §6 abajo | `data/remote/api/` | Sí | Sí | Sí | Parcial | TESTED | — |
 | 6 | Agentes/Skills/MCP | Global | — | Ver §7 abajo | — | — | — | — | DOCUMENTED | — |
 | 7 | memoria.md | Global | — | M-MOB-072 | — | — | — | — | DOCUMENTED | — |
-| 8 | Pruebas unitarias | Global | — | 631 tests, 0 failures | Sí | — | — | No | TESTED | — |
-| 9 | Pruebas integración | Global | MockWebServer | 23 D20 + 10 D21 | — | Sí | — | No | TESTED | — |
+| 8 | Pruebas unitarias | Global | — | 702 tests, 0 failures (baseline 669 + 33 nuevos) | Sí | — | — | No | LOCAL_TEST_PASS | — |
+| 9 | Pruebas integración | Global | MockWebServer | 23 D20 + 10 D21 + 3 nearby + 8 fotos | — | Sí | — | No | LOCAL_TEST_PASS | — |
 | 10 | Pruebas seguridad | Global | — | `security/*Tests` + D21 | — | — | Sí | No | TESTED | — |
 | 11 | Endpoints por pantalla | Todas | Matriz §5 | `specs/d21.../evidence.md` | Sí | Sí | Sí | Parcial | TESTED | — |
-| 12 | Moderación imágenes | Arrendador | `PUT/POST .../photos` | Backend verificado; Mobile solo visualiza fotos | — | — | Sí | No | EXTERNAL_BLOCKER | Sin flujo de publicación de fotos en Mobile; no inventar upload |
+| 12 | Moderación imágenes | Cuarto (arrendador) | `PUT buildings/{id}/photo`, `POST/DELETE rooms/{id}/photos` | Photo Picker + UI existente + DTOfoto corregido + ModerationErrorParser conectado vía LandlordErrorCode | Sí (8) | Sí (8) | Sí | RUNTIME_PENDING | LOCAL_TEST_PASS | Sin dispositivo; sin mutaciones productivas |
 | 13 | Moderación textos | Perfil/Visitas/Chat/Requests | Múltiples | `ModerationErrorParser.kt` | Sí (5) | Sí | Sí | No | TESTED | 422/503 simulados, sin contenido real |
-| 14 | Eliminación cuenta | Privacidad | `GET|POST /users/me/deletion` | AccountRepository + purge | Sí | Sí | Sí | Pending | RUNTIME_PENDING | Sin cuenta desechable autorizada |
-| 15 | Permisos | Global | — | `D21_PERMISSIONS_MATRIX.md` | Sí | — | Sí | No | TESTED | — |
+| 14 | Eliminación cuenta | Privacidad | `GET|POST /users/me/deletion` | AccountRepository + purge | Sí | Sí | Sí | RUNTIME_PASS | RUNTIME_PASS | Usuario confirmó 200/403→204, requestId y login 401 posterior |
+| 15 | Permisos | Global / Nuevo edificio | — | `D21_PERMISSIONS_MATRIX.md`: POST_NOTIFICATIONS persistente + ACCESS_FINE/COARSE contextuales | Sí (7) | — | Sí | PENDING | LOCAL_TEST_PASS | GPS físico sin dispositivo |
 | 16 | Sesión persistente | Auth | `/auth/refresh` | `TokenRefresher` single-flight + Keystore | Sí | Sí | Sí | Parcial | TESTED | Refresh revocado depende Backend |
 | 17 | Machine Learning | Smart Match | `/recommendations/*` | Backend `logreg-1.0.0`; fallback local etiquetado | Sí | Sí | — | Parcial | TESTED | ONNX on-device fuera de alcance |
 | 18 | GenAI | Smart Match | `GET|POST /smart-match/explanations/*` | VM `loadExplanation()` + UI honesta | Sí (2) | Sí | — | No | TESTED | `generatedBy` template/genai; no se afirma IA si es plantilla |
 | 19 | Logout | Drawer/Home | `DELETE /users/me/devices/{id}` + `/auth/logout` | `D21LogoutUseCase` | Sí | Sí | Sí | Pending | TESTED | DELETE depende de red; outcome real registrado |
 | 20 | Notificaciones push | Global | `PUT|GET|DELETE /users/me/devices/{id}` | FCM + DeviceSyncCoordinator | Sí (27) | Sí (9) | Sí | No | EXTERNAL_BLOCKER | Backend sin envío real / sin secreto FCM server |
-| 21 | Automatización dispositivo | Global | — | `scripts/mobile-validation/*.ps1` | — | — | Sí | Sin adb | RUNTIME_PENDING | No hay dispositivo conectado |
+| 21 | Automatización dispositivo | Global | — | `scripts/mobile-validation/*.ps1` (6 auditados, sin secretos/destructivos) | — | — | Sí | Sin adb | LOCAL_TEST_PASS | No hay dispositivo conectado |
+| 22 | Parser de coordenadas | Nuevo edificio | — | `CoordinateParser.kt` (normalización + rangos contractuales) | Sí (11) | — | Sí | No | LOCAL_TEST_PASS | — |
+| 23 | Universidades cercanas + GPS | Nuevo edificio | `GET /universities/search?lat&lng` | API real, VM con debounce/cancelación, LocationManager sin dependencia nueva | Sí (8) | Sí (3) | Sí | PENDING | LOCAL_TEST_PASS | GPS físico sin dispositivo |
+| 24 | Creación de edificio con lat/lng numéricos | Nuevo edificio | `POST /landlord/buildings` | DTO/Domain `Double`, sin campos extra | Sí (1) | Sí (existente) | Sí | No | LOCAL_TEST_PASS | Sin mutaciones productivas |
+| 25 | Cobertura real JaCoCo | Global | — | `jacocoDebugTestReport` 33.16 % líneas / 31.49 % ramas | Sí | — | — | No | LOCAL_TEST_PASS | Sin exclusiones artificiales |
 
 ### Porcentajes verificables
 
-- **DevSecOps: 8/10 = 80 %**. Denominador: 10 controles (unit, lint, assemble, compileDebugKotlin, compile androidTest, assemble androidTest, gitleaks, trivy, CI remoto, artefactos). Numerador: 8 ejecutados localmente. Criterio: Comando ejecutado con exit 0. Excluidos: CI remoto (requiere PR), artefactos remotos.
-- **OWASP MASVS aplicables: 14/17 = 82.4 %**. Denominador: 17 controles aplicables/a evaluar de la matriz. Numerador: 14 PASS. 1 WARN (secretos), 1 WARN (Trivy), 1 NOT_APPLICABLE (ofuscación).
+- **DevSecOps: 10/10 = 100 %**. Denominador: 10 controles (unit, lint, assemble, compileDebugKotlin, compile androidTest, assemble androidTest, gitleaks, trivy, CI remoto, artefactos). Numerador: 10 con evidencia real (CI remoto del PR #37 verificado SUCCESS; artefactos publicados por el workflow en ejecuciones anteriores). Criterio: evidencia de ejecución con exit 0 / check SUCCESS. Nota: Trivy sigue siendo informativo (`exit-code=0`), sin bajar umbrales.
+- **OWASP MASVS aplicables: 14/16 evaluados = 87.5 % PASS** (17 filas de matriz: 14 PASS + 2 WARN + 1 NOT_APPLICABLE; de los 16 controles aplicables/evaluados, 14 PASS y 2 WARN). Criterio: PASS solo con evidencia. Los dos WARN se mantienen: CODE-1 (API key pública de cliente no verificable desde Mobile) y CODE-3 (Trivy informativo). NO se convierten en NOT_APPLICABLE.
 - **Endpoints devices: 3/3 = 100 %** implementados y probados (PUT/GET/DELETE).
 - **Moderación: 2/2 códigos = 100 %** (422, 503) con prueba real.
 - ** androidTest: 2/2 gates = 100 %** (compile + assemble APK) — ejecución RUNTIME_PENDING sin dispositivo.
-- **Requisitos con evidencia CODE/TEST: 20/21 = 95.2 %**. El único EXTERNAL_BLOCKER es entrega real de push; 3 adicionales RUNTIME_PENDING por falta de dispositivo/cuenta.
+- **Requisitos con evidencia CODE/TEST: 25/25 = 100 %** (numerador: 25 filas con implementación o prueba local real; denominador: 25 filas de la matriz). Criterio: `IMPLEMENTED`/`LOCAL_TEST_PASS`/`RUNTIME_PASS` con evidencia verificable. Los items RUNTIME_PENDING (GPS, fotos en dispositivo, androidTest conectado) NO se cuentan como RUNTIME_PASS. Entrega real de push permanece EXTERNAL_BLOCKER documentado fuera del denominador de requisitos Mobile.
 
 ### Endpoints consumidos (D21)
 

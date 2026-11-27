@@ -11,6 +11,7 @@ import com.thehouse.app.data.remote.dto.catalog.PropertyDetailDto
 import com.thehouse.app.data.remote.dto.catalog.PropertyListResponseDto
 import com.thehouse.app.data.remote.dto.catalog.UniversityListResponseDto
 import com.thehouse.app.domain.error.DomainError
+import com.thehouse.app.domain.repository.NearbyUniversity
 import com.thehouse.app.domain.error.DomainException
 import com.thehouse.app.domain.model.PagedResult
 import com.thehouse.app.domain.model.Property
@@ -84,6 +85,36 @@ class UniversityRepositoryImpl(
             Result.failure(DomainException(DomainError.Unknown))
         }
     }
+
+    override suspend fun searchNearbyUniversities(lat: Double, lng: Double): Result<List<NearbyUniversity>> =
+        try {
+            val response = Perf.traceSuspend("network.universities.searchNearby") {
+                api.searchNearbyUniversities(lat = lat, lng = lng)
+            }
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                // El Backend ordena por distancia; NO se recalcula Haversine en Mobile.
+                Result.success(body.items.map { item ->
+                    NearbyUniversity(
+                        id = item.id,
+                        code = item.code,
+                        name = item.name,
+                        city = item.city,
+                        distanceKm = item.distanceKm,
+                    )
+                })
+            } else {
+                Result.failure(DomainException(DataError.Http(response.code()).toDomainError()))
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (timeout: SocketTimeoutException) {
+            Result.failure(DomainException(DomainError.Timeout))
+        } catch (network: IOException) {
+            Result.failure(DomainException(DomainError.Network))
+        } catch (unexpected: Exception) {
+            Result.failure(DomainException(DomainError.Unknown))
+        }
 
     private suspend fun readCachedUniversities(key: String): PagedResult<University>? {
         val cached = cache?.get(key, UniversityListResponseDto.serializer()) ?: return null
