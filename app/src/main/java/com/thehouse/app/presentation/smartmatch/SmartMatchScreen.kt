@@ -176,6 +176,7 @@ fun SmartMatchScreen(
                                 // D20: toggle real vía ViewModel (PUT/DELETE con roomId).
                                 onFavoriteClick = { vm.onFavoriteClick(result.roomId) },
                                 onContactClick = { onContactClick(result.roomId) },
+                                onLoadExplanation = { vm.loadExplanation(result.roomId) },
                             )
                         }
                     }

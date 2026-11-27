@@ -1,0 +1,24 @@
+# D21 — Checklist
+
+- [x] Gobernanza leída (constitution, AGENTS, memoria) y declaración de autorización
+- [x] PR #36 verificado MERGED, base `54ece77`, rama creada desde origin/main
+- [x] Spec/plan/task creados antes de implementar
+- [x] Contratos Backend verificados en solo lectura (devices, moderación, GenAI, delete)
+- [x] installationId UUID D persistente (DataStore, Mutex, estable)
+- [x] DeviceApi/DTO/Repository/UseCases sin bodies default
+- [x] DeviceSyncCoordinator: dedup, guest, rotación, red, logout, cambio de cuenta
+- [x] onNewToken → sincronización; DI en AppContainer
+- [x] D21LogoutUseCase: DELETE antes de revocar, outcome real, purga always
+- [x] Moderación centralizada 422/503 con conservación de texto
+- [x] GenAI: explicación bajo demanda con generatedBy honesto, score intacto
+- [x] Permiso ACCESS_NETWORK_STATE añadido por uso real
+- [x] androidTest reparado (4 archivos reescritos con APIs reales)
+- [x] Scripts PowerShell de automatización (5 + common)
+- [x] CI: compile/assemble androidTest añadidos sin bajar umbrales
+- [x] Matrices OWASP / permisos / plataforma / trazabilidad
+- [x] 631 tests / 0 failures / 0 errors
+- [x] Gates: compile, unit, lint, assembleDebug, compile androidTest, assemble androidTest
+- [ ] `connectedDebugAndroidTest` — sin dispositivo (adb no disponible)
+- [ ] FCM real delivery — EXTERNAL_BLOCKER (Backend sin envío / secreto)
+- [ ] Eliminación en cuenta desechable — sin autorización de cuenta
+- [ ] CI remoto del PR — pendiente de push/PR

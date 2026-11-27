@@ -341,7 +341,6 @@ class AppContainer(context: Context) {
 
     val register: RegisterUseCase by lazy { RegisterUseCase(authRepository) }
     val login: LoginUseCase by lazy { LoginUseCase(authRepository) }
-    val logout: LogoutUseCase by lazy { LogoutUseCase(authRepository) }
     val observeSession: ObserveSessionUseCase by lazy { ObserveSessionUseCase(authRepository) }
     val restoreSession: RestoreSessionUseCase by lazy { RestoreSessionUseCase(authRepository) }
 
@@ -679,8 +678,9 @@ class AppContainer(context: Context) {
     }
 
     // ===== NV-14 Fase B — FCM / Push =====
-    // Backend token registration: FCM-TOKEN-BACKEND-BLOCKED (no existe contrato
-    // real de devices/token en el backend disponible). No se crea endpoint.
+    // D21: contrato real de devices verificado en Backend
+    // `TheHouse.Http/PushDevicesEndpoint.cs` (PUT/GET/DELETE). Ya no existe
+    // FCM-TOKEN-BACKEND-BLOCKED: el token se sincroniza con el Backend.
 
     val applicationScope: CoroutineScope by lazy {
         CoroutineScope(SupervisorJob() + dispatchers.io)
@@ -725,6 +725,62 @@ class AppContainer(context: Context) {
         )
     }
 
+    // ===== D21: installationId + registro de dispositivos =====
+
+    val installationIdStore: com.thehouse.app.domain.repository.InstallationIdStore by lazy {
+        com.thehouse.app.data.device.DataStoreInstallationIdStore(preferences)
+    }
+
+    val deviceApi: com.thehouse.app.data.remote.api.DeviceApi by lazy {
+        retrofit.create(com.thehouse.app.data.remote.api.DeviceApi::class.java)
+    }
+
+    val deviceRepository: com.thehouse.app.domain.repository.DeviceRepository by lazy {
+        com.thehouse.app.data.device.DeviceRepositoryImpl(deviceApi)
+    }
+
+    val registerDevice: com.thehouse.app.domain.usecase.RegisterDeviceUseCase by lazy {
+        com.thehouse.app.domain.usecase.RegisterDeviceUseCase(
+            repository = deviceRepository,
+            installationIdStore = installationIdStore,
+            sessionState = { sessionStore.state.value },
+            appVersion = { com.thehouse.app.BuildConfig.VERSION_NAME },
+        )
+    }
+
+    val unregisterDevice: com.thehouse.app.domain.usecase.UnregisterDeviceUseCase by lazy {
+        com.thehouse.app.domain.usecase.UnregisterDeviceUseCase(
+            repository = deviceRepository,
+            installationIdStore = installationIdStore,
+        )
+    }
+
+    val deviceSyncCoordinator: com.thehouse.app.domain.device.DeviceSyncCoordinator by lazy {
+        com.thehouse.app.domain.device.DeviceSyncCoordinator(
+            repository = deviceRepository,
+            installationIdStore = installationIdStore,
+            sessionState = sessionStore.state,
+            connectivity = connectivityObserver,
+            appScope = applicationScope,
+            tokenProvider = { pushTokenCoordinator.currentTokenForBackendSync() },
+            tokenClear = { pushTokenCoordinator.clear() },
+            logger = { event -> pushLogger.info(event) },
+        ).also { coordinator ->
+            // onNewToken (incluida rotación FCM) dispara sincronización.
+            pushTokenCoordinator.onTokenChanged = { coordinator.onNewToken() }
+        }
+    }
+
+    val logout: com.thehouse.app.domain.usecase.D21LogoutUseCase by lazy {
+        com.thehouse.app.domain.usecase.D21LogoutUseCase(
+            repository = authRepository,
+            deviceSync = deviceSyncCoordinator,
+        )
+    }
+
+    val moderationErrorParser: com.thehouse.app.data.moderation.ModerationErrorParser
+        get() = com.thehouse.app.data.moderation.ModerationErrorParser
+
     val pushSessionGate: com.thehouse.app.domain.push.PushSessionGate by lazy {
         com.thehouse.app.data.notifications.push.PersistentPushSessionGate(
             sessionStore = sessionStore,
@@ -761,6 +817,9 @@ class AppContainer(context: Context) {
      * - → Active: obtiene/refresca token FCM (sin registrarlo en Backend).
      */
     fun observePushSession() {
+        // D21: inicializar el coordinador para registrar el callback de onNewToken
+        // antes de que Firebase pueda entregar una rotación de token.
+        deviceSyncCoordinator
         applicationScope.launch {
             var previous: SessionState? = null
             sessionStore.state.collect { current ->
@@ -779,6 +838,8 @@ class AppContainer(context: Context) {
                 }
                 if (current is SessionState.Active && !wasActive) {
                     pushTokenCoordinator.refresh()
+                    // D21: sincronizar dispositivo tras restauración/login.
+                    deviceSyncCoordinator.onSessionRestored()
                 }
                 previous = current
             }

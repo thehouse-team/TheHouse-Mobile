@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Roofing
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -85,6 +86,7 @@ internal fun SmartMatchRecommendationCard(
     onRoomClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onContactClick: () -> Unit,
+    onLoadExplanation: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -189,11 +191,16 @@ internal fun SmartMatchRecommendationCard(
             }
 
             TextButton(
-                onClick = { expanded = !expanded },
+                onClick = {
+                    val next = !expanded
+                    expanded = next
+                    // D21: cargar explicación textual bajo demanda, sin recalcular score.
+                    if (next && result.explanation == null && !result.explanationLoading) onLoadExplanation()
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = if (expanded) "Ocultar factores" else "¿Por qué es compatible contigo?",
+                    text = if (expanded) "Ocultar detalles" else "¿Por qué es compatible contigo?",
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -212,6 +219,45 @@ internal fun SmartMatchRecommendationCard(
                     } else {
                         result.factors.forEach { factor ->
                             FactorRow(factor = factor)
+                        }
+                    }
+
+                    // D21: explicación textual del Backend, separada de los
+                    // factores numéricos. Etiqueta honesta de su origen.
+                    HorizontalDivider()
+                    when {
+                        result.explanationLoading -> Text(
+                            text = "Cargando explicación…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        result.explanationFailed -> Text(
+                            text = "No se pudo cargar la explicación. Intenta de nuevo.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        result.explanation != null -> {
+                            val explanation = result.explanation!!
+                            Text(
+                                text = if (explanation.generatedBy == "genai")
+                                    "Explicación generada con IA"
+                                else
+                                    "Explicación basada en tus preferencias",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.semantics {
+                                    contentDescription = "smart.match.explanation.source.${explanation.generatedBy}"
+                                },
+                            )
+                            Text(explanation.summary, style = MaterialTheme.typography.bodySmall)
+                            if (explanation.pros.isNotEmpty()) {
+                                Text("A favor", style = MaterialTheme.typography.labelSmall)
+                                explanation.pros.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                            }
+                            if (explanation.cons.isNotEmpty()) {
+                                Text("En contra", style = MaterialTheme.typography.labelSmall)
+                                explanation.cons.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                            }
                         }
                     }
                 }

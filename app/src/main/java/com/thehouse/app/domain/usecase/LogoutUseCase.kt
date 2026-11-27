@@ -9,7 +9,7 @@ import com.thehouse.app.domain.repository.AuthRepository
  * (POST /api/v1/auth/logout), y SIEMPRE limpia el estado local (tokens, sesión).
  * Sin red, el logout local es inmediato y el resultado no interrumpe el flujo.
  */
-class LogoutUseCase(private val repository: AuthRepository) {
+open class LogoutUseCase(private val repository: AuthRepository) {
 
-    suspend operator fun invoke(): Result<Unit> = repository.logout()
+    open suspend operator fun invoke(): Result<Unit> = repository.logout()
 }

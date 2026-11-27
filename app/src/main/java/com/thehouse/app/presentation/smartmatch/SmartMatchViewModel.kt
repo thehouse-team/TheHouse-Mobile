@@ -399,6 +399,63 @@ class SmartMatchViewModel(
         return all.distinctBy { it.id }
     }
 
+    /**
+     * D21: carga la explicación textual del Backend bajo demanda.
+     *
+     * NO recalcula el score: el Backend es autoridad. Separa los factores
+     * numéricos del modelo ML de la explicación (GenAI o plantilla).
+     * Ante cualquier error, marca `explanationFailed` sin tocar el score.
+     */
+    fun loadExplanation(roomId: String) {
+        val current = _uiState.value as? SmartMatchUiState.Content ?: return
+        if (current.results.firstOrNull { it.roomId == roomId }?.explanation != null) return
+        viewModelScope.launch {
+            setExplanationState(roomId, loading = true)
+            try {
+                val response = when (sessionState.value) {
+                    is SessionState.Active -> smartMatchRepository.getExplanation(roomId)
+                    else -> smartMatchRepository.queryExplanation(
+                        com.thehouse.app.data.remote.dto.smartmatch.SmartMatchExplanationQueryRequest(
+                            roomId = roomId,
+                            universityId = null,
+                            preferences = null,
+                        ),
+                    )
+                }
+                val explanation = com.thehouse.app.domain.smartmatch.SmartMatchExplanation(
+                    roomId = response.roomId,
+                    score = response.score.toInt().coerceIn(0, 100),
+                    summary = response.summary,
+                    pros = response.pros,
+                    cons = response.cons,
+                    generatedBy = if (response.generatedBy == "genai") "genai" else "template",
+                    modelVersion = response.modelVersion,
+                    explanationVersion = response.explanationVersion,
+                )
+                updateExplanation(roomId) { it.copy(explanation = explanation, explanationLoading = false, explanationFailed = false) }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                SmartMatchFlowLogger.exception("explanation", t)
+                updateExplanation(roomId) { it.copy(explanationLoading = false, explanationFailed = true) }
+            }
+        }
+    }
+
+    private fun setExplanationState(roomId: String, loading: Boolean) {
+        updateExplanation(roomId) { it.copy(explanationLoading = loading, explanationFailed = false) }
+    }
+
+    private fun updateExplanation(
+        roomId: String,
+        transform: (com.thehouse.app.domain.smartmatch.SmartMatchResult) -> com.thehouse.app.domain.smartmatch.SmartMatchResult,
+    ) {
+        val content = _uiState.value as? SmartMatchUiState.Content ?: return
+        _uiState.value = content.copy(
+            results = content.results.map { if (it.roomId == roomId) transform(it) else it },
+        )
+    }
+
     companion object {
         private const val DEFAULT_PAGE_SIZE = 20
 

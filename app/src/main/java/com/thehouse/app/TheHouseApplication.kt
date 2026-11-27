@@ -10,9 +10,10 @@ import com.thehouse.app.preferences.flow.PreferencesFlowLogger
  *
  * Es el composition root de DI manual. No contiene lógica de negocio.
  *
- * NV-14 Fase B: registra canales de notificación, visibilidad de proceso y
- * observación de sesión para push. Sin `google-services.json`, Firebase no se
- * inicializa y el runtime push queda bloqueado de forma segura.
+ * NV-14 / D21: registra canales de notificación, visibilidad de proceso,
+ * observación de sesión para push y sincronización de dispositivos con Backend.
+ * Firebase se inicializa desde `google-services.json`; si falla, las funciones
+ * principales siguen funcionando y el registro de dispositivo se omite.
  */
 class TheHouseApplication : Application() {
 

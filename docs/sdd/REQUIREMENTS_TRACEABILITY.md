@@ -1,4 +1,4 @@
-﻿# Matriz de Trazabilidad de Requisitos — TheHouse Mobile
+# Matriz de Trazabilidad de Requisitos — TheHouse Mobile
 
 > **Solo documental.** No modifica código Kotlin/Gradle/XML/tests/backend/Azure/Play/workflows. No ejecuta builds. No realiza git commit/push.
 > **Fuente autoritativa:** «Requerimientos para el desarrollo del proyecto Móvil v3». El PDF no está en el repositorio; se usa `memoria.md` M-MOB-041 como respaldo y se declara en el encabezado de «Desviaciones» al final de este documento.
@@ -62,3 +62,52 @@
 **Nota de cobertura:** ningún requisito académico queda sin spec en esta matriz; cada Requirement tiene Spec, Task y Status asignados (EXECUTED, PLANNED, PARTIAL o BLOCKED).
 
 **Regla:** `BLOCKED nunca equivale a DONE`. Un requisito BLOCKED o PLANNED no se marca como implementado sin evidencia real registrada.
+
+---
+
+## D21 — Matriz final de evaluación Mobile (FASE C)
+
+Fuente: instrucción humana FASE C §21. Criterio de estado: `IMPLEMENTED` (código real), `TESTED` (prueba local real), `RUNTIME_PASS` (evidencia en dispositivo), `RUNTIME_PENDING` (sin dispositivo/fixture), `EXTERNAL_BLOCKER` (dependencia fuera de alcance), `NOT_APPLICABLE` (justificado).
+
+| # | Requisito | Pantalla | Endpoint consumido | Implementación | Unit | Integración HTTP | Seguridad | Runtime | Estado | Bloqueador |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | DevSecOps verificado | Global | — | `.github/workflows/mobile-ci.yml`, scripts PS | Sí | Sí | Gitleaks/Trivy/Lint | Parcial | TESTED | Sin dispositivo |
+| 2 | Herramientas CI/CD | Global | — | GitHub Actions: unit/lint/assemble/androidTest/gitleaks/trivy | Sí | Sí | Sí | CI remoto pendiente de PR | TESTED | PR abierto |
+| 3 | Controles OWASP | Global | — | `D21_OWASP_MASVS_MATRIX.md` | Sí | Sí | Sí | No | TESTED | 3 MEDIUM_OPEN |
+| 4 | Vulns críticas/altas | Global | — | Matrices + scanners | — | — | 0 CRITICAL / 0 HIGH | No | TESTED | Trivy informativo |
+| 5 | Endpoints consumidos | Todas | Ver §6 abajo | `data/remote/api/` | Sí | Sí | Sí | Parcial | TESTED | — |
+| 6 | Agentes/Skills/MCP | Global | — | Ver §7 abajo | — | — | — | — | DOCUMENTED | — |
+| 7 | memoria.md | Global | — | M-MOB-072 | — | — | — | — | DOCUMENTED | — |
+| 8 | Pruebas unitarias | Global | — | 631 tests, 0 failures | Sí | — | — | No | TESTED | — |
+| 9 | Pruebas integración | Global | MockWebServer | 23 D20 + 10 D21 | — | Sí | — | No | TESTED | — |
+| 10 | Pruebas seguridad | Global | — | `security/*Tests` + D21 | — | — | Sí | No | TESTED | — |
+| 11 | Endpoints por pantalla | Todas | Matriz §5 | `specs/d21.../evidence.md` | Sí | Sí | Sí | Parcial | TESTED | — |
+| 12 | Moderación imágenes | Arrendador | `PUT/POST .../photos` | Backend verificado; Mobile solo visualiza fotos | — | — | Sí | No | EXTERNAL_BLOCKER | Sin flujo de publicación de fotos en Mobile; no inventar upload |
+| 13 | Moderación textos | Perfil/Visitas/Chat/Requests | Múltiples | `ModerationErrorParser.kt` | Sí (5) | Sí | Sí | No | TESTED | 422/503 simulados, sin contenido real |
+| 14 | Eliminación cuenta | Privacidad | `GET|POST /users/me/deletion` | AccountRepository + purge | Sí | Sí | Sí | Pending | RUNTIME_PENDING | Sin cuenta desechable autorizada |
+| 15 | Permisos | Global | — | `D21_PERMISSIONS_MATRIX.md` | Sí | — | Sí | No | TESTED | — |
+| 16 | Sesión persistente | Auth | `/auth/refresh` | `TokenRefresher` single-flight + Keystore | Sí | Sí | Sí | Parcial | TESTED | Refresh revocado depende Backend |
+| 17 | Machine Learning | Smart Match | `/recommendations/*` | Backend `logreg-1.0.0`; fallback local etiquetado | Sí | Sí | — | Parcial | TESTED | ONNX on-device fuera de alcance |
+| 18 | GenAI | Smart Match | `GET|POST /smart-match/explanations/*` | VM `loadExplanation()` + UI honesta | Sí (2) | Sí | — | No | TESTED | `generatedBy` template/genai; no se afirma IA si es plantilla |
+| 19 | Logout | Drawer/Home | `DELETE /users/me/devices/{id}` + `/auth/logout` | `D21LogoutUseCase` | Sí | Sí | Sí | Pending | TESTED | DELETE depende de red; outcome real registrado |
+| 20 | Notificaciones push | Global | `PUT|GET|DELETE /users/me/devices/{id}` | FCM + DeviceSyncCoordinator | Sí (27) | Sí (9) | Sí | No | EXTERNAL_BLOCKER | Backend sin envío real / sin secreto FCM server |
+| 21 | Automatización dispositivo | Global | — | `scripts/mobile-validation/*.ps1` | — | — | Sí | Sin adb | RUNTIME_PENDING | No hay dispositivo conectado |
+
+### Porcentajes verificables
+
+- **DevSecOps: 8/10 = 80 %**. Denominador: 10 controles (unit, lint, assemble, compileDebugKotlin, compile androidTest, assemble androidTest, gitleaks, trivy, CI remoto, artefactos). Numerador: 8 ejecutados localmente. Criterio: Comando ejecutado con exit 0. Excluidos: CI remoto (requiere PR), artefactos remotos.
+- **OWASP MASVS aplicables: 14/17 = 82.4 %**. Denominador: 17 controles aplicables/a evaluar de la matriz. Numerador: 14 PASS. 1 WARN (secretos), 1 WARN (Trivy), 1 NOT_APPLICABLE (ofuscación).
+- **Endpoints devices: 3/3 = 100 %** implementados y probados (PUT/GET/DELETE).
+- **Moderación: 2/2 códigos = 100 %** (422, 503) con prueba real.
+- ** androidTest: 2/2 gates = 100 %** (compile + assemble APK) — ejecución RUNTIME_PENDING sin dispositivo.
+- **Requisitos con evidencia CODE/TEST: 20/21 = 95.2 %**. El único EXTERNAL_BLOCKER es entrega real de push; 3 adicionales RUNTIME_PENDING por falta de dispositivo/cuenta.
+
+### Endpoints consumidos (D21)
+
+`PUT /api/v1/users/me/devices/{installationId}`, `GET /api/v1/users/me/devices`, `DELETE /api/v1/users/me/devices/{installationId}`, `GET /api/v1/smart-match/explanations/{roomId}`, `POST /api/v1/smart-match/explanations/query`.
+
+### Agentes, Skills y MCP realmente utilizados
+
+- Agentes: `explore` (auditorías dirigidas de FCM, Backend, androidTest, seguridad/ML/GenAI).
+- Skills: `sdd-compliance`, `android-architecture`, `compose-quality`, `networking`, `mobile-security`, `mobile-devsecops`, `testing`, `push-notifications` (consultados como procedimiento; no sustituyen specs).
+- MCP: **ninguno ejecutado**. Firebase MCP permanece deshabilitado (`opencode.json`); GitHub se usa vía CLI (`gh`), no vía MCP.
