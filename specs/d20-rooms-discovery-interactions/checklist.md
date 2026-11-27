@@ -8,4 +8,4 @@
 - [x] F4 Solicitudes con roomId
 - [x] F5 Visitas con roomId e idempotencia
 - [x] F6 Legacy documentado, gates verdes, SDD/memoria/evidencia
-- [ ] Commit + push + PR único OPEN/MERGEABLE (sin merge)
+- [x] Commit + push + PR único OPEN/MERGEABLE (sin merge)
