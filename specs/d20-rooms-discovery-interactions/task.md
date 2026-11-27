@@ -12,3 +12,4 @@ Autorización: humana explícita (Fase B). Todas las tasks dentro de la spec D20
 | T06 | Solicitudes con roomId, validación y conversationId | F4 |
 | T07 | Visitas con roomId, Idempotency-Key y reglas horarias | F5 |
 | T08 | Retirada controlada de legacy, tests, gates, evidencia, PR | F6 |
+| T09 | Hotfix final: filtros (borrador crudo + ModalBottomSheet) y visitas (DatePicker + slots + POST real) | F1/F5 |

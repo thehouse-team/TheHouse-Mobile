@@ -1,5 +1,8 @@
 package com.thehouse.app.data.remote.dto.visits
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.EncodeDefault.Mode
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -56,12 +59,14 @@ data class VisitAddressDto(
 data class VisitLocationDto(val lat: Double, val lng: Double)
 
 /** Body con XOR roomId/propertyId. Los flujos D20 envían SOLO roomId. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class CreateVisitRequestDto(
-    val roomId: String? = null,
-    val propertyId: String? = null,
+    /** XOR contractual: el campo ausente NO se envía, ni siquiera como null. */
+    @EncodeDefault(Mode.NEVER) val roomId: String? = null,
+    @EncodeDefault(Mode.NEVER) val propertyId: String? = null,
     val scheduledAt: String,
-    val message: String? = null,
+    @EncodeDefault(Mode.NEVER) val message: String? = null,
 )
 
 @Serializable

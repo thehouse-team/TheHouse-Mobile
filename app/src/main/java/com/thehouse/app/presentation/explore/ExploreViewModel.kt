@@ -5,6 +5,7 @@ import com.thehouse.app.domain.model.Property
 import com.thehouse.app.domain.model.SessionState
 import com.thehouse.app.domain.model.University
 import com.thehouse.app.domain.repository.SelectedUniversityRepository
+import com.thehouse.app.domain.room.FilterDraftParser
 import com.thehouse.app.domain.room.RoomSearchCatalog
 import com.thehouse.app.domain.room.RoomSearchFilters
 import com.thehouse.app.domain.usecase.FavoriteStateStore
@@ -45,6 +46,46 @@ data class ExploreFiltersUi(
     val sort: String = "distance",
 )
 
+/**
+ * Borrador del panel de filtros. Los campos numéricos se guardan como texto
+ * para que la edición parcial nunca se convierta en cero ni se pierda.
+ * La conversión ocurre una sola vez, al pulsar «Aplicar filtros».
+ */
+data class FilterDraftUi(
+    val minPriceRaw: String = "",
+    val maxPriceRaw: String = "",
+    val distanceRaw: String = RoomSearchCatalog.DEFAULT_DISTANCE_KM.toString(),
+    val base: ExploreFiltersUi = ExploreFiltersUi(),
+    val validationError: String? = null,
+) {
+    fun toFilters(): Pair<ExploreFiltersUi, String?> {
+        val min = FilterDraftParser.parsePrice(minPriceRaw, "Precio mínimo")
+        val max = FilterDraftParser.parsePrice(maxPriceRaw, "Precio máximo")
+        val distance = FilterDraftParser.parseDistance(distanceRaw)
+        val error = listOfNotNull(
+            min.error,
+            max.error,
+            distance.error,
+            FilterDraftParser.priceRangeError(min.value, max.value),
+        ).firstOrNull()
+        if (error != null) return base to error
+        return base.copy(
+            minPrice = min.value,
+            maxPrice = max.value,
+            maxDistanceKm = distance.value ?: RoomSearchCatalog.DEFAULT_DISTANCE_KM,
+        ) to null
+    }
+
+    companion object {
+        fun from(filters: ExploreFiltersUi) = FilterDraftUi(
+            minPriceRaw = filters.minPrice?.toString().orEmpty(),
+            maxPriceRaw = filters.maxPrice?.toString().orEmpty(),
+            distanceRaw = filters.maxDistanceKm.toString(),
+            base = filters,
+        )
+    }
+}
+
 data class ExploreUiState(
     val query: String = "",
     val properties: CatalogLoadState<Property> = CatalogLoadState.Empty,
@@ -58,7 +99,8 @@ data class ExploreUiState(
     val isAuthenticated: Boolean = false,
     val universities: List<University> = emptyList(),
     /** Borrador: los campos se editan sin lanzar petición hasta "Aplicar". */
-    val draftFilters: ExploreFiltersUi = ExploreFiltersUi(),
+    val filterDraft: FilterDraftUi = FilterDraftUi(),
+    val filterValidationError: String? = null,
 ) {
     fun visibleRooms(): List<com.thehouse.app.domain.room.RoomSearchItem> {
         val items = (rooms as? RoomSearchState.Content)?.items.orEmpty()
@@ -78,8 +120,8 @@ sealed interface ExploreEvent : UiEvent {
     data class QueryChanged(val query: String) : ExploreEvent
     data class UniversityChanged(val universityId: String) : ExploreEvent
     data class FilterChanged(val filters: ExploreFiltersUi) : ExploreEvent
-    /** Edición del borrador: NO dispara petición. */
-    data class DraftFilterChanged(val filters: ExploreFiltersUi) : ExploreEvent
+    /** Edición del borrador (texto crudo): NO dispara petición. */
+    data class DraftFilterChanged(val draft: FilterDraftUi) : ExploreEvent
     data object ApplyFilters : ExploreEvent
     data object ClearFilters : ExploreEvent
     data object ToggleFilters : ExploreEvent
@@ -187,27 +229,55 @@ class ExploreViewModel(
                 applyUniversity(event.universityId, "user_selection")
             }
             is ExploreEvent.FilterChanged -> {
-                updateState { it.copy(filters = event.filters, draftFilters = event.filters) }
+                // Los chips rápidos se basan en los filtros APLICADOS: un borrador
+                // sucio nunca debe colarse en una búsqueda que el usuario no pidió.
+                updateState {
+                    it.copy(
+                        filters = event.filters,
+                        filterDraft = FilterDraftUi.from(event.filters),
+                        filterValidationError = null,
+                    )
+                }
                 loadRooms(refresh = true)
             }
-            is ExploreEvent.DraftFilterChanged -> updateState { it.copy(draftFilters = event.filters) }
+            is ExploreEvent.DraftFilterChanged -> updateState {
+                it.copy(filterDraft = event.draft, filterValidationError = null)
+            }
             ExploreEvent.ApplyFilters -> {
-                val draft = uiState.value.draftFilters
-                updateState { it.copy(filters = draft) }
+                val (candidate, error) = uiState.value.filterDraft.toFilters()
+                if (error != null) {
+                    // Sin petición: el usuario debe corregir antes de aplicar.
+                    updateState { it.copy(filterValidationError = error) }
+                    return
+                }
+                updateState { it.copy(filters = candidate, filterValidationError = null) }
                 loadRooms(refresh = true)
             }
             ExploreEvent.ClearFilters -> {
                 val currentUniversity = uiState.value.filters.universityId
                 val cleared = ExploreFiltersUi(universityId = currentUniversity)
-                updateState { it.copy(filters = cleared, draftFilters = cleared) }
-                loadRooms(refresh = true)
+                val current = uiState.value.filters
+                val unchanged = cleared == current
+                updateState {
+                    it.copy(
+                        filters = cleared,
+                        filterDraft = FilterDraftUi.from(cleared),
+                        filterValidationError = null,
+                    )
+                }
+                // Evita peticiones duplicadas cuando no había nada que limpiar.
+                if (!unchanged) loadRooms(refresh = true)
             }
             ExploreEvent.ToggleFilters -> {
                 // Al abrir, sincroniza el borrador con los filtros aplicados.
+                // Al cerrar sin aplicar, NO se toca la búsqueda activa.
                 updateState {
                     it.copy(
                         showFilters = !it.showFilters,
-                        draftFilters = if (!it.showFilters) it.filters else it.draftFilters,
+                        filterDraft = if (!it.showFilters) {
+                            FilterDraftUi.from(it.filters)
+                        } else it.filterDraft,
+                        filterValidationError = null,
                     )
                 }
             }
@@ -224,7 +294,9 @@ class ExploreViewModel(
             it.copy(
                 universitySource = source,
                 filters = it.filters.copy(universityId = id),
-                draftFilters = it.draftFilters.copy(universityId = id),
+                filterDraft = it.filterDraft.copy(
+                    base = it.filterDraft.base.copy(universityId = id),
+                ),
             )
         }
         loadRooms(refresh = true)

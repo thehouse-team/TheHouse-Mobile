@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | ID | D20-Rooms-Discovery-Interactions |
-| Versión | 1.0.0 |
+| Versión | 1.2.0 (cierre final de filtros y visitas) |
 | Fecha | 2026-11-27 |
 | Estado | APROBADA (autorización humana explícita, mensaje Fase B) |
 | Rama | `feature/rooms-discovery-interactions` desde `origin/main` @ `b4283a6` |

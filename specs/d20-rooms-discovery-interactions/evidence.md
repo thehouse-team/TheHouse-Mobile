@@ -134,3 +134,42 @@ Búsqueda dirigida: una sola occurrence de `Icons.Rounded.Menu` en código de la
 
 ### RUNTIME
 Sin `adb` disponible en la sesión: no se instaló APK ni se capturaron pantallas. Queda pendiente la validación humana en dispositivo: apertura guest de Smart Match sin FATAL, y selección de universidad en guest comprobando `source=network`, `result_count count=N` y tarjetas.
+
+## D20 CIERRE FINAL — Filtros y agendamiento de visitas (2026-11-27)
+
+Autorización humana individual sobre el mismo PR #36 (verificado OPEN / MERGEABLE antes de implementar; base `e72ba9c0b99fc887865b9b1b919b56ed1c736c54`). Sin merge, sin Backend/GenAI/ML/ONNX/infra, sin Fase C, sin PR nuevo, sin auditorías maestras repetidas.
+
+### EVIDENCIA RUNTIME HUMANA REGISTRADA (14/17 aprobadas)
+Funcionan: inicio y Explorar con habitaciones reales; scroll del catálogo; apertura de RoomDetail desde Inicio y Explore; Smart Match sin crash con diseño/recomendaciones/favoritos y persistencia tras reinicio; formulario Contactar con preguntas y mensajes; creación real de solicitudes; Mis solicitudes; acceso a conversaciones. HTTP observado por el usuario: `rooms/search` 200 count=4, `smart-match/recommendations` 200 count=11, `rooms/{id}` 200, `PUT favorites/{roomId}` 204, `POST rooms/{roomId}/requests` 201, `GET users/me/requests` 200, `GET|POST conversations/{id}/messages` 200/201, `POST conversations/{id}/read` 204. Fallan: introducir precios, aplicar/limpiar filtros, seleccionar fecha/hora de visita y confirmar visita. Sin `POST /visits` en los logs compartidos; NO se asumió rechazo Backend sin evidencia.
+
+### FILTER_PRICE_ROOT_CAUSE (demostrado por código)
+`ExploreScreen.FilterBar` convertía cada pulsación con `value.toIntOrNull()` y exigía `500..50000` en la misma pulsación: los valores parciales («5», «50», «500» → este último sí válido pero los dos primeros no) se convertían en `null`, por lo que el campo volvía a quedar vacío y el usuario no podía escribir. `filters.minPrice` era `Int?`, así que no podía representar texto parcial. Además no había `KeyboardOptions(keyboardType = Number)`. El panel inline era un `Column` sin `modifier` ni scroll: «Aplicar/Limpiar filtros» quedaban por encima del `LazyColumn(weight(1f))` y podían salir del viewport; el teclado los ocultaba.
+
+### FILTER_PRICE_FIX / FILTER_PANEL_DESIGN / FILTER_SCROLL
+- `FilterDraftUi` guarda `minPriceRaw`, `maxPriceRaw` y `distanceRaw` como **String**: campo vacío, dígitos parciales y borrado funcionan; `KeyboardType.Number`/`Decimal`; sin conversión durante la edición y sin consultas (`DraftFilterChanged` no llama a `loadRooms`).
+- `FilterDraftParser` (Domain, puro) convierte y valida **una sola vez**, al aplicar; rechaza valores fuera de 500..50000 y 0.5..30, y la inversión min>max, sin reemplazar entradas parciales por cero.
+- Panel rediseñado como `ModalBottomSheet` de Material 3, altura acotada al 92 %, contenido con `verticalScroll` y acciones fijas abajo con `navigationBarsPadding` (sin duplicar insets). Incluye universidad, tipo de cuarto, tipo de inmueble, baño, convivencia, servicios multi-selección, precios, distancia y orden, con etiquetas españolas y códigos reales del Backend. Se mantiene el azul TheHouse vía `colorScheme`.
+
+### FILTER_APPLY_HTTP / FILTER_CLEAR_HTTP / FILTER_DUPLICATION
+- `ApplyFilters`: valida → si hay error no consulta y lo muestra; si es válido cierra el panel, copia el borrador a `filters`, reinicia paginación con `refresh=true` y emite **una sola** consulta real. La generación anti-stale y `filtersKey` se conservan. Estados Loading/Content/Empty/Error intactos.
+- `ClearFilters`: restaura defaults preservando la universidad válida, sincroniza el borrador y evita la petición duplicada si no había criterios opcionales que limpiar.
+- Los chips rápidos ahora se basan en los filtros **aplicados** (`filters`), no en un borrador sucio. Cerrar sin aplicar (incluido `onDismissRequest`) no modifica la búsqueda activa. Perfil/Preferencias no se tocan.
+
+### VISIT_CONFIRM_ROOT_CAUSE (demostrado por código)
+`ScheduleVisitDestination` hacía `runCatching { LocalDate.parse(text) }.getOrNull()?.let { ... }`: cualquier texto inválido se descartaba en silencio y el ViewModel nunca recibía fecha/hora. `submit()` hacía `val date = state.date ?: return` y `val time = state.time ?: return`: sin mensaje de error, sin petición. Por eso no aparecía `POST /visits`. El botón Confirmar además estaba dentro del `verticalScroll`.
+
+### VISIT_DATE_PICKER / VISIT_TIME_PICKER / VISIT_TIMEZONE / VISIT_DATE_VALIDATION / VISIT_TIME_VALIDATION
+- `DatePickerDialog` de Material 3 con `SelectableDates` que deshabilita días pasados y fuera de 60 días; fecha mostrada en español («30 de noviembre de 2026») calculada dinámicamente. `selectedDateMillis` se convierte con `Instant.ofEpochMilli(...).atOffset(ZoneOffset.UTC).toLocalDate()` (patrón confirmado por compose-ui-agent): evita el desplazamiento al día anterior al aplicar America/Mexico_City.
+- Cuadrícula de horarios permitidos en pasos de 15 min, 08:00–20:00 inclusivos, etiquetada «Horarios permitidos para solicitar una visita» (no disponibilidad confirmada; el Backend mantiene autoridad con 409 `schedule_overlap`). Se excluyen horarios que incumplen la anticipación de 2 h el día actual y los que exceden 60 días en el último día. Cambiar la fecha revalida y limpia una hora incompatible con mensaje visible. Zona mostrada como «Horario de Ciudad de México».
+- `VisitScheduleOptions` (Domain, puro) concentra todas estas reglas y es verificable sin Compose.
+
+### VISIT_POST_HTTP_TEST / VISIT_IDEMPOTENCY / VISIT_ERROR_HANDLING
+- `VisitPostHttpIntegrationTest` usa `VisitsApi` de producción + Retrofit real + MockWebServer y verifica `RecordedRequest`: `POST /api/v1/visits`, header `Idempotency-Key`, cuerpo con `roomId` real, **sin `propertyId`** (gracias a `@EncodeDefault(Mode.NEVER)` en el DTO), `scheduledAt` con offset `-06:00` y `message`. Cubre 201, 200 replay con `Idempotent-Replayed` y 422 `too_soon`.
+- `scheduledAt = LocalDate + LocalTime + ZoneId.of("America/Mexico_City")`; nunca la zona del dispositivo. Idempotency-Key UUID estable por intento lógico (mismo payload/reintento) y nueva cuando cambian los datos; se limpia tras éxito. Doble envío bloqueado por `status == SUBMITTING` y por el botón `loading`.
+- Errores 400/401/409/422/429/503 se mapean a `VisitErrorCode`/`DomainError` y se muestran con texto concreto; ya no hay mensajes genéricos que oculten la causa. Instrumentación DEBUG segura `VisitFlow` con sink no-op en JVM (patrón D19.1): `submit_blocked`, `submit_start`, `submit_success`, `submit_failure` sin tokens/PII.
+
+### GATES FINALES
+`clean compileDebugKotlin` OK; `testDebugUnitTest` **602 tests / 0 failures / 0 errors** (baseline 578 + 24 nuevos); `lintDebug` 0 errores; `assembleDebug` OK; `git diff --check` exit 0. Sin dependencias nuevas (Material3 DatePicker/ModalBottomSheet ya incluidos en el BOM aprobado). Sin cambios en Backend, GenAI, ML/ONNX, infra, MainActivity, tema, D18/D19.1, favoritos, solicitudes, conversaciones ni TokenRefresher.
+
+### RUNTIME PENDIENTE
+No hay `adb` en la sesión: no se instaló APK ni se enviaron visitas reales. Instrucciones para el usuario: (1) instalar `app/build/outputs/apk/debug/app-debug.apk` con `adb install -r`; (2) en guest con universidad seleccionada abrir Explorar → Filtros, escribir «3500» y «5000» en precio, desplazar hasta «Ordenar por», pulsar Aplicar y verificar una sola petición `GET /api/v1/rooms/search` con `minPrice=3500&maxPrice=5000`; probar Limpiar; (3) con sesión autorizada abrir RoomDetail → Agendar visita, elegir fecha con el calendario, horario de 15 min, mensaje opcional y Confirmar, verificando `POST /api/v1/visits` con `Idempotency-Key` y `roomId`. NO se envían visitas reales automáticamente sin autorización específica.
