@@ -41,8 +41,10 @@ class CreateRequestViewModel(
             is CreateRequestEvent.QuickQuestionToggled -> updateState {
                 val updated = if (event.question in it.quickQuestions) {
                     it.quickQuestions - event.question
-                } else {
+                } else if (it.quickQuestions.size < 5) {
                     it.quickQuestions + event.question
+                } else {
+                    it.quickQuestions // contrato: máximo 5 preguntas rápidas
                 }
                 it.copy(
                     quickQuestions = updated,

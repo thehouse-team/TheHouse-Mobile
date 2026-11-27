@@ -64,6 +64,10 @@ import com.thehouse.app.domain.usecase.ObserveSessionUseCase
 import com.thehouse.app.domain.usecase.RegisterUseCase
 import com.thehouse.app.domain.usecase.RestoreSessionUseCase
 import com.thehouse.app.domain.usecase.SearchPropertiesUseCase
+import com.thehouse.app.domain.usecase.SearchRoomsUseCase
+import com.thehouse.app.data.room.RoomSearchRepositoryImpl
+import com.thehouse.app.domain.usecase.FavoriteStateStore
+import com.thehouse.app.domain.usecase.ToggleFavoriteUseCase
 import com.thehouse.app.domain.usecase.SelectUniversityUseCase
 
 import com.thehouse.app.domain.usecase.GetProfileUseCase
@@ -216,10 +220,33 @@ class AppContainer(context: Context) {
 
     val favoriteIdsStore: FavoriteIdsStore by lazy { FavoriteIdsStore() }
 
+    /** D20: estado compartido de favoritos por roomId (identidad real). */
+    val favoriteStateStore: FavoriteStateStore by lazy { FavoriteStateStore() }
+    private val favoriteInFlight = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
     val getFavorites: GetFavoritesUseCase by lazy { GetFavoritesUseCase(favoritesRepository) }
     val getFavoriteIds: GetFavoriteIdsUseCase by lazy { GetFavoriteIdsUseCase(favoritesRepository) }
     val addFavorite: com.thehouse.app.domain.usecase.AddFavoriteUseCase by lazy { com.thehouse.app.domain.usecase.AddFavoriteUseCase(favoritesRepository) }
     val removeFavorite: RemoveFavoriteUseCase by lazy { RemoveFavoriteUseCase(favoritesRepository) }
+    val toggleFavorite: ToggleFavoriteUseCase by lazy {
+        ToggleFavoriteUseCase(
+            repository = favoritesRepository,
+            store = favoriteStateStore,
+            isAuthenticated = { sessionStore.state.value is SessionState.Active },
+            inFlight = favoriteInFlight,
+        )
+    }
+
+    /** D20: sincroniza favoritos desde el Backend tras iniciar sesión. */
+    fun syncFavorites() {
+        if (sessionStore.state.value !is SessionState.Active) {
+            favoriteStateStore.clear()
+            return
+        }
+        applicationScope.launch {
+            getFavoriteIds().onSuccess { favoriteStateStore.setAll(it) }
+        }
+    }
 
 
     // ===== D11 Profile + Preferences + Quick Setup =====
@@ -252,6 +279,10 @@ class AppContainer(context: Context) {
         com.thehouse.app.domain.usecase.GetRoomDetailUseCase(roomRepository)
     }
 
+    /** D20: búsqueda real de habitaciones (GET /api/v1/rooms/search). */
+    val roomSearchRepository: RoomSearchRepositoryImpl by lazy { RoomSearchRepositoryImpl(roomApi) }
+    val searchRooms: SearchRoomsUseCase by lazy { SearchRoomsUseCase(roomSearchRepository) }
+
     val getProfile: GetProfileUseCase by lazy { GetProfileUseCase(profileRepository) }
     val updateProfile: UpdateProfileUseCase by lazy { UpdateProfileUseCase(profileRepository) }
     val selectUserUniversity: SelectUserUniversityUseCase by lazy { SelectUserUniversityUseCase(profileRepository) }
@@ -269,6 +300,9 @@ class AppContainer(context: Context) {
     }
 
     val createVisit: CreateVisitUseCase by lazy { CreateVisitUseCase(visitsRepository) }
+    val createRoomVisit: com.thehouse.app.domain.usecase.CreateRoomVisitUseCase by lazy {
+        com.thehouse.app.domain.usecase.CreateRoomVisitUseCase(visitsRepository)
+    }
     val getVisits: GetVisitsUseCase by lazy { GetVisitsUseCase(visitsRepository) }
     val getVisit: GetVisitUseCase by lazy { GetVisitUseCase(visitsRepository) }
     val cancelVisit: CancelVisitUseCase by lazy { CancelVisitUseCase(visitsRepository) }

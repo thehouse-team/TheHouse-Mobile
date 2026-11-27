@@ -1,14 +1,19 @@
 package com.thehouse.app.domain.model
 
+/**
+ * Favorito real. `roomId` es la identidad principal; `propertyId` se conserva
+ * nullable para compatibilidad con respuestas legacy (nunca se confunde).
+ */
 data class Favorite(
-    val propertyId: String,
+    val roomId: String,
     val title: String,
-    val price: Double? = null,
+    val price: Int? = null,
     val currency: String? = null,
+    val roomType: String? = null,
+    val bathroom: String? = null,
     val city: String? = null,
-    val universityId: String? = null,
-    val bedrooms: Int? = null,
-    val bathrooms: Int? = null,
-    val areaM2: Double? = null,
+    val buildingId: String? = null,
     val favoritedAt: String? = null,
+    val propertyId: String? = null,
+    val demo: Boolean = false,
 )

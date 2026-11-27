@@ -10,10 +10,21 @@ data class VisitPropertyDto(
     val city: String,
 )
 
+/** Resumen del cuarto real (`VisitResponse.room`, no-null en el contrato). */
+@Serializable
+data class VisitRoomSummaryDto(
+    val id: String,
+    val buildingId: String? = null,
+    val title: String,
+    val city: String? = null,
+)
+
 @Serializable
 data class VisitDto(
     val id: String,
-    val property: VisitPropertyDto,
+    /** Contrato real: `room` siempre presente. Legacy: `property` puede estar. */
+    val room: VisitRoomSummaryDto? = null,
+    val property: VisitPropertyDto? = null,
     val scheduledAt: String,
     val timeZone: String,
     val status: String,
@@ -21,11 +32,34 @@ data class VisitDto(
     val createdAt: String? = null,
     val updatedAt: String? = null,
     val cancelledAt: String? = null,
+    /** Dirección exacta: solo presente cuando la visita está confirmada. */
+    val address: VisitAddressDto? = null,
+    val location: VisitLocationDto? = null,
+) {
+    /** Identidad de la visita: roomId real cuando existe, legacy propertyId. */
+    val effectiveRoomId: String get() = room?.id ?: property?.id.orEmpty()
+    val effectiveTitle: String get() = room?.title ?: property?.title.orEmpty()
+    val effectiveCity: String get() = room?.city ?: property?.city.orEmpty()
+}
+
+@Serializable
+data class VisitAddressDto(
+    val street: String? = null,
+    val number: String? = null,
+    val neighborhood: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    @SerialName("postalCode") val postalCode: String? = null,
 )
 
 @Serializable
+data class VisitLocationDto(val lat: Double, val lng: Double)
+
+/** Body con XOR roomId/propertyId. Los flujos D20 envían SOLO roomId. */
+@Serializable
 data class CreateVisitRequestDto(
-    val propertyId: String,
+    val roomId: String? = null,
+    val propertyId: String? = null,
     val scheduledAt: String,
     val message: String? = null,
 )

@@ -49,6 +49,8 @@ class U2ViewModelFactory(
             com.thehouse.app.presentation.roomdetail.RoomDetailViewModel(
                 roomId = roomId,
                 getRoomDetail = container.getRoomDetail,
+                favoriteStore = container.favoriteStateStore,
+                toggleFavorite = container.toggleFavorite,
             )
         }
     }
@@ -58,6 +60,18 @@ class U2ViewModelFactory(
             ScheduleVisitViewModel(
                 propertyId = propertyId,
                 createVisit = container.createVisit,
+            )
+        }
+    }
+
+    /** D20: agendar visita con roomId real (XOR roomId/propertyId). */
+    fun scheduleRoomVisit(roomId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            ScheduleVisitViewModel(
+                propertyId = "",
+                createVisit = container.createVisit,
+                roomId = roomId,
+                createRoomVisit = container.createRoomVisit,
             )
         }
     }
@@ -264,22 +278,29 @@ class U2ViewModelFactory(
                 pushRefreshSignals = container.pushRefreshSignals,
                 profileUniversityState = container.profileRepository.universityState,
                 refreshProfile = { container.profileRepository.loadProfile() },
+                searchRooms = container.searchRooms,
+                favoriteStateStore = container.favoriteStateStore,
+                toggleFavorite = container.toggleFavorite,
             ) as T
 
         modelClass.isAssignableFrom(ExploreViewModel::class.java) ->
             ExploreViewModel(
-                getProperties = container.getProperties,
                 searchProperties = container.searchProperties,
                 connectivityObserver = container.connectivityObserver,
+                searchRooms = container.searchRooms,
+                favoriteStateStore = container.favoriteStateStore,
+                toggleFavorite = container.toggleFavorite,
             ) as T
 
         modelClass.isAssignableFrom(FavoritesViewModel::class.java) ->
             FavoritesViewModel(
                 getFavorites = container.getFavorites,
                 removeFavorite = container.removeFavorite,
-                favoriteIdsStore = container.favoriteIdsStore,
+                favoriteIdsStore = container.favoriteStateStore,
                 sessionState = container.sessionStore.state,
                 connectivityObserver = container.connectivityObserver,
+                getFavoriteIds = container.getFavoriteIds,
+                toggleFavorite = container.toggleFavorite,
             ) as T
 
         modelClass.isAssignableFrom(VisitsViewModel::class.java) ->

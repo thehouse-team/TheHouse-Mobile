@@ -6,6 +6,15 @@ import com.thehouse.app.domain.model.VisitCreation
 import com.thehouse.app.domain.model.VisitStatus
 import com.thehouse.app.domain.repository.VisitsRepository
 
+class CreateRoomVisitUseCase(private val repository: VisitsRepository) {
+    suspend operator fun invoke(
+        roomId: String,
+        scheduledAt: String,
+        message: String?,
+        idempotencyKey: String,
+    ): Result<VisitCreation> = repository.createRoomVisit(roomId, scheduledAt, message, idempotencyKey)
+}
+
 class CreateVisitUseCase(private val repository: VisitsRepository) {
     suspend operator fun invoke(
         propertyId: String,

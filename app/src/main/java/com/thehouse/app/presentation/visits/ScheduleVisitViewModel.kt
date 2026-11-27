@@ -5,6 +5,7 @@ import com.thehouse.app.domain.error.VisitErrorCode
 import com.thehouse.app.domain.error.VisitException
 import com.thehouse.app.domain.model.Visit
 import com.thehouse.app.domain.usecase.CreateVisitUseCase
+import com.thehouse.app.domain.usecase.CreateRoomVisitUseCase
 import com.thehouse.app.domain.usecase.VisitValidationResult
 import com.thehouse.app.domain.usecase.VisitValidator
 import com.thehouse.app.presentation.common.BaseViewModel
@@ -50,11 +51,15 @@ class ScheduleVisitViewModel(
     private val createVisit: CreateVisitUseCase,
     private val now: () -> Instant = { Instant.now() },
     private val newKey: () -> String = { UUID.randomUUID().toString() },
+    /** D20: cuando se usa roomId real, NO se envía propertyId (XOR). */
+    private val roomId: String? = null,
+    private val createRoomVisit: CreateRoomVisitUseCase? = null,
 ) : BaseViewModel<ScheduleVisitUiState, ScheduleVisitEvent, ScheduleVisitEffect>(
     ScheduleVisitUiState(),
 ) {
     private var pendingKey: String? = null
     private var pendingIntent: String? = null
+    private val targetId: String get() = roomId ?: propertyId
 
     override fun onEvent(event: ScheduleVisitEvent) {
         when (event) {
@@ -101,7 +106,7 @@ class ScheduleVisitViewModel(
         }
 
         val apiScheduledAt = VisitValidator.formatForApi(zoned)
-        val intent = "$propertyId|$apiScheduledAt|${state.message}"
+        val intent = "$targetId|$apiScheduledAt|${state.message}"
         if (pendingIntent != intent) {
             pendingKey = newKey()
             pendingIntent = intent
@@ -110,12 +115,21 @@ class ScheduleVisitViewModel(
 
         updateState { it.copy(status = ScheduleVisitStatus.SUBMITTING, errorCode = null, domainError = null) }
         launch {
-            val result = createVisit(
-                propertyId = propertyId,
-                scheduledAt = apiScheduledAt,
-                message = state.message.ifBlank { null },
-                idempotencyKey = key,
-            )
+            val result = if (roomId != null && createRoomVisit != null) {
+                createRoomVisit(
+                    roomId = roomId,
+                    scheduledAt = apiScheduledAt,
+                    message = state.message.ifBlank { null },
+                    idempotencyKey = key,
+                )
+            } else {
+                createVisit(
+                    propertyId = propertyId,
+                    scheduledAt = apiScheduledAt,
+                    message = state.message.ifBlank { null },
+                    idempotencyKey = key,
+                )
+            }
             result.fold(
                 onSuccess = { creation ->
                     pendingKey = null

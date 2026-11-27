@@ -193,5 +193,6 @@ private fun VisitCard(
 
 private fun statusLabel(status: VisitStatus): String = when (status) {
     VisitStatus.REQUESTED -> "Solicitada"
+    VisitStatus.CONFIRMED -> "Confirmada"
     VisitStatus.CANCELLED -> "Cancelada"
 }
