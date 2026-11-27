@@ -135,5 +135,7 @@ fun PreferencesDto.toDomainDisplay(): Preference = Preference(
     pets = PreferencesContract.booleanToLabel(pets),
     transport = transport?.let(PreferencesContract::codeToLabel),
     propertyTypes = propertyTypes?.map(PreferencesContract::codeToLabel),
-    currency = currency ?: budget?.currency ?: PreferencesContract.CURRENCY,
+    // D19.1: `PreferencesResponse` del Backend NO tiene campo `currency` a nivel
+    // raíz; la moneda contractual vive dentro de `budget` (BudgetResponse).
+    currency = budget?.currency ?: PreferencesContract.CURRENCY,
 )

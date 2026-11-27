@@ -15,22 +15,21 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class PreferencesDto(
-    val budget: BudgetDto?,
-    val maxDistanceKm: Double?,
-    val essentialServices: List<String>?,
-    val livingWith: String?,
-    val placeType: String?,
-    val pets: Boolean?,
-    val transport: String?,
-    val propertyTypes: List<String>?,
-    val currency: String?,
+    val budget: BudgetDto? = null,
+    val maxDistanceKm: Double? = null,
+    val essentialServices: List<String>? = null,
+    val livingWith: String? = null,
+    val placeType: String? = null,
+    val pets: Boolean? = null,
+    val transport: String? = null,
+    val propertyTypes: List<String>? = null,
 )
 
 @Serializable
 data class BudgetDto(
-    val min: Int?,
-    val max: Int?,
-    val currency: String?,
+    val min: Int? = null,
+    val max: Int? = null,
+    val currency: String? = null,
 )
 
 fun PreferencesDto.toDomain(): Preference = toDomainDisplay()

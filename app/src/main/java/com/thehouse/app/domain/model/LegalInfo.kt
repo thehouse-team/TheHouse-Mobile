@@ -10,10 +10,14 @@ data class LegalInfo(
     val accountDeletionUrl: String?,
     val updatedAt: String?,
 ) {
-    /** State seguro cuando la URL no está publicada. */
+    /**
+     * Estado honesto cuando la URL no está publicada (D19.1).
+     * La app NO contiene texto legal propio: afirmar lo contrario sería una
+     * declaración falsa. Solo se abre una URL HTTPS válida del Backend.
+     */
     val privacyStatus: String
         get() = if (privacyUrl.isNullOrBlank()) {
-            "El aviso de privacidad está disponible dentro de la aplicación."
+            "El aviso de privacidad aún no ha sido publicado."
         } else {
             "Puedes abrir el aviso de privacidad en tu navegador."
         }

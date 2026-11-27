@@ -14,6 +14,7 @@ import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiEvent
 import com.thehouse.app.presentation.common.toSafeUiMessage
+import com.thehouse.app.profile.flow.ProfileFlowLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.StateFlow
 
@@ -137,6 +138,7 @@ class ProfileViewModel(
     }
 
     private fun load() {
+        ProfileFlowLogger.loadStart()
         updateState {
             it.copy(
                 isLoading = true,
@@ -145,10 +147,14 @@ class ProfileViewModel(
                 actionError = null,
             )
         }
+        ProfileFlowLogger.state("Loading")
         launch {
             try {
+                ProfileFlowLogger.requestStart()
                 profileRepository.loadProfile()
                 val profile = getProfile()
+                ProfileFlowLogger.deserializationResult("success")
+                ProfileFlowLogger.mappingResult("success")
                 updateState {
                     it.copy(
                         isLoading = false,
@@ -158,10 +164,15 @@ class ProfileViewModel(
                         error = null,
                     )
                 }
+                ProfileFlowLogger.state("Content")
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {
                 val unauthorized = (throwable as? DomainException)?.error == DomainError.Unauthorized
+                if (throwable is kotlinx.serialization.SerializationException) {
+                    ProfileFlowLogger.deserializationResult("error")
+                }
+                ProfileFlowLogger.exception(throwable, "load")
                 updateState {
                     it.copy(
                         isLoading = false,
@@ -170,6 +181,7 @@ class ProfileViewModel(
                         error = if (unauthorized) null else throwable.toSafeUiMessage(),
                     )
                 }
+                ProfileFlowLogger.state(if (unauthorized) "RequiresAuth" else "Error")
                 if (unauthorized) sendEffect(ProfileEffect.RequireLogin)
             }
         }
