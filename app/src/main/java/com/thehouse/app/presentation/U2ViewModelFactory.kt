@@ -43,6 +43,16 @@ class U2ViewModelFactory(
         }
     }
 
+    /** D18: detalle real de cuarto (GET /api/v1/rooms/{roomId}). */
+    fun roomDetail(roomId: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            com.thehouse.app.presentation.roomdetail.RoomDetailViewModel(
+                roomId = roomId,
+                getRoomDetail = container.getRoomDetail,
+            )
+        }
+    }
+
     fun scheduleVisit(propertyId: String): ViewModelProvider.Factory = viewModelFactory {
         initializer {
             ScheduleVisitViewModel(

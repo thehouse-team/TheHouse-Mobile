@@ -1,4 +1,4 @@
-package com.thehouse.app.domain.usecase
+﻿package com.thehouse.app.domain.usecase
 
 import com.thehouse.app.domain.model.Preference
 import com.thehouse.app.domain.model.Property
@@ -29,6 +29,7 @@ class RunSmartMatchUseCase(
             val probability = model.predictProbability(vector).coerceIn(0.0, 1.0)
             val matchScore = (probability * 100.0).roundToInt().coerceIn(0, 100)
             SmartMatchResult(
+                roomId = property.id,
                 property = property,
                 probability = probability,
                 matchScore = matchScore,
