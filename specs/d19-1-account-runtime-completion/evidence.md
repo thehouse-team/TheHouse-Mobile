@@ -53,3 +53,19 @@
 
 - `RUNTIME_PENDING` para Perfil/Preferencias/Smart Match/Arrendador: no hay credenciales de prueba autorizadas para verificar HTTP real en dispositivo. Los seis comportamientos aprobados no se modificaron.
 - `EXTERNAL_BLOCKER`: `privacyUrl` depende de `GET /api/v1/legal` del Backend; sin URL publicada se muestra el mensaje honesto. No se inventó contenido ni URL.
+
+### CERTIFICACIÓN RUNTIME (emulador-5554, HEAD e576539)
+
+- `adb install -r app-debug.apk` (preserva datos), `logcat -c` y arranque con monkey: **sin FATAL EXCEPTION**, `topResumedActivity=com.thehouse.app/.MainActivity`.
+- `uiautomator dump`: header `TheHouse` visible; hamburger abre drawer guest con **"Aviso de privacidad"**. Regresiones 1-3 y drawer guest confirmadas.
+- Sin credenciales de prueba autorizadas: Perfil, Preferencias, Smart Match, Arrendador, logout autenticado y eliminación siguen en **RUNTIME_PENDING**. No se inventaron credenciales ni se ejecutó eliminación real.
+
+#### Pasos exactos para completar la certificación autenticada
+1. Abrir la app e iniciar sesión con una cuenta de prueba autorizada por el usuario.
+2. Drawer → **Mi perfil**: verificar carga con 200, editar nombre (PATCH) y universidad (PUT 204), salir y volver a confirmar persistencia; forzar 401 para confirmar regreso a Login.
+3. Drawer → **Preferencias**: verificar formulario editable tras GET 200, guardar (PUT 200), salir y volver a confirmar persistencia; no debe aparecer error genérico tras 200.
+4. **Smart Match** con perfil completo: verificar GET recommendations 200 (Content o Empty legítimo); si aparece 422, confirmar que se muestran `university`, `budget.max`, `livingWith`, `placeType` como faltantes; completarlos desde Perfil/Preferencias/Quick Setup y reintentar. Verificar navegación roomId → RoomDetail.
+5. Welcome → **Crear cuenta** → **Aviso de privacidad** → regresar al formulario sin perder datos; con `privacyUrl=null` debe mostrarse «El aviso de privacidad aún no ha sido publicado.»
+6. Drawer → **Mis alojamientos**: sin perfil landlord debe mostrar activación (404 esperado); con perfil debe cargar dashboard y datos reales. Verificar Solicitudes recibidas y Mis acuerdos con `landlord_required`; Introducir código sin exigir perfil landlord.
+7. Capturar ante cualquier FATAL EXCEPTION: `adb logcat -d -s AndroidRuntime:E` y `adb shell dumpsys dropbox --print data_app_crash`.
+8. No ejecutar eliminación de cuenta real sin autorización específica; el preview y la confirmación ya están aprobados.
