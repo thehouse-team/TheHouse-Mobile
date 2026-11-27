@@ -54,3 +54,73 @@
 ### Resultado
 
 `D19.1-FUNCTIONAL-AND-VISUAL-COMPLETION-CODE-READY`. No se declara `RUNTIME-CERTIFIED`: faltan pruebas autenticadas. NO se mergeó PR #35.
+
+## HOTFIX FINAL DE SCROLL Y DIAGNÓSTICO SMART MATCH (2026-11-27)
+
+### PREFERENCES_SCROLL_ROOT_CAUSE
+
+`PreferencesForm(state, onEvent, modifier, ...)` declaraba el parámetro `modifier` pero **no lo aplicaba**: el `Column` raíz usaba `Modifier.testTag("preferences_screen")`. Por tanto se descartaban `fillMaxSize()`, `.padding(innerPadding)` y `.verticalScroll(rememberScrollState())` que el caller pasaba. Resultado exacto reportado: sin desplazamiento, secciones recortadas y CTA fijo solapando el contenido. No había scroll anidado ni `weight` problemático; el `Scaffold` y su `bottomBar` estaban bien dimensionados.
+
+### PREFERENCES_SCROLL_FIX
+
+- `Column(modifier = modifier.testTag("preferences_screen"))` — se aplica el modifier del caller (único contenedor de scroll).
+- `navigationBarsPadding()` en el `bottomBar` + `imePadding()` en el `Scaffold` sin duplicar insets del `ModalNavigationDrawer`/shell.
+- `Spacer(height = Spacing.xxl)` al final del formulario para que «Tipo de propiedad» sea totalmente visible por encima del CTA.
+- Mensajes de éxito/error dentro del `bottomBar`, nunca en un overlay sobre campos.
+- Contrato HTTP, DTO, validación, dropdowns y moneda MXN **sin cambios**.
+
+### SMART MATCH — DIAGNÓSTICO SOLO LECTURA (Backend)
+
+- `GET /api/v1/smart-match/recommendations` sin Bearer → **401** (verificado desde host). No se dispone de credenciales autorizadas para repetirlo autenticado.
+- `GET /api/v1/rooms/count?universityId=...` → **200** con `count` 1–5 para las 10 universidades publicadas; sin `universityId` → **400** (parámetro obligatorio).
+- `GET /api/v1/rooms/search?universityId=...&pageSize=50` → **200**; p. ej. ITSOEH: 2 cuartos (1.2 km y 8.9 km), uno dentro de 5 km, precio 2300, `allowedTenants=any`.
+- `SmartMatchRules.Violations` excluye **solo** por `price > budget.max`, `livingWith != any` cuando el estudiante no es `any`, y `pets=true` con cuarto que no permite mascotas. `placeType=studio`, `transport=walk`, `essentialServices`, `propertyTypes` y `budget.min` son **features de scoring**, no filtros duros. El radio 5 km se aplica en `SmartMatchCandidatesAsync(universityId, maxDistanceKm)` antes del scoring.
+- Conclusión: el estado vacío es **plausible y legítimo** si la universidad del perfil tiene todos sus cuartos publicados fuera de 5 km o excluidos por `livingWith=men`/precio; **no hay evidencia de defecto Mobile**. Los DTOs `SmartMatchListResponse` y `SmartMatchRecommendationItemDto` son espejo exacto de `SmartMatchRecommendationsResponse`/`SmartMatchRecommendation` (`items`, `page`, `pageSize`, `totalItems`, `totalPages`), por lo que un 200 con elementos se deserializaría y mostraría.
+- Logging DEBUG existente y suficiente: `SmartMatchFlow auth_query_result count=N`, `state=Empty|Content`, `fallback_start reason=...`; `TheHouseHttp` añade status y `requestId`. Sin PII.
+
+### Comandos exactos para certificación autenticada por el usuario
+
+```powershell
+$base = 'https://ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io'
+$token = '<Bearer de sesión autorizada>'
+$h = @{ Authorization = "Bearer $token" }
+# 1) Recomendaciones reales
+$r = Invoke-WebRequest "$base/api/v1/smart-match/recommendations?page=1&pageSize=20" -Headers $h
+$r.StatusCode; ($r.Content | ConvertFrom-Json).items.Count
+# 2) Universidad del perfil y candidatos públicos
+$p = Invoke-WebRequest "$base/api/v1/users/me/profile" -Headers $h
+$u = ($p.Content | ConvertFrom-Json).university.id
+Invoke-WebRequest "$base/api/v1/rooms/count?universityId=$u" | Select-Object -ExpandProperty Content
+Invoke-WebRequest "$base/api/v1/rooms/search?universityId=$u&pageSize=50" | Select-Object -ExpandProperty Content
+# 3) En el dispositivo, filtrar logs (sin exponer token):
+adb logcat -d -s SmartMatchFlow:D TheHouseHttp:D AndroidRuntime:E
+```
+
+Clasificación: `200 + items.Count=0` → **EMPTY válido**; `200 + items.Count>0` con UI vacía → defecto Mobile; `422` → revisar `missing`; otros estados → causa real del Problem Details. No se activa fallback local para un 200 vacío.
+
+### Texto Smart Match
+
+Subtítulo corregido a «Encuentra alojamientos compatibles con tus preferencias.» y loading a «Buscando alojamientos compatibles…». «Estimación local» sigue reservado al fallback autorizado (D16). Sin cambios en modelos ML/ONNX.
+
+### Favoritos
+
+«Favoritos aún no disponible. No se ha guardado la propiedad.» se registra como **pendiente conocido de PR B**; fuera de D19.1. No se implementó favoritos, migración de catálogo, solicitudes ni visitas.
+
+### Gates del hotfix
+
+| Comando | Resultado |
+|---|---|
+| `clean compileDebugKotlin --offline` | BUILD SUCCESSFUL |
+| `testDebugUnitTest --offline` | BUILD SUCCESSFUL — **536 tests / 0 failures / 0 errors** (534 + 2 nuevos) |
+| `lintDebug --offline` | BUILD SUCCESSFUL (0 errores) |
+| `assembleDebug --offline` | BUILD SUCCESSFUL |
+| `git diff --check` | exit 0 |
+
+Tests nuevos: (1) `preferences form applies scroll modifier...` — el modifier se aplica, un solo `verticalScroll`, `navigationBarsPadding` y `Spacer` final; (2) `smart match subtitle no longer claims on device ML...`.
+
+### Runtime del hotfix
+
+- **RUNTIME_PASS**: subtítulo nuevo visible en dispositivo (uiautomator: «Encuentra alojamientos compatibles con tus preferencias.»),APK reinstalado sin crash.
+- **RUNTIME_PENDING**: desplazamiento real con sesión y teclado, HTTP autenticado de recomendaciones, Room Detail desde recomendaciones. Sin credenciales autorizadas no se inventaron datos ni se modificaron preferencias.
+
+Resultado: **`D19.1-FINAL-LAYOUT-FIXED`** (código); no `RUNTIME-CERTIFIED`.

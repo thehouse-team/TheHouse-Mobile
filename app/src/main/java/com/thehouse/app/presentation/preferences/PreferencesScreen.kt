@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -134,6 +137,7 @@ fun PreferencesScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(horizontal = Spacing.xl, vertical = Spacing.md),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
@@ -219,7 +223,10 @@ private fun PreferencesForm(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier.testTag("preferences_screen"),
+        // D19.1 hotfix: el modifier del caller (con verticalScroll e
+        // innerPadding del Scaffold) DEBE aplicarse aquí. Antes se descartaba
+        // y el formulario quedaba sin scroll, recortado y solapado por el CTA.
+        modifier = modifier.testTag("preferences_screen"),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
         Text(
@@ -365,6 +372,10 @@ private fun PreferencesForm(
                 onSelect = { onEvent(PreferencesEvent.PropertyTypesChanged(it)) },
             )
         }
+
+        // Espacio inferior para que la última sección quede completamente
+        // visible por encima del CTA fijo, incluso con el teclado abierto.
+        Spacer(modifier = Modifier.height(Spacing.xxl))
     }
 }
 

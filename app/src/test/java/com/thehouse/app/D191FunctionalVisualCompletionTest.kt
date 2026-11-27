@@ -172,6 +172,32 @@ class D191FunctionalVisualCompletionTest {
     }
 
     @Test
+    fun `preferences form applies scroll modifier and reserves space below last section`() = runTest {
+        val source = sourceOf(
+            "src/main/java/com/thehouse/app/presentation/preferences/PreferencesScreen.kt",
+        )
+        // Causa del hotfix: el modifier del caller se descartaba en PreferencesForm.
+        assertTrue(source.contains("modifier = modifier.testTag(\"preferences_screen\")"))
+        assertFalse(source.contains("modifier = Modifier.testTag(\"preferences_screen\")"))
+        assertTrue(source.contains(".verticalScroll(rememberScrollState())"))
+        assertTrue(source.contains(".navigationBarsPadding()"))
+        assertTrue(source.contains("Spacer(modifier = Modifier.height(Spacing.xxl))"))
+        // Un único contenedor de desplazamiento: sin scroll anidado.
+        assertEquals(1, source.split(".verticalScroll(").size - 1)
+    }
+
+    @Test
+    fun `smart match subtitle no longer claims on device ML for online results`() = runTest {
+        val source = sourceOf(
+            "src/main/java/com/thehouse/app/presentation/smartmatch/SmartMatchScreen.kt",
+        )
+        assertTrue(source.contains("Encuentra alojamientos compatibles con tus preferencias."))
+        assertFalse(source.contains("ML on-device"))
+        assertFalse(source.contains("Calculando recomendaciones con ML"))
+        assertTrue(source.contains("Estimación local"))
+    }
+
+    @Test
     fun `legal null url clears any stale local url and shows honest message`() = runTest {
         val session = MutableStateFlow<SessionState>(
             SessionState.Active(

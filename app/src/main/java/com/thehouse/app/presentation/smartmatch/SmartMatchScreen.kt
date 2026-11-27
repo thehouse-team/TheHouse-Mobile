@@ -85,13 +85,13 @@ fun SmartMatchScreen(
         ) {
             TheHouseHeader(
                 title = "Smart Match",
-                subtitle = "Recomendaciones según tus preferencias (ML on-device).",
+                subtitle = "Encuentra alojamientos compatibles con tus preferencias.",
                 modifier = Modifier.semantics { contentDescription = "Título Smart Match" },
             )
             when (val s = state) {
                 SmartMatchUiState.Loading -> {
                     LoadingView(
-                        message = "Calculando recomendaciones con ML…",
+                        message = "Buscando alojamientos compatibles…",
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
@@ -158,7 +158,7 @@ fun SmartMatchScreen(
                 SmartMatchUiState.Empty -> {
                     EmptyStateView(
                         title = "Sin recomendaciones",
-                        message = "No encontramos propiedades candidatas por ahora. Intenta más tarde.",
+                        message = "No encontramos alojamientos compatibles con tus preferencias actuales.",
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),

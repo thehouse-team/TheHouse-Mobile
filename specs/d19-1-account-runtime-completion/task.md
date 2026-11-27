@@ -24,5 +24,9 @@
 | D19.1-T20 | Sincronización de universidad guardada en Inicio (P1) | DONE |
 | D19.1-T21 | 10 regresiones nuevas + gates + evidencia + memoria | DONE — 534 tests, lint/assemble/diff-check verdes |
 | D19.1-T22 | Reinstalar APK y capturas en dispositivo | DONE — RUNTIME_PASS parcial; auth PENDING |
+| D19.1-T23 | Hotfix scroll de Preferencias: aplicar modifier del caller, insets y spacer final | DONE — causa verificada: modifier descartado |
+| D19.1-T24 | Diagnóstico solo lectura de recomendaciones/count/search + logging DEBUG existente | DONE — EMPTY plausible, sin defecto Mobile demostrado |
+| D19.1-T25 | Texto Smart Match sin claim de ML on-device | DONE — RUNTIME_PASS en dispositivo |
+| D19.1-T26 | Favoritos diferido a PR B; 2 regresiones nuevas y gates | DONE — 536 tests, lint/assemble/diff-check verdes |
 
 Regla: ninguna tarea se marca DONE sin evidencia real. `BLOCKED` nunca equivale a `DONE`.
