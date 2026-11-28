@@ -343,3 +343,10 @@ base `d11c3f18fe28ade4510a95bdb3bcc2cbbab8c6f2`. Congelaci�n visual total; sin m
 - `uiautomator dump`: Home invitado renderiza «Hola, invitado», «Publicar mi renta» antes de «Recomendados para ti», catálogo real y bottom bar — baseline visual preservado.
 - Tap controlado sobre «Publicar mi renta» (bounds `[53,1477][1027,1603]`) → pantalla «Inicia sesión en TheHouse». Guard de invitado confirmado, sin mutaciones productivas.
 - NO se ejecutó flujo autenticado de arrendador ni se crearon edificios/cuartos/solicitudes: sin credenciales y prohibido crear datos productivos sin autorización. `RUNTIME_AUTHENTICATED=PENDING`.
+
+### Cierre de commit / PR (2026-11-28)
+
+- Commit: `ffeb61e57f833579641e2471fbca51abcc03beff` — 19 archivos, +577/-26.
+- Push: `6ab949e..ffeb61e feature/platform-security-automation -> feature/platform-security-automation` SUCCESS.
+- PR #37: OPEN / MERGEABLE (verificado con `gh pr view 37` tras el push). NO MERGEADO.
+- CI remoto: dos runs para `ffeb61e` (`46110222161`, `46110225627`) en estado `in_progress` al momento del reporte; run anterior `46089420527` sobre `6ab949e` = SUCCESS. `REMOTE_CI=PENDING` (no se afirma verde).
