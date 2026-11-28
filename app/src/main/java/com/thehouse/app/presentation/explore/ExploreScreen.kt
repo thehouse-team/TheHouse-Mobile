@@ -482,7 +482,7 @@ private fun ServicesChips(
             FilterChip(
                 selected = code in selected,
                 onClick = { onToggle(code, code !in selected) },
-                label = { Text(code.replaceFirstChar { it.uppercase() }) },
+                label = { Text(RoomSearchCatalog.label(RoomSearchCatalog.Kind.SERVICE, code)) },
                 modifier = Modifier.heightIn(min = 48.dp),
             )
         }

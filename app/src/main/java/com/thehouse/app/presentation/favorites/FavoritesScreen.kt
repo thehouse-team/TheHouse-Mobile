@@ -154,8 +154,17 @@ private fun FavoriteCard(
                 }
             }
             val details = buildString {
-                favorite.roomType?.let { append(it) }
-                favorite.bathroom?.let { if (isNotEmpty()) append(" · "); append(it) }
+                favorite.roomType?.let {
+                    append(com.thehouse.app.domain.room.RoomSearchCatalog.label(
+                        com.thehouse.app.domain.room.RoomSearchCatalog.Kind.ROOM_TYPE, it,
+                    ))
+                }
+                favorite.bathroom?.let {
+                    if (isNotEmpty()) append(" · ")
+                    append(com.thehouse.app.domain.room.RoomSearchCatalog.label(
+                        com.thehouse.app.domain.room.RoomSearchCatalog.Kind.BATHROOM, it,
+                    ))
+                }
             }
             if (details.isNotBlank()) {
                 Text(text = details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

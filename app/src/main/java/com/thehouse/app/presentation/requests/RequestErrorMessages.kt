@@ -12,6 +12,8 @@ object RequestErrorMessages {
     fun map(code: RequestErrorCode?, domainError: DomainError? = null): String = when (code) {
         RequestErrorCode.ACTIVE_REQUEST_EXISTS ->
             "Ya tienes una solicitud activa para este cuarto."
+        RequestErrorCode.REQUEST_IN_PROGRESS ->
+            "Hay una solicitud en proceso. Espera un momento e intenta de nuevo."
         RequestErrorCode.ACTIVE_REQUESTS_LIMIT ->
             "Llegaste al límite de solicitudes activas."
         RequestErrorCode.PARTICIPANT_SUSPENDED ->
@@ -24,6 +26,10 @@ object RequestErrorMessages {
             "El cuarto ya no está disponible."
         RequestErrorCode.LANDLORD_REQUIRED ->
             "Necesitas activar el modo arrendador."
+        RequestErrorCode.CONTENT_REJECTED ->
+            "El mensaje no cumple las reglas de la comunidad. Revísalo y vuelve a intentarlo."
+        RequestErrorCode.MODERATION_UNAVAILABLE ->
+            "No pudimos revisar el mensaje en este momento. Intenta de nuevo en unos segundos."
         RequestErrorCode.UNKNOWN -> fallback(domainError)
         null -> fallback(domainError)
     }

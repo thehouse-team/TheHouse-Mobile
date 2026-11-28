@@ -11,11 +11,15 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.thehouse.app.domain.repository.NotificationPermissionStore
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -40,6 +44,18 @@ object NotificationPermissionPolicy {
 
     fun canPostNotifications(sdkInt: Int, runtimeGranted: Boolean): Boolean =
         !runtimePermissionRequired(sdkInt) || runtimeGranted
+
+    /**
+     * Solicitud contextual: el diálogo solo se abre una vez y mientras Android
+     * pueda mostrarlo. Tras denegación permanente se ofrece Ajustes.
+     */
+    fun shouldRequestContextually(
+        sdkInt: Int,
+        runtimeGranted: Boolean,
+        askedOnce: Boolean,
+        showRationale: Boolean,
+    ): Boolean = runtimePermissionRequired(sdkInt) && !runtimeGranted &&
+        (!askedOnce || showRationale)
 
     fun resolveStatus(
         sdkInt: Int,
@@ -71,13 +87,29 @@ internal data class NotificationPermissionUi(
  */
 @Suppress("InlinedApi") // POST_NOTIFICATIONS solo se usa tras comprobar SDK >= 33.
 @Composable
-internal fun rememberNotificationPermissionUi(): NotificationPermissionUi {
+internal fun rememberNotificationPermissionUi(
+    store: NotificationPermissionStore? = null,
+): NotificationPermissionUi {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val activity = remember(context) { context.findActivity() }
+    val resolvedStore = store ?: remember(context) {
+        runCatching {
+            (context.applicationContext as com.thehouse.app.TheHouseApplication)
+                .container.notificationPermissionStore
+        }.getOrNull()
+    }
+    var askedOnce by remember { mutableStateOf(false) }
+    var decisionLoaded by remember { mutableStateOf(false) }
+    var contextualRequested by remember { mutableStateOf(false) }
 
     var granted by remember { mutableStateOf(isNotificationPermissionGranted(context)) }
-    var askedOnce by rememberSaveable { mutableStateOf(false) }
     var showRationale by remember { mutableStateOf(shouldShowRationale(activity)) }
+
+    LaunchedEffect(resolvedStore) {
+        askedOnce = resolvedStore?.wasAsked() ?: false
+        decisionLoaded = true
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -85,6 +117,23 @@ internal fun rememberNotificationPermissionUi(): NotificationPermissionUi {
         askedOnce = true
         granted = result
         showRationale = shouldShowRationale(activity)
+        resolvedStore?.let { store -> scope.launch { store.markAsked() } }
+    }
+
+    // Una sola solicitud contextual al entrar al centro de notificaciones.
+    // Tras denegación permanente NO se repite: se ofrece acceso a Ajustes.
+    LaunchedEffect(decisionLoaded, askedOnce, granted, showRationale) {
+        if (!decisionLoaded || contextualRequested) return@LaunchedEffect
+        if (NotificationPermissionPolicy.shouldRequestContextually(
+                sdkInt = Build.VERSION.SDK_INT,
+                runtimeGranted = granted,
+                askedOnce = askedOnce,
+                showRationale = showRationale,
+            )
+        ) {
+            contextualRequested = true
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     // Refresca al volver de Ajustes del sistema.

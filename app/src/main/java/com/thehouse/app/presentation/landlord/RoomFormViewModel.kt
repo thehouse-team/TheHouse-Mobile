@@ -58,7 +58,11 @@ data class RoomFormUiState(
         ?.let { if (it in 500..50000) null else "Entre 500 y 50 000 MXN." } ?: "Entre 500 y 50 000 MXN."
     val sizeError: String? = sizeM2.toIntOrNull()
         ?.let { if (it in 4..200) null else "Entre 4 y 200 m²." } ?: "Entre 4 y 200 m²."
-    val availableFromError: String? = if (availableFrom.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))) {
+    // El contrato declara availableFrom nullable (RoomBaseDto / RoomBase.AvailableFrom).
+    // Si se deja vacío el cuarto queda en `setup` hasta completarse; no es un error.
+    val availableFromError: String? = if (availableFrom.isBlank() ||
+        availableFrom.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))
+    ) {
         null
     } else {
         "Fecha YYYY-MM-DD."

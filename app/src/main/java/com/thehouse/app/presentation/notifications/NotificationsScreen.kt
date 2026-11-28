@@ -1,4 +1,4 @@
-package com.thehouse.app.presentation.notifications
+﻿package com.thehouse.app.presentation.notifications
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +17,17 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AssignmentTurnedIn
+import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.RateReview
+import androidx.compose.material.icons.rounded.ReportProblem
+import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +73,8 @@ fun NotificationsDestination(
     onNavigateToAgreement: () -> Unit,
     onNavigateToRental: () -> Unit,
     onNavigateToBuilding: (String) -> Unit,
+    /** NV-20 v1.3.0: room → RoomDetailRoute(targetId), nunca propertyId. */
+    onNavigateToRoom: (String) -> Unit = {},
 ) {
     val viewModel: NotificationsViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -78,6 +90,7 @@ fun NotificationsDestination(
                     onNavigateToAgreement = onNavigateToAgreement,
                     onNavigateToRental = onNavigateToRental,
                     onNavigateToBuilding = onNavigateToBuilding,
+                    onNavigateToRoom = onNavigateToRoom,
                 )
                 is NotificationsEffect.TargetUnavailable -> Unit
             }
@@ -120,6 +133,7 @@ private fun handleTarget(
     onNavigateToAgreement: () -> Unit,
     onNavigateToRental: () -> Unit,
     onNavigateToBuilding: (String) -> Unit,
+    onNavigateToRoom: (String) -> Unit = {},
 ) {
     when (val destination = NotificationDestinationResolver.fromTarget(target)) {
         is NotificationDestination.Request -> onNavigateToRequest(destination.id)
@@ -130,6 +144,7 @@ private fun handleTarget(
         NotificationDestination.Agreement -> onNavigateToAgreement()
         NotificationDestination.Rental -> onNavigateToRental()
         is NotificationDestination.Building -> onNavigateToBuilding(destination.id)
+        is NotificationDestination.Room -> onNavigateToRoom(destination.id)
         NotificationDestination.NotificationCenter -> Unit
     }
 }
@@ -306,6 +321,20 @@ private fun NotificationRow(
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            // NV-20 v1.3.0: glifo coherente por tipo; desconocido → genérico.
+            // Nunca se muestra el valor interno del tipo ni el targetKind.
+            Icon(
+                imageVector = notificationIcon(notification.type),
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .size(18.dp),
+                tint = if (notification.read) {
+                    MaterialTheme.colorScheme.outlineVariant
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
             Box(
                 modifier = Modifier
                     .padding(top = 6.dp)
@@ -424,3 +453,19 @@ private fun NotificationPermissionCard(
         }
     }
 }
+
+/**
+ * NV-20 v1.3.0: mapeo de tipo → glifo, sin exponer el valor interno al usuario.
+ * Los tipos desconocidos usan un icono genérico (compatibilidad hacia adelante).
+ */
+internal fun notificationIcon(type: String): androidx.compose.ui.graphics.vector.ImageVector =
+    when (type) {
+        "agreement_proposed", "agreement_cancelled" -> Icons.Rounded.AssignmentTurnedIn
+        "review_received", "review_hidden" -> Icons.Rounded.RateReview
+        "favorite_unavailable" -> Icons.Rounded.FavoriteBorder
+        "report_resolved" -> Icons.Rounded.ReportProblem
+        "request_new", "request_accepted", "request_rejected" -> Icons.Rounded.Forum
+        "visit_confirmed", "visit_cancelled", "visit_rescheduled" -> Icons.Rounded.EventAvailable
+        "message_received" -> Icons.Rounded.Forum
+        else -> Icons.Rounded.Notifications
+    }

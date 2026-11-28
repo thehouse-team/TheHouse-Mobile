@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material3.CircularProgressIndicator
@@ -97,6 +96,7 @@ fun HomeScreen(
             when (effect) {
                 HomeEffect.LoggedOut -> onLoggedOut()
                 HomeEffect.RequireLogin -> onRequireLogin()
+                HomeEffect.OpenLandlord -> onOpenLandlord()
                 is HomeEffect.Message -> Unit
             }
         }
@@ -166,6 +166,11 @@ fun HomeScreen(
 
             SmartMatchPromo(onClick = onNavigateToSmartMatch)
 
+            TheHouseSecondaryButton(
+                text = "Publicar mi renta",
+                onClick = { viewModel.onEvent(HomeEvent.PublishClicked) },
+            )
+
             SectionHeader(
                 title = "Recomendados para ti",
                 subtitle = "Opciones reales cerca de tu universidad",
@@ -223,26 +228,6 @@ fun HomeScreen(
                 }
             }
 
-            TheHouseSecondaryButton(
-                text = "Publicar mi renta",
-                onClick = { viewModel.onEvent(HomeEvent.PublishClicked) },
-            )
-
-            TheHouseCard(onClick = onOpenPrivacy) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                ) {
-                    ActionIcon(Icons.Outlined.PrivacyTip)
-                    Text(
-                        text = "Privacidad",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
         }
     }
 }

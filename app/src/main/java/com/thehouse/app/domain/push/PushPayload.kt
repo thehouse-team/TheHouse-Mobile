@@ -24,8 +24,6 @@ const val PUSH_TARGET_ID_MAX_LENGTH = 128
 const val PUSH_TITLE_MAX_LENGTH = 200
 const val PUSH_BODY_MAX_LENGTH = 1000
 
-private val SAFE_ID = Regex("^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
-
 /**
  * Valida y resuelve un target de notificación. Devuelve `null` para kinds
  * desconocidos, ids vacíos o ids con caracteres no permitidos.
@@ -36,12 +34,24 @@ object NotificationTargetResolver {
         if (kind.isNullOrBlank()) return null
         val parsedKind = NotificationTargetKind.fromApi(kind.trim())
         if (parsedKind == NotificationTargetKind.UNKNOWN) return null
+        // NV-20 v1.3.0: `none` abre la bandeja y NO exige targetId; se conserva
+        // el envelope con id vacío. El resto valida SAFE_ID con la misma regla
+        // centralizada que usa `NotificationDestinationResolver`.
+        if (parsedKind == NotificationTargetKind.NONE) {
+            return NotificationTarget(kind = parsedKind, id = id?.trim().orEmpty())
+        }
         val safeId = id?.trim().orEmpty()
-        if (!SAFE_ID.matches(safeId)) return null
+        if (!NotificationDestinationResolver.isValidTargetId(safeId)) return null
+        // Un id inválido para room también debe caer a bandeja, no a una ruta.
+        if (parsedKind == NotificationTargetKind.ROOM &&
+            NotificationDestinationResolver.from(parsedKind.api, safeId) !is
+            com.thehouse.app.domain.push.NotificationDestination.Room
+        ) return null
         return NotificationTarget(kind = parsedKind, id = safeId)
     }
 
-    fun isSafeId(value: String): Boolean = SAFE_ID.matches(value)
+    fun isSafeId(value: String): Boolean =
+        NotificationDestinationResolver.isValidTargetId(value)
 }
 
 enum class PushPayloadWarning {

@@ -6,23 +6,32 @@ package com.thehouse.app.domain.error
  */
 enum class RequestErrorCode {
     ACTIVE_REQUEST_EXISTS,
+    /** Backend 409: la operación de solicitud está en progreso (lock Redis). */
+    REQUEST_IN_PROGRESS,
     ACTIVE_REQUESTS_LIMIT,
     PARTICIPANT_SUSPENDED,
     OWN_ROOM,
     REQUEST_STATE,
     ROOM_UNAVAILABLE,
     LANDLORD_REQUIRED,
+    /** Backend 422: el texto/mensaje fue rechazado por moderación. */
+    CONTENT_REJECTED,
+    /** Backend 503: moderación no disponible; Retry-After presente. */
+    MODERATION_UNAVAILABLE,
     UNKNOWN;
 
     companion object {
         fun fromApi(value: String?): RequestErrorCode = when (value) {
             "active_request_exists" -> ACTIVE_REQUEST_EXISTS
+            "request_in_progress" -> REQUEST_IN_PROGRESS
             "active_requests_limit" -> ACTIVE_REQUESTS_LIMIT
             "participant_suspended" -> PARTICIPANT_SUSPENDED
             "own_room" -> OWN_ROOM
             "request_state" -> REQUEST_STATE
             "room_unavailable" -> ROOM_UNAVAILABLE
             "landlord_required" -> LANDLORD_REQUIRED
+            "content_rejected" -> CONTENT_REJECTED
+            "moderation_unavailable" -> MODERATION_UNAVAILABLE
             else -> UNKNOWN
         }
     }

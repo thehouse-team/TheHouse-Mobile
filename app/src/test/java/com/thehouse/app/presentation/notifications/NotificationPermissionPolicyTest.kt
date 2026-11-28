@@ -82,6 +82,35 @@ class NotificationPermissionPolicyTest {
     }
 
     @Test
+    fun `contextual request happens only when dialog can be shown`() {
+        assertTrue(
+            NotificationPermissionPolicy.shouldRequestContextually(
+                sdkInt = 33, runtimeGranted = false, askedOnce = false, showRationale = false,
+            ),
+        )
+        assertTrue(
+            NotificationPermissionPolicy.shouldRequestContextually(
+                sdkInt = 33, runtimeGranted = false, askedOnce = true, showRationale = true,
+            ),
+        )
+        assertFalse(
+            NotificationPermissionPolicy.shouldRequestContextually(
+                sdkInt = 33, runtimeGranted = false, askedOnce = true, showRationale = false,
+            ),
+        )
+        assertFalse(
+            NotificationPermissionPolicy.shouldRequestContextually(
+                sdkInt = 32, runtimeGranted = false, askedOnce = false, showRationale = false,
+            ),
+        )
+        assertFalse(
+            NotificationPermissionPolicy.shouldRequestContextually(
+                sdkInt = 33, runtimeGranted = true, askedOnce = false, showRationale = false,
+            ),
+        )
+    }
+
+    @Test
     fun `denial never breaks app usage`() {
         // La app sigue operativa: el permiso solo condiciona notificaciones.
         val status = NotificationPermissionPolicy.resolveStatus(

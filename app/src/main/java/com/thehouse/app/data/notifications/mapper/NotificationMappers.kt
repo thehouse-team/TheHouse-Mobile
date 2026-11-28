@@ -27,7 +27,13 @@ fun NotificationItemDto.toDomain(): AppNotification = AppNotification(
 
 fun NotificationTargetDto.toDomain(): NotificationTarget? {
     val kind = NotificationTargetKind.fromApi(kind)
-    val targetId = id?.takeIf { it.isNotBlank() } ?: return null
+    // NV-20 v1.3.0: `none` no exige targetId; se conserva el envelope con id
+    // vacío y el resolver global decide abrir la bandeja. Para el resto, un id
+    // ausente/inválido también degrada a bandeja en el resolver (sin petición).
+    val targetId = id?.trim().orEmpty()
+    if (targetId.isEmpty() && kind != NotificationTargetKind.NONE) {
+        return NotificationTarget(kind = kind, id = "")
+    }
     return NotificationTarget(kind = kind, id = targetId)
 }
 

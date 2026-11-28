@@ -128,9 +128,11 @@ class RequestsRepositoryImpl(
             response.code() == 401 || response.code() == 403 -> DomainError.Unauthorized
             response.code() == 404 -> DomainError.NotFound
             response.code() == 409 -> DomainError.Conflict
+            response.code() == 422 && rawProblemCode == "content_rejected" -> DomainError.ValidationError
             response.code() == 422 -> DomainError.Unknown
             response.code() == 408 -> DomainError.Timeout
             response.code() == 429 -> DomainError.RateLimited
+            response.code() == 503 -> DomainError.ServiceUnavailable
             response.code() in 500..599 -> DomainError.Server
             else -> DomainError.Unknown
         }

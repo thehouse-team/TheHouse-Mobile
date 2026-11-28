@@ -46,6 +46,10 @@ object LandlordErrorMessages {
                 "La imagen supera el tamaño permitido."
             exception.code == LandlordErrorCode.PAYLOAD_TOO_LARGE ->
                 "El archivo es demasiado grande para subirlo."
+            exception.code == LandlordErrorCode.CONTENT_REJECTED ->
+                "El contenido no cumple las reglas de la comunidad. Revísalo y vuelve a intentarlo."
+            exception.code == LandlordErrorCode.MODERATION_UNAVAILABLE ->
+                "No pudimos revisar el contenido en este momento. Intenta de nuevo en unos segundos."
             exception.code == LandlordErrorCode.VALIDATION ->
                 "Revisa los datos: hay campos inválidos o incompletos."
             exception.code == LandlordErrorCode.LANDLORD_EXISTS ->

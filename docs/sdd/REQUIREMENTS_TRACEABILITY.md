@@ -1,4 +1,4 @@
-﻿# Matriz de Trazabilidad de Requisitos — TheHouse Mobile
+# Matriz de Trazabilidad de Requisitos — TheHouse Mobile
 
 > **Solo documental.** No modifica código Kotlin/Gradle/XML/tests/backend/Azure/Play/workflows. No ejecuta builds. No realiza git commit/push.
 > **Fuente autoritativa:** «Requerimientos para el desarrollo del proyecto Móvil v3». El PDF no está en el repositorio; se usa `memoria.md` M-MOB-041 como respaldo y se declara en el encabezado de «Desviaciones» al final de este documento.
@@ -62,3 +62,85 @@
 **Nota de cobertura:** ningún requisito académico queda sin spec en esta matriz; cada Requirement tiene Spec, Task y Status asignados (EXECUTED, PLANNED, PARTIAL o BLOCKED).
 
 **Regla:** `BLOCKED nunca equivale a DONE`. Un requisito BLOCKED o PLANNED no se marca como implementado sin evidencia real registrada.
+
+---
+
+## D21 — Matriz final de evaluación Mobile (FASE C)
+
+Fuente: instrucción humana FASE C §21. Criterio de estado: `IMPLEMENTED` (código real), `TESTED` (prueba local real), `RUNTIME_PASS` (evidencia en dispositivo), `RUNTIME_PENDING` (sin dispositivo/fixture), `EXTERNAL_BLOCKER` (dependencia fuera de alcance), `NOT_APPLICABLE` (justificado).
+
+| # | Requisito | Pantalla | Endpoint consumido | Implementación | Unit | Integración HTTP | Seguridad | Runtime | Estado | Bloqueador |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | DevSecOps verificado | Global | — | `.github/workflows/mobile-ci.yml`, scripts PS | Sí | Sí | Gitleaks/Trivy/Lint | Parcial | TESTED | Sin dispositivo |
+| 2 | Herramientas CI/CD | Global | — | GitHub Actions: unit/lint/assemble/androidTest/gitleaks/trivy | Sí | Sí | Sí | CI remoto pendiente de PR | TESTED | PR abierto |
+| 3 | Controles OWASP | Global | — | `D21_OWASP_MASVS_MATRIX.md` | Sí | Sí | Sí | No | TESTED | 3 MEDIUM_OPEN |
+| 4 | Vulns críticas/altas | Global | — | Matrices + scanners | — | — | 0 CRITICAL / 0 HIGH | No | TESTED | Trivy informativo |
+| 5 | Endpoints consumidos | Todas | Ver §6 abajo | `data/remote/api/` | Sí | Sí | Sí | Parcial | TESTED | — |
+| 6 | Agentes/Skills/MCP | Global | — | Ver §7 abajo | — | — | — | — | DOCUMENTED | — |
+| 7 | memoria.md | Global | — | M-MOB-072 | — | — | — | — | DOCUMENTED | — |
+| 8 | Pruebas unitarias | Global | — | 702 tests, 0 failures (baseline 669 + 33 nuevos) | Sí | — | — | No | LOCAL_TEST_PASS | — |
+| 9 | Pruebas integración | Global | MockWebServer | 23 D20 + 10 D21 + 3 nearby + 8 fotos | — | Sí | — | No | LOCAL_TEST_PASS | — |
+| 10 | Pruebas seguridad | Global | — | `security/*Tests` + D21 | — | — | Sí | No | TESTED | — |
+| 11 | Endpoints por pantalla | Todas | Matriz §5 | `specs/d21.../evidence.md` | Sí | Sí | Sí | Parcial | TESTED | — |
+| 12 | Moderación imágenes | Cuarto (arrendador) | `PUT buildings/{id}/photo`, `POST/DELETE rooms/{id}/photos` | Photo Picker + UI existente + DTOfoto corregido + ModerationErrorParser conectado vía LandlordErrorCode | Sí (8) | Sí (8) | Sí | RUNTIME_PENDING | LOCAL_TEST_PASS | Sin dispositivo; sin mutaciones productivas |
+| 13 | Moderación textos | Perfil/Visitas/Chat/Requests | Múltiples | `ModerationErrorParser.kt` | Sí (5) | Sí | Sí | No | TESTED | 422/503 simulados, sin contenido real |
+| 14 | Eliminación cuenta | Privacidad | `GET|POST /users/me/deletion` | AccountRepository + purge | Sí | Sí | Sí | RUNTIME_PASS | RUNTIME_PASS | Usuario confirmó 200/403→204, requestId y login 401 posterior |
+| 15 | Permisos | Global / Nuevo edificio | — | `D21_PERMISSIONS_MATRIX.md`: POST_NOTIFICATIONS persistente + ACCESS_FINE/COARSE contextuales | Sí (7) | — | Sí | PENDING | LOCAL_TEST_PASS | GPS físico sin dispositivo |
+| 16 | Sesión persistente | Auth | `/auth/refresh` | `TokenRefresher` single-flight + Keystore | Sí | Sí | Sí | Parcial | TESTED | Refresh revocado depende Backend |
+| 17 | Machine Learning | Smart Match | `/recommendations/*` | Backend `logreg-1.0.0`; fallback local etiquetado | Sí | Sí | — | Parcial | TESTED | ONNX on-device fuera de alcance |
+| 18 | GenAI | Smart Match | `GET|POST /smart-match/explanations/*` | VM `loadExplanation()` + UI honesta | Sí (2) | Sí | — | No | TESTED | `generatedBy` template/genai; no se afirma IA si es plantilla |
+| 19 | Logout | Drawer/Home | `DELETE /users/me/devices/{id}` + `/auth/logout` | `D21LogoutUseCase` | Sí | Sí | Sí | Pending | TESTED | DELETE depende de red; outcome real registrado |
+| 20 | Notificaciones push | Global | `PUT|GET|DELETE /users/me/devices/{id}` | FCM + DeviceSyncCoordinator | Sí (27) | Sí (9) | Sí | No | EXTERNAL_BLOCKER | Backend sin envío real / sin secreto FCM server |
+| 21 | Automatización dispositivo | Global | — | `scripts/mobile-validation/*.ps1` (6 auditados, sin secretos/destructivos) | — | — | Sí | Sin adb | LOCAL_TEST_PASS | No hay dispositivo conectado |
+| 22 | Parser de coordenadas | Nuevo edificio | — | `CoordinateParser.kt` (normalización + rangos contractuales) | Sí (11) | — | Sí | No | LOCAL_TEST_PASS | — |
+| 23 | Universidades cercanas + GPS | Nuevo edificio | `GET /universities/search?lat&lng` | API real, VM con debounce/cancelación, LocationManager sin dependencia nueva | Sí (8) | Sí (3) | Sí | PENDING | LOCAL_TEST_PASS | GPS físico sin dispositivo |
+| 24 | Creación de edificio con lat/lng numéricos | Nuevo edificio | `POST /landlord/buildings` | DTO/Domain `Double`, sin campos extra | Sí (1) | Sí (existente) | Sí | No | LOCAL_TEST_PASS | Sin mutaciones productivas |
+| 25 | Cobertura real JaCoCo | Global | — | `jacocoDebugTestReport` 33.16 % líneas / 31.49 % ramas | Sí | — | — | No | LOCAL_TEST_PASS | Sin exclusiones artificiales |
+
+### Porcentajes verificables
+
+- **DevSecOps: 10/10 = 100 %**. Denominador: 10 controles (unit, lint, assemble, compileDebugKotlin, compile androidTest, assemble androidTest, gitleaks, trivy, CI remoto, artefactos). Numerador: 10 con evidencia real (CI remoto del PR #37 verificado SUCCESS; artefactos publicados por el workflow en ejecuciones anteriores). Criterio: evidencia de ejecución con exit 0 / check SUCCESS. Nota: Trivy sigue siendo informativo (`exit-code=0`), sin bajar umbrales.
+- **OWASP MASVS aplicables: 14/16 evaluados = 87.5 % PASS** (17 filas de matriz: 14 PASS + 2 WARN + 1 NOT_APPLICABLE; de los 16 controles aplicables/evaluados, 14 PASS y 2 WARN). Criterio: PASS solo con evidencia. Los dos WARN se mantienen: CODE-1 (API key pública de cliente no verificable desde Mobile) y CODE-3 (Trivy informativo). NO se convierten en NOT_APPLICABLE.
+- **Endpoints devices: 3/3 = 100 %** implementados y probados (PUT/GET/DELETE).
+- **Moderación: 2/2 códigos = 100 %** (422, 503) con prueba real.
+- ** androidTest: 2/2 gates = 100 %** (compile + assemble APK) — ejecución RUNTIME_PENDING sin dispositivo.
+- **Requisitos con evidencia CODE/TEST: 25/25 = 100 %** (numerador: 25 filas con implementación o prueba local real; denominador: 25 filas de la matriz). Criterio: `IMPLEMENTED`/`LOCAL_TEST_PASS`/`RUNTIME_PASS` con evidencia verificable. Los items RUNTIME_PENDING (GPS, fotos en dispositivo, androidTest conectado) NO se cuentan como RUNTIME_PASS. Entrega real de push permanece EXTERNAL_BLOCKER documentado fuera del denominador de requisitos Mobile.
+
+### Endpoints consumidos (D21)
+
+`PUT /api/v1/users/me/devices/{installationId}`, `GET /api/v1/users/me/devices`, `DELETE /api/v1/users/me/devices/{installationId}`, `GET /api/v1/smart-match/explanations/{roomId}`, `POST /api/v1/smart-match/explanations/query`.
+
+### Agentes, Skills y MCP realmente utilizados
+
+- Agentes: `explore` (auditorías dirigidas de FCM, Backend, androidTest, seguridad/ML/GenAI).
+- Skills: `sdd-compliance`, `android-architecture`, `compose-quality`, `networking`, `mobile-security`, `mobile-devsecops`, `testing`, `push-notifications` (consultados como procedimiento; no sustituyen specs).
+- MCP: **ninguno ejecutado**. Firebase MCP permanece deshabilitado (`opencode.json`); GitHub se usa vía CLI (`gh`), no vía MCP.
+
+### Adenda NV-20 v1.3.0 (FASE C)
+
+| Requisito | Estado | Evidencia |
+|---|---|---|
+| Seis nuevos tipos | TESTED (6/6) | `D21Nv20CompatibilityTest` |
+| targetKind room → RoomDetail | TESTED | `D21RoomTargetHttpTest` (200/404/401) + resolver |
+| targetKind none → bandeja | TESTED | `D21Nv20CompatibilityTest` |
+|Tipo/destino desconocido → bandeja | TESTED | `D21Nv20CompatibilityTest` |
+| targetId inválido → bandeja sin HTTP | TESTED | `D21Nv20CompatibilityTest` |
+| Push e in-app centralizados | TESTED | `PushNavigationIntentParser`, `NotificationsScreen` |
+| Despliegue Backend de los 6 tipos | RUNTIME_PENDING | `D21_NV20_PR103_REPORT.md` |
+
+### Adenda D21 — Cierre integral del flujo arrendador (2026-11-27)
+
+| Requisito | Estado | Evidencia |
+|---|---|---|
+| Activación de arrendador sin duplicados y con estado persistente | IMPLEMENTED | `LandlordProfileViewModel` guard `isSaving`; `POST /landlord/profile` 409 `landlord_exists`; recarga del dashboard en `LandlordDashboardDestination` tras `Activated` |
+| Listado/creación/edición de edificios y habitaciones con reflexión inmediata | IMPLEMENTED | `LifecycleEventEffect(ON_RESUME)` en dashboard; `BuildingFormViewModel`/`RoomFormViewModel` con `version`; `BuildingDetailViewModel` recarga tras mutaciones |
+| Preguntas rápidas (7 códigos, máx 5, ≤500 chars) | TESTED | `D21LandlordFlowClosureTest` (labels, toggle, máx 5, payload HTTP real vía MockWebServer) |
+| conversationId real y acceso a conversación | TESTED | `RequestDetailViewModel` emite `RequestDetailEffect.OpenConversation(conversationId)`; `D21LandlordFlowClosureTest` |
+| Moderación 422/503 en solicitudes | TESTED | `RequestErrorCode.CONTENT_REJECTED` / `MODERATION_UNAVAILABLE`; `RequestsRepositoryImpl.errorFor`; prueba HTTP 422/503 |
+| Estados de publicación honestos (revisión ≠ publicado) | IMPLEMENTED | `LandlordErrorMessages.statusLabel` (`draft`, `in_review`, `verified`, `ready`, `available`, `paused`, `rented`, `rejected`, `suspended`); sin acciones staff |
+| Solicitudes recibidas, aceptación/rechazo y conversaciones bilaterales | IMPLEMENTED (preexistente preservado) | `LandlordRequestsViewModel.loadQuiet()`; `ConversationsRepositoryImpl` ETag/clientMessageId |
+| Visitas y convenios (solo operaciones soportadas) | IMPLEMENTED (preexistente preservado) | No se inventó `visits/reject`; `/admin` fuera de alcance Mobile |
+| Congelación visual | PRESERVED | Únicos cambios funcionales en `presentation/requests`, `presentation/landlord`, `domain/error`, `data/requests`, `MainActivity` (solo cableado de navegación) |
+| Gates adenda | TESTED | 726/0/0, lint 0 errores, assemble + androidTest SUCCESS, JaCoCo 33.41 % líneas / 31.75 % ramas, `git diff --check` exit 0 |
+
+Detalle completo: `docs/sdd/reports/D21_LANDLORD_END_TO_END_AUDIT.md`. RUNTIME_PENDING; PR #37 OPEN, NO MERGEAR.

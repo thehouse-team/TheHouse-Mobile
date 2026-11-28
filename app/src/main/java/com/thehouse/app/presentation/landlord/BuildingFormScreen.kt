@@ -1,5 +1,8 @@
 package com.thehouse.app.presentation.landlord
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -28,6 +31,7 @@ import com.thehouse.app.presentation.components.InlineMessage
 import com.thehouse.app.presentation.components.LoadingView
 import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
 import com.thehouse.app.presentation.components.TheHouseScreen
 import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.ui.theme.Spacing
@@ -63,6 +67,30 @@ fun BuildingFormScreen(
     onReload: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Permiso contextual: SOLO se solicita al pulsar «Usar mi ubicación actual».
+    val locationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { result ->
+        val fine = result[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarse = result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        onEvent(BuildingFormEvent.LocationPermissionResult(fineGranted = fine, coarseGranted = coarse))
+    }
+    fun requestLocation() {
+        locationLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ),
+        )
+    }
+
+    val scrollState = rememberScrollState()
+    // Al pulsar Submit con errores, volver al inicio del formulario para que el
+    // primer campo pendiente sea visible (los campos están ordenados de arriba abajo).
+    LaunchedEffect(state.pendingFields) {
+        if (state.pendingFields.isNotEmpty()) scrollState.animateScrollTo(0)
+    }
+
     TheHouseScreen(
         title = if (state.isEdit) "Editar edificio" else "Nuevo edificio",
         subtitle = "Datos, ubicación y servicios",
@@ -73,7 +101,7 @@ fun BuildingFormScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
@@ -139,6 +167,8 @@ fun BuildingFormScreen(
                                 value = state.number,
                                 onValueChange = { onEvent(BuildingFormEvent.NumberChanged(it)) },
                                 label = "Número",
+                                isError = state.showNumberError && state.numberError != null,
+                                errorMessage = if (state.showNumberError) state.numberError else null,
                                 modifier = Modifier.weight(1f),
                             )
                             TheHouseTextField(
@@ -147,6 +177,8 @@ fun BuildingFormScreen(
                                     onEvent(BuildingFormEvent.NeighborhoodChanged(it))
                                 },
                                 label = "Colonia",
+                                isError = state.showNeighborhoodError && state.neighborhoodError != null,
+                                errorMessage = if (state.showNeighborhoodError) state.neighborhoodError else null,
                                 modifier = Modifier.weight(2f),
                             )
                         }
@@ -178,39 +210,86 @@ fun BuildingFormScreen(
                     }
 
                     FormSection(title = "Ubicación") {
+                        Text(
+                            text = com.thehouse.app.domain.landlord.LandlordFlowPolicies.COORDINATE_HINT,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                             TheHouseTextField(
                                 value = state.lat,
                                 onValueChange = { onEvent(BuildingFormEvent.LatChanged(it)) },
                                 label = "Latitud",
-                                isError = state.latError != null,
-                                errorMessage = state.latError,
+                                isError = state.showLatError && state.latError != null,
+                                errorMessage = if (state.showLatError) state.latError else null,
                                 modifier = Modifier.weight(1f),
                             )
                             TheHouseTextField(
                                 value = state.lng,
                                 onValueChange = { onEvent(BuildingFormEvent.LngChanged(it)) },
                                 label = "Longitud",
-                                isError = state.lngError != null,
-                                errorMessage = state.lngError,
+                                isError = state.showLngError && state.lngError != null,
+                                errorMessage = if (state.showLngError) state.lngError else null,
                                 modifier = Modifier.weight(1f),
                             )
                         }
+                        TheHouseSecondaryButton(
+                            text = if (state.isLocating) "Obteniendo ubicación…" else "Usar mi ubicación actual",
+                            onClick = {
+                                onEvent(BuildingFormEvent.UseCurrentLocationClicked)
+                                requestLocation()
+                            },
+                            enabled = !state.isLocating,
+                            loading = state.isLocating,
+                        )
+                        state.locationMessage?.let { message ->
+                            InlineMessage(
+                                text = message,
+                                tone = com.thehouse.app.presentation.components.StatusTone.Warning,
+                            )
+                        }
+                        if (state.nearbySearching) {
+                            Text(
+                                text = "Buscando universidades cercanas…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        state.nearbyError?.let { message ->
+                            InlineMessage(
+                                text = message,
+                                tone = com.thehouse.app.presentation.components.StatusTone.Warning,
+                            )
+                            TheHouseSecondaryButton(
+                                text = "Reintentar búsqueda",
+                                onClick = { onEvent(BuildingFormEvent.RetryNearbySearch) },
+                                enabled = !state.nearbySearching,
+                            )
+                        }
+                        val visibleUniversities: List<UniversityChoice> = if (
+                            state.isNearbyResult && state.nearbyUniversities.isNotEmpty()
+                        ) {
+                            state.nearbyUniversities.map {
+                                UniversityChoice(it.id, it.name, it.distanceKm)
+                            }
+                        } else {
+                            state.universities.map { UniversityChoice(it.id, it.name, null) }
+                        }
                         Text(
-                            text = "Universidad más cercana",
+                            text = if (state.isNearbyResult) "Universidades cercanas" else "Universidad más cercana",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
-                        state.universities.forEach { university ->
+                        visibleUniversities.forEach { university ->
+                            val label = university.distanceKm?.let { "${university.name} — $it km" }
+                                ?: university.name
                             FilterChip(
                                 selected = state.universityId == university.id,
-                                onClick = {
-                                    onEvent(BuildingFormEvent.UniversityChanged(university.id))
-                                },
-                                label = { Text(university.name) },
+                                onClick = { onEvent(BuildingFormEvent.UniversityChanged(university.id)) },
+                                label = { Text(label) },
                             )
                         }
-                        state.universityError?.let {
+                        state.universityError?.takeIf { state.submitAttempted }?.let {
                             InlineMessage(text = it, tone = com.thehouse.app.presentation.components.StatusTone.Warning)
                         }
                     }
@@ -260,6 +339,8 @@ fun BuildingFormScreen(
                             onValueChange = { onEvent(BuildingFormEvent.RulesChanged(it)) },
                             label = "Reglas (opcional, máx. 2000)",
                             supportingText = "${state.rules.length}/2000",
+                            isError = state.rulesError != null,
+                            errorMessage = state.rulesError,
                             singleLine = false,
                             minLines = 4,
                         )
@@ -269,6 +350,14 @@ fun BuildingFormScreen(
                         InlineMessage(text = message)
                     }
 
+                    // Resumen compacto: solo se muestra tras pulsar Submit con errores.
+                    if (state.submitAttempted && state.pendingFields.isNotEmpty()) {
+                        val resumen = state.pendingFields.joinToString(" · ") {
+                            BuildingFormValidation.label(it)
+                        }
+                        InlineMessage(text = "Revisa: $resumen")
+                    }
+
                     TheHousePrimaryButton(
                         text = when {
                             state.isSaving -> "Guardando…"
@@ -276,7 +365,9 @@ fun BuildingFormScreen(
                             else -> "Crear edificio"
                         },
                         onClick = { onEvent(BuildingFormEvent.Submit) },
-                        enabled = !state.isLoading && state.isValid,
+                        // El botón debe ser pulsable para poder activar submitAttempted
+                        // y mostrar TODAS las validaciones pendientes.
+                        enabled = !state.isLoading && !state.isSaving,
                         loading = state.isSaving,
                     )
                 }
@@ -284,6 +375,13 @@ fun BuildingFormScreen(
         }
     }
 }
+
+/** Presentación local: une catálogo paginado y resultado por cercanía sin mezclar DTOs. */
+private data class UniversityChoice(
+    val id: String,
+    val name: String,
+    val distanceKm: Double?,
+)
 
 @Composable
 private fun FormSection(

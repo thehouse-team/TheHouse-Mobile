@@ -29,6 +29,27 @@ data class UniversityListResponseDto(
     val totalPages: Int = 0,
 )
 
+/**
+ * Contrato real verificado de GET /api/v1/universities/search?lat=&lng=
+ * (UniversitySearchEndpoint.cs / ProfileContracts.cs, solo lectura):
+ * items con id, code, name, city y distanceKm (double?, omitido si null).
+ * Máximo 20, ordenado por distancia ascendente y luego nombre.
+ * No incluye paginación ni country/createdAt.
+ */
+@Serializable
+data class NearbyUniversityDto(
+    val id: String,
+    val code: String,
+    val name: String,
+    val city: String,
+    val distanceKm: Double? = null,
+)
+
+@Serializable
+data class NearbyUniversityResponseDto(
+    val items: List<NearbyUniversityDto> = emptyList(),
+)
+
 @Serializable
 data class PropertyListItemDto(
     val id: String,

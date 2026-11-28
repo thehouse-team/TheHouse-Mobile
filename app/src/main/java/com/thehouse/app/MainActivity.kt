@@ -1003,6 +1003,14 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                     launchSingleTop = true
                                 }
                             },
+                            onNavigateToRoom = { roomId ->
+                                // NV-20 v1.3.0: id validado por el resolver central.
+                                if (RoomDetailRoute.isValid(roomId)) {
+                                    navController.navigate(RoomDetailRoute(roomId).route) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            },
                         )
                     }
                 }
@@ -1119,6 +1127,11 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                             onBack = { navController.popBackStack() },
                             onCreated = { request ->
                                 navController.navigate(RequestDetailRoute(request.id).route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onOpenConversation = { conversationId ->
+                                navController.navigate(ConversationRoute(conversationId).route) {
                                     launchSingleTop = true
                                 }
                             },
@@ -1324,5 +1337,13 @@ private fun NotificationDestination.toRoute(): String = when (this) {
     NotificationDestination.Agreement,
     NotificationDestination.Rental -> AppRoutes.myRental.route
     is NotificationDestination.Building -> BuildingDetailRoute(id).route
+    // NV-20 v1.3.0: room abre el detalle REAL del cuarto (GET /rooms/{id}).
+    // Nunca PropertyDetailRoute ni propertyId; el id ya fue validado por el
+    // resolver centralizado (SAFE_ID) antes de llegar aquí.
+    is NotificationDestination.Room -> if (RoomDetailRoute.isValid(id)) {
+        RoomDetailRoute(id).route
+    } else {
+        AppRoutes.notifications.route
+    }
     NotificationDestination.NotificationCenter -> AppRoutes.notifications.route
 }

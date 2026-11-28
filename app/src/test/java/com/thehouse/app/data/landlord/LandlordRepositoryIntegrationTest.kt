@@ -95,6 +95,11 @@ class LandlordRepositoryIntegrationTest {
         }
     """.trimIndent()
 
+    private val photoJson = """
+        {"id":"p1","url":"/api/v1/media/p1","thumbUrl":"/api/v1/media/p1?size=thumb",
+         "width":100,"height":100,"bytes":10,"createdAt":"2026-01-01T00:00:00Z"}
+    """.trimIndent()
+
     private fun problem(code: String, status: Int) =
         """{"type":"about:blank","title":"Conflict","status":$status,"code":"$code"}"""
 
@@ -461,7 +466,7 @@ class LandlordRepositoryIntegrationTest {
 
     @Test
     fun `upload building photo sends PUT multipart with file field`() = runTest {
-        server.enqueue(jsonResponse(200, buildingJson))
+        server.enqueue(jsonResponse(200, photoJson))
         val file = tempFile("building.jpg")
         val result = repository.uploadBuildingPhoto("b1", file, "image/jpeg")
         assertTrue(result.isSuccess)
@@ -484,7 +489,7 @@ class LandlordRepositoryIntegrationTest {
 
     @Test
     fun `upload room photo sends POST multipart`() = runTest {
-        server.enqueue(jsonResponse(200, roomJson))
+        server.enqueue(jsonResponse(200, photoJson))
         val file = tempFile("room.png")
         val result = repository.uploadRoomPhoto("r1", file, "image/png")
         assertTrue(result.isSuccess)

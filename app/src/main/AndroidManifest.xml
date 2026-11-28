@@ -3,7 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- D21: necesario para AndroidConnectivityObserver (ConnectivityManager),
+         usado por reintentos de sync de dispositivos y fallback local. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- D21 adenda geolocalización: SOLO solicitud contextual desde "Usar mi
+         ubicación actual" en Nuevo edificio. Sin ACCESS_BACKGROUND_LOCATION. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
         android:name=".TheHouseApplication"

@@ -399,7 +399,14 @@ class LandlordRepositoryImpl(
     private fun errorFor(response: Response<*>): LandlordException {
         val rawCode = response.readProblemCode(json)
         val mappedCode = LandlordErrorCode.fromApi(rawCode)
+        // Moderación centralizada del Backend: sin lógica propia en Mobile.
+        // content_rejected (422) conserva el texto en la UI para corrección;
+        // moderation_unavailable (503) es retryable y respeta Retry-After.
+        val moderationRejected = mappedCode == LandlordErrorCode.CONTENT_REJECTED
+        val moderationUnavailable = mappedCode == LandlordErrorCode.MODERATION_UNAVAILABLE
         val domainError = when {
+            moderationRejected -> DomainError.ValidationError
+            moderationUnavailable -> DomainError.ServiceUnavailable
             // Contrato NV-21: cuenta suspendida → 403 account_suspended.
             response.code() == 403 && rawCode == "account_suspended" ->
                 DomainError.AccountSuspended
@@ -408,6 +415,7 @@ class LandlordRepositoryImpl(
             response.code() == 404 -> DomainError.NotFound
             response.code() == 409 -> DomainError.Conflict
             response.code() == 408 -> DomainError.Timeout
+            response.code() == 422 -> DomainError.ValidationError
             response.code() == 413 -> DomainError.Unknown
             response.code() == 415 -> DomainError.Unknown
             response.code() == 429 -> DomainError.RateLimited

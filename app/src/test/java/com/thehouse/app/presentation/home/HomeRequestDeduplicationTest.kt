@@ -39,6 +39,9 @@ private class CountingUniversityRepository : UniversityRepository {
     }
 
     override suspend fun getUniversityById(id: String): Result<University> = error("no usado")
+
+    override suspend fun searchNearbyUniversities(lat: Double, lng: Double) =
+        error("no usado en HomeRequestDeduplicationTest")
 }
 
 private class CountingPropertyRepository : PropertyRepository {

@@ -8,6 +8,7 @@ import com.thehouse.app.data.remote.dto.landlord.CreateBuildingDto
 import com.thehouse.app.data.remote.dto.landlord.CreateLandlordProfileDto
 import com.thehouse.app.data.remote.dto.landlord.GenerateRoomsDto
 import com.thehouse.app.data.remote.dto.landlord.LandlordProfileDto
+import com.thehouse.app.data.remote.dto.landlord.PhotoResponseDto
 import com.thehouse.app.data.remote.dto.landlord.LandlordStatsRoomsResponseDto
 import com.thehouse.app.data.remote.dto.landlord.PublicationStatusDto
 import com.thehouse.app.data.remote.dto.landlord.RoomDto
@@ -93,7 +94,7 @@ interface LandlordApi {
     suspend fun uploadBuildingPhoto(
         @Path("id") id: String,
         @Part file: MultipartBody.Part,
-    ): Response<BuildingDto>
+    ): Response<PhotoResponseDto>
 
     @DELETE("api/v1/landlord/buildings/{id}/photo")
     suspend fun deleteBuildingPhoto(@Path("id") id: String): Response<Unit>
@@ -103,13 +104,13 @@ interface LandlordApi {
     suspend fun uploadRoomPhoto(
         @Path("id") id: String,
         @Part file: MultipartBody.Part,
-    ): Response<RoomDto>
+    ): Response<PhotoResponseDto>
 
     @DELETE("api/v1/landlord/rooms/{id}/photos/{photoId}")
     suspend fun deleteRoomPhoto(
         @Path("id") id: String,
         @Path("photoId") photoId: String,
-    ): Response<RoomDto>
+    ): Response<Unit>
 
     @Multipart
     @PUT("api/v1/landlord/buildings/{id}/documents/ine")

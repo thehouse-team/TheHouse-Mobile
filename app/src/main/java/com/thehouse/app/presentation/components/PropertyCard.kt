@@ -29,21 +29,16 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
 import com.thehouse.app.domain.model.Property
-import com.thehouse.app.perf.Perf
 import com.thehouse.app.presentation.demo.PrototypeProperties
 import com.thehouse.app.presentation.demo.PrototypeProperty
 import com.thehouse.app.ui.theme.Elevations
@@ -78,48 +73,12 @@ fun PropertyCard(
     ) {
         Column {
             Box {
-                val thumb = property.thumbnailUrl
-                if (!thumb.isNullOrBlank()) {
-                    // PERF: duración de carga de imagen (inicio -> estado final).
-                    val imageStartNanos = remember(thumb) { System.nanoTime() }
-                    AsyncImage(
-                        model = thumb,
-                        contentDescription = "Foto de ${property.title}",
-                        contentScale = ContentScale.Crop,
-                        onState = { imageState ->
-                            if (imageState is AsyncImagePainter.State.Success ||
-                                imageState is AsyncImagePainter.State.Error
-                            ) {
-                                Perf.since("image.load.property_card", imageStartNanos)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(168.dp),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(168.dp)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.secondaryContainer,
-                                    ),
-                                ),
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Roofing,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-                            modifier = Modifier.size(44.dp),
-                        )
-                    }
-                }
+                TheHouseImage(
+                    url = property.thumbnailUrl,
+                    title = property.title,
+                    perfOperation = "image.load.property_card",
+                    modifier = Modifier.fillMaxWidth().height(ImageHeight),
+                )
                 Surface(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.94f),
@@ -311,7 +270,11 @@ fun PropertyCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = property.services.joinToString(" · "),
+                    text = property.services.joinToString(" · ") {
+                        com.thehouse.app.domain.room.RoomSearchCatalog.label(
+                            com.thehouse.app.domain.room.RoomSearchCatalog.Kind.SERVICE, it,
+                        )
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

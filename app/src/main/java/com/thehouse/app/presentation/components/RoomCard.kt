@@ -1,7 +1,6 @@
 package com.thehouse.app.presentation.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,28 +15,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Roofing
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
 import com.thehouse.app.domain.room.RoomSearchCatalog
 import com.thehouse.app.domain.room.RoomSearchItem
-import com.thehouse.app.perf.Perf
 import com.thehouse.app.ui.theme.Elevations
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
@@ -67,40 +59,12 @@ fun RoomCard(
     ) {
         Column {
             Box {
-                val thumb = room.thumbnailUrl
-                if (!thumb.isNullOrBlank()) {
-                    val imageStartNanos = remember(thumb) { System.nanoTime() }
-                    AsyncImage(
-                        model = thumb,
-                        contentDescription = "Foto de ${room.title}",
-                        contentScale = ContentScale.Crop,
-                        onState = { state ->
-                            if (state is AsyncImagePainter.State.Success || state is AsyncImagePainter.State.Error) {
-                                Perf.since("image.load.room_card", imageStartNanos)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(168.dp),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(168.dp).background(
-                            Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                    MaterialTheme.colorScheme.secondaryContainer,
-                                ),
-                            ),
-                        ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Roofing,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-                            modifier = Modifier.size(44.dp),
-                        )
-                    }
-                }
+                TheHouseImage(
+                    url = room.thumbnailUrl,
+                    title = room.title,
+                    perfOperation = "image.load.room_card",
+                    modifier = Modifier.fillMaxWidth().height(ImageHeight),
+                )
                 Surface(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.94f),
@@ -167,7 +131,9 @@ fun RoomCard(
                 )
                 if (room.services.isNotEmpty()) {
                     Text(
-                        text = room.services.take(3).joinToString(" · "),
+                        text = room.services.take(3).joinToString(" · ") {
+                            RoomSearchCatalog.label(RoomSearchCatalog.Kind.SERVICE, it)
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

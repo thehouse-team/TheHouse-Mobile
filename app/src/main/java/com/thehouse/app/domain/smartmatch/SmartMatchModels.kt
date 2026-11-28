@@ -56,6 +56,26 @@ data class SmartMatchResult(
     val thumbnailUrl: String? = null,
     /** D20: estado de favorito compartido, derivado del store por roomId. */
     val isFavorite: Boolean = false,
+    /** D21: explicación textual cargada bajo demanda; null = no solicitada. */
+    val explanation: SmartMatchExplanation? = null,
+    val explanationLoading: Boolean = false,
+    val explanationFailed: Boolean = false,
+)
+
+/**
+ * Explicación textual del Backend (GenAI o plantilla). NUNCA recalcula el score:
+ * los factores numéricos y la explicación se mantienen separados.
+ */
+data class SmartMatchExplanation(
+    val roomId: String,
+    val score: Int,
+    val summary: String,
+    val pros: List<String>,
+    val cons: List<String>,
+    /** "genai" | "template", mostrado con honestidad en la UI. */
+    val generatedBy: String,
+    val modelVersion: String,
+    val explanationVersion: String,
 )
 
 /** Versiones: el artefacto local NO se declara equivalente al modelo productivo. */

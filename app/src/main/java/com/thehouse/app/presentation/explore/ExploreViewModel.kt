@@ -203,7 +203,15 @@ class ExploreViewModel(
 
         if (getUniversities != null) {
             launch {
-                val result = getUniversities()
+                val result = try {
+                    getUniversities()
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    return@launch
+                } catch (network: java.io.IOException) {
+                    Result.failure(com.thehouse.app.domain.error.DomainException(
+                        com.thehouse.app.domain.error.DomainError.Network,
+                    ))
+                }
                 result.onSuccess { page ->
                     updateState { it.copy(universities = page.items) }
                 }

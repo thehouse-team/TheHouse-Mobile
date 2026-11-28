@@ -1,7 +1,7 @@
 package com.thehouse.app.presentation.auth
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -26,7 +26,7 @@ class LoginScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun `login muestra boton y navega a crear cuenta`() {
+    fun login_muestra_boton_y_navega_a_crear_cuenta() {
         val appContext = InstrumentationRegistry.getInstrumentation()
             .targetContext.applicationContext as TheHouseApplication
         val factory = U2ViewModelFactory(appContext.container)

@@ -2,6 +2,7 @@ package com.thehouse.app.presentation.landlord
 
 import com.thehouse.app.domain.error.LandlordErrorCode
 import com.thehouse.app.domain.error.LandlordException
+import com.thehouse.app.domain.landlord.PublicationGuide
 import com.thehouse.app.domain.model.Building
 import com.thehouse.app.domain.model.BuildingDocuments
 import com.thehouse.app.domain.model.BuildingStatus
@@ -32,6 +33,8 @@ data class BuildingDetailUiState(
     val building: Building? = null,
     val rooms: List<Room> = emptyList(),
     val publication: PublicationStatus? = null,
+    /** Guía derivada del endpoint real; se recalcula tras cada operación exitosa. */
+    val guide: PublicationGuide = PublicationGuide.from(null, draft = false),
     val documents: BuildingDocuments? = null,
     val isPublishing: Boolean = false,
     val isDeleting: Boolean = false,
@@ -146,8 +149,30 @@ class BuildingDetailViewModel(
     private fun loadPublication() {
         launch {
             getPublication(buildingId).fold(
-                onSuccess = { publication -> updateState { it.copy(publication = publication) } },
+                onSuccess = { publication ->
+                    updateState { current ->
+                        current.copy(
+                            publication = publication,
+                            guide = PublicationGuide.from(
+                                publication,
+                                draft = current.building?.status == BuildingStatus.DRAFT,
+                            ),
+                        )
+                    }
+                },
                 onFailure = { throwable -> handleFailure(throwable) },
+            )
+        }
+    }
+
+    /** Recalcula la guía sin nueva petición HTTP cuando cambia el estado local del edificio. */
+    private fun refreshGuide() {
+        updateState { current ->
+            current.copy(
+                guide = PublicationGuide.from(
+                    current.publication,
+                    draft = current.building?.status == BuildingStatus.DRAFT,
+                ),
             )
         }
     }
@@ -252,6 +277,7 @@ class BuildingDetailViewModel(
                         )
                     }
                     sendEffect(BuildingDetailEffect.Published(building))
+                    refreshGuide()
                     loadPublication()
                 },
                 onFailure = { throwable -> handleFailure(throwable, saving = true) },
@@ -289,8 +315,11 @@ class BuildingDetailViewModel(
                         current.copy(
                             busyRoomId = null,
                             rooms = current.rooms.map { if (it.id == updated.id) updated else it },
+                            infoMessage = if (pause) "Cuarto pausado." else "Cuarto reanudado.",
                         )
                     }
+                    // room_ready depende del estado real de los cuartos: se recarga sin reiniciar.
+                    loadPublication()
                 },
                 onFailure = { throwable ->
                     handleFailure(throwable, saving = false)

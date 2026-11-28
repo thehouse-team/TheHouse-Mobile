@@ -267,6 +267,7 @@ fun RoomFormScreen(
                             label = "Disponible desde (YYYY-MM-DD)",
                             isError = state.availableFromError != null,
                             errorMessage = state.availableFromError,
+                            supportingText = "Opcional: sin fecha el cuarto queda en configuración.",
                         )
                         Text(
                             text = "Contrato mínimo",

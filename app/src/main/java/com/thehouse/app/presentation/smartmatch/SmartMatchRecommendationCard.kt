@@ -19,9 +19,9 @@ import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Roofing
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,19 +38,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Canvas
-import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
+import com.thehouse.app.domain.room.RoomSearchCatalog
 import com.thehouse.app.domain.smartmatch.SmartMatchFactor
 import com.thehouse.app.domain.smartmatch.SmartMatchResult
 import com.thehouse.app.domain.smartmatch.SmartMatchSource
-import com.thehouse.app.perf.Perf
+import com.thehouse.app.presentation.components.TheHouseImage
 import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
@@ -85,6 +83,7 @@ internal fun SmartMatchRecommendationCard(
     onRoomClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onContactClick: () -> Unit,
+    onLoadExplanation: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -189,11 +188,16 @@ internal fun SmartMatchRecommendationCard(
             }
 
             TextButton(
-                onClick = { expanded = !expanded },
+                onClick = {
+                    val next = !expanded
+                    expanded = next
+                    // D21: cargar explicación textual bajo demanda, sin recalcular score.
+                    if (next && result.explanation == null && !result.explanationLoading) onLoadExplanation()
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = if (expanded) "Ocultar factores" else "¿Por qué es compatible contigo?",
+                    text = if (expanded) "Ocultar detalles" else "¿Por qué es compatible contigo?",
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -214,6 +218,45 @@ internal fun SmartMatchRecommendationCard(
                             FactorRow(factor = factor)
                         }
                     }
+
+                    // D21: explicación textual del Backend, separada de los
+                    // factores numéricos. Etiqueta honesta de su origen.
+                    HorizontalDivider()
+                    when {
+                        result.explanationLoading -> Text(
+                            text = "Cargando explicación…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        result.explanationFailed -> Text(
+                            text = "No se pudo cargar la explicación. Intenta de nuevo.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        result.explanation != null -> {
+                            val explanation = result.explanation!!
+                            Text(
+                                text = if (explanation.generatedBy == "genai")
+                                    "Explicación generada con IA"
+                                else
+                                    "Explicación basada en tus preferencias",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.semantics {
+                                    contentDescription = "smart.match.explanation.source.${explanation.generatedBy}"
+                                },
+                            )
+                            Text(explanation.summary, style = MaterialTheme.typography.bodySmall)
+                            if (explanation.pros.isNotEmpty()) {
+                                Text("A favor", style = MaterialTheme.typography.labelSmall)
+                                explanation.pros.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                            }
+                            if (explanation.cons.isNotEmpty()) {
+                                Text("En contra", style = MaterialTheme.typography.labelSmall)
+                                explanation.cons.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -222,38 +265,14 @@ internal fun SmartMatchRecommendationCard(
 
 @Composable
 private fun RecommendationImage(result: SmartMatchResult) {
-    val thumb = result.thumbnailUrl?.takeIf { it.isNotBlank() }
-    if (thumb != null) {
-        val start = remember(thumb) { System.nanoTime() }
-        AsyncImage(
-            model = thumb,
-            contentDescription = "Foto de ${result.property.title}",
-            contentScale = ContentScale.Crop,
-            onState = { state ->
-                if (state is AsyncImagePainter.State.Success || state is AsyncImagePainter.State.Error) {
-                    Perf.since("image.load.smart_match", start)
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp),
-        )
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Roofing,
-                contentDescription = "Sin foto disponible",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(44.dp),
-            )
-        }
-    }
+    TheHouseImage(
+        url = result.thumbnailUrl,
+        title = result.property.title,
+        perfOperation = "image.load.smart_match",
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp),
+    )
 }
 
 @Composable
@@ -261,9 +280,12 @@ private fun RealInfoRow(result: SmartMatchResult) {
     val parts = mutableListOf<String>()
     result.distanceKm?.let { parts += "${formatDecimal(it)} km" }
     result.walkingMinutes?.let { parts += "$it min caminando" }
-    result.roomType?.takeIf { it.isNotBlank() }?.let { parts += readableCode(it) }
-    result.buildingType?.takeIf { it.isNotBlank() }?.let { parts += readableCode(it) }
-    result.allowedTenants?.takeIf { it.isNotBlank() }?.let { parts += readableCode(it) }
+    result.roomType?.takeIf { it.isNotBlank() }
+        ?.let { parts += RoomSearchCatalog.label(RoomSearchCatalog.Kind.ROOM_TYPE, it) }
+    result.buildingType?.takeIf { it.isNotBlank() }
+        ?.let { parts += RoomSearchCatalog.label(RoomSearchCatalog.Kind.BUILDING_TYPE, it) }
+    result.allowedTenants?.takeIf { it.isNotBlank() }
+        ?.let { parts += RoomSearchCatalog.label(RoomSearchCatalog.Kind.ALLOWED_TENANTS, it) }
     if (parts.isNotEmpty()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -287,7 +309,9 @@ private fun RealInfoRow(result: SmartMatchResult) {
     }
     if (result.services.isNotEmpty()) {
         Text(
-            text = "Servicios: ${result.services.joinToString(", ") { readableCode(it) }}",
+            text = "Servicios: ${result.services.joinToString(", ") {
+                RoomSearchCatalog.label(RoomSearchCatalog.Kind.SERVICE, it)
+            }}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
@@ -295,10 +319,6 @@ private fun RealInfoRow(result: SmartMatchResult) {
         )
     }
 }
-
-private fun readableCode(code: String): String = code
-    .replace('_', ' ')
-    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
 private fun formatPrice(value: Double): String =
     if (value % 1.0 == 0.0) value.toLong().toString() else String.format(java.util.Locale.US, "%.2f", value)

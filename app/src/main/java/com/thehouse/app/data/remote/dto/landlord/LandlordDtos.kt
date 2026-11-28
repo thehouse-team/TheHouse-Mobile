@@ -58,6 +58,23 @@ data class MediaItemDto(
     val createdAt: String? = null,
 )
 
+/**
+ * Contrato REAL de respuesta de carga de foto (MediaContracts.cs / MediaEndpoint.cs):
+ * PUT /landlord/buildings/{id}/photo → 200, POST /landlord/rooms/{id}/photos → 201.
+ * Antes se declaraba BuildingDto/RoomDto, por lo que Retrofit no podía
+ * deserializar la respuesta real (aunque el repositorio ignoraba el body).
+ */
+@Serializable
+data class PhotoResponseDto(
+    val id: String,
+    val url: String,
+    val thumbUrl: String,
+    val width: Int? = null,
+    val height: Int? = null,
+    val bytes: Long? = null,
+    val createdAt: String? = null,
+)
+
 @Serializable
 data class BuildingDto(
     val id: String,

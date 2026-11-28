@@ -5,6 +5,7 @@ import com.thehouse.app.domain.error.RequestException
 import com.thehouse.app.domain.model.QuickQuestion
 import com.thehouse.app.domain.model.RoomRequest
 import com.thehouse.app.domain.usecase.CreateRequestUseCase
+import com.thehouse.app.domain.usecase.GetUserRequestsUseCase
 import com.thehouse.app.presentation.common.BaseViewModel
 import com.thehouse.app.presentation.common.UiEffect
 import com.thehouse.app.presentation.common.UiEvent
@@ -16,22 +17,26 @@ data class CreateRequestUiState(
     val isSending: Boolean = false,
     val errorCode: RequestErrorCode? = null,
     val errorMessage: String? = null,
+    /** conversationId REAL recuperado de GET /users/me/requests tras un 409 existente. */
+    val existingConversationId: String? = null,
 )
 
 sealed interface CreateRequestEvent : UiEvent {
     data class QuickQuestionToggled(val question: QuickQuestion) : CreateRequestEvent
     data class MessageChanged(val value: String) : CreateRequestEvent
     data object Send : CreateRequestEvent
+    data object OpenExistingConversation : CreateRequestEvent
 }
 
 sealed interface CreateRequestEffect : UiEffect {
     data class Created(val request: RoomRequest) : CreateRequestEffect
-    data object OpenConversation : CreateRequestEffect
+    data class OpenConversation(val conversationId: String) : CreateRequestEffect
 }
 
 class CreateRequestViewModel(
     private val roomId: String,
     private val createRequest: CreateRequestUseCase,
+    private val getUserRequests: GetUserRequestsUseCase? = null,
 ) : BaseViewModel<CreateRequestUiState, CreateRequestEvent, CreateRequestEffect>(
     CreateRequestUiState(roomId = roomId),
 ) {
@@ -57,6 +62,11 @@ class CreateRequestViewModel(
                 it.copy(message = event.value.take(500), errorCode = null, errorMessage = null)
             }
             CreateRequestEvent.Send -> send()
+            CreateRequestEvent.OpenExistingConversation -> {
+                uiState.value.existingConversationId?.let { id ->
+                    sendEffect(CreateRequestEffect.OpenConversation(id))
+                }
+            }
         }
     }
 
@@ -98,9 +108,34 @@ class CreateRequestViewModel(
                                 exception?.code,
                                 exception?.domainError,
                             ),
+                            existingConversationId = null,
                         )
                     }
+                    if (exception?.code == RequestErrorCode.ACTIVE_REQUEST_EXISTS) {
+                        recoverExistingConversation()
+                    }
                 },
+            )
+        }
+    }
+
+    /**
+     * El 409 `active_request_exists` del Backend NO incluye conversationId.
+     * La única forma de ofrecer navegación con un ID real es consultar
+     * `GET /users/me/requests` y buscar la solicitud activa de este cuarto.
+     */
+    private fun recoverExistingConversation() {
+        val useCase = getUserRequests ?: return
+        launch {
+            useCase(status = com.thehouse.app.domain.model.RequestStatus.PENDING).fold(
+                onSuccess = { page ->
+                    val conversationId = page.items.firstOrNull { it.room.id == roomId }
+                        ?.conversationId?.takeIf { it.isNotBlank() }
+                    if (conversationId != null) {
+                        updateState { it.copy(existingConversationId = conversationId) }
+                    }
+                },
+                onFailure = { /* Sin cambio de estado: el mensaje de error ya es suficiente. */ },
             )
         }
     }

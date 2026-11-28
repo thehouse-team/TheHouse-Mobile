@@ -66,6 +66,20 @@ class PushTokenCoordinator(
     /** Llamado desde `FirebaseMessagingService.onNewToken`. */
     fun onNewToken(newToken: String) {
         applyToken(newToken, source = "on_new_token")
+        onTokenChanged?.invoke()
+    }
+
+    /**
+     * D21: callback invocado cuando el token cambia (incluido `onNewToken`).
+     * El coordinador de devices lo usa para sincronizar el token rotado.
+     */
+    var onTokenChanged: (() -> Unit)? = null
+
+    /** D21: limpia el token al cambiar de cuenta (aislamiento A " B). */
+    @Synchronized
+    fun clear() {
+        token = null
+        _state.value = PushTokenState.Unavailable
     }
 
     /**
