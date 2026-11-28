@@ -384,3 +384,6 @@ Sin merge, sin rama/PR nuevo, sin Backend/GenAI/ML/ONNX/infra, sin mutaciones pr
 - Gates: `clean`, `compileDebugKotlin`, `testDebugUnitTest`, `lintDebug`, `assembleDebug`, `compileDebugAndroidTestKotlin`, `assembleDebugAndroidTest`, `jacocoDebugTestReport`, `git diff --check` — BUILD SUCCESSFUL / exit 0.
 - Conteo real: **761 tests, 0 failures, 0 errors** (738 baseline + 23 nuevos: 18 D21PublicationFlowTest + 5 LandlordRoomStatsHttpTest).
 - JaCoCo: 34.89 % líneas (7771/22272), 32.46 % ramas (2954/9101), sin exclusiones.
+- Commit: `9bf464d1a3db93ceaf992e9b3ba6bc793a9993c8` (13 archivos, +1017/-109). Push `d821049..9bf464d` a `feature/platform-security-automation` SUCCESS.
+- PR #37 tras el push: OPEN / MERGEABLE (base `main`). NO MERGEADO.
+- CI remoto: run push `46116601718` y run pull_request `46116605772`, ambos sobre `9bf464d` → **SUCCESS**.
