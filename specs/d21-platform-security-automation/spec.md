@@ -216,3 +216,32 @@ Autorización humana sobre el MISMO PR #37, rama y commit base `4dc4e6e`, sin me
 | D21-S04 | DNS del emulador diagnosticado como fallo de entorno; sin IP/DNS/TLS/timeoutmodificados | EVIDENCIADO |
 
 **Estado:** D21-NETWORK-STABILITY-HOTFIX-CODE-READY. CRASH_REPRODUCED: PARCIAL (stack real recuperado; offline reproducible, read-timeout no reproducible por DNS roto). SIN MERGE.
+
+---
+
+## ADENDA FINAL — Cierre integral del flujo del arrendador (2026-11-27)
+
+Autorización humana individual sobre el MISMO PR #37 (OPEN/MERGEABLE, HEAD `6ab949e`),
+rama `feature/platform-security-automation`. Sin merge, sin rama/PR nuevo, sin Backend,
+GenAI, ML, ONNX ni infraestructura. Congelación visual total: no se tocan Home, Explore,
+Smart Match, Favoritos, RoomDetail, Perfil, Preferencias, Header, Drawer ni tema.
+
+Auditoría contractual dirigida: `docs/sdd/reports/D21_LANDLORD_END_TO_END_AUDIT.md`.
+Contratos verificados en Backend (solo lectura): `MessagingEndpoint.cs`,
+`MessagingServices.cs` (7 códigos, máx 5, mensaje ≤500, `conversationId` no nullable,
+201), `MessagingContracts.cs` (`JsonUnmappedMemberHandling.Disallow`),
+`UserEndpointSupport.cs` (422 `content_rejected`, 503 `moderation_unavailable`),
+`LandlordEndpoint.cs`, `Listings.cs`, `AdminEndpoint.cs` (aprobación staff fuera de alcance).
+
+| ID | Requisito | Estado |
+|---|---|---|
+| D21-L01 | Catálogo único de etiquetas españolas para las 7 preguntas rápidas; el detalle deja de mostrar códigos API | IMPLEMENTADO / TESTED |
+| D21-L02 | Conversación: `RequestDetailEvent.OpenConversation` emite `conversationId` real del Backend y navega; antes era `Unit` | IMPLEMENTADO / TESTED |
+| D21-L03 | Error de moderación 422/503 mapeado a `RequestErrorCode` y mensaje Spanish; formulario conservado para reintento | IMPLEMENTADO / TESTED |
+| D21-L04 | Activación: recarga del dashboard tras `LandlordProfileEffect.Activated` (navegación `launchSingleTop` al mismo destino era no-op) | IMPLEMENTADO |
+| D21-L05 | Actualización automática del listado de alojamientos al volver (ON_RESUME, sin refresh manual) | IMPLEMENTADO |
+| D21-L06 | `availableFrom` opcional según contrato (`string?`); fecha inválida sí se rechaza | IMPLEMENTADO |
+| D21-L07 | Matriz de endpoints, estados de dominio y brechas documentada | EVIDENCIADO |
+| D21-L08 | 10 pruebas nuevas (labels, máx 5, payload HTTP real, moderación, conversationId, toggle) | LOCAL_TEST_PASS |
+
+**Estado:** D21-LANDLORD-END-TO-END-CODE-READY. RUNTIME_PENDING. SIN MERGE.

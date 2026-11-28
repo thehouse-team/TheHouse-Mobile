@@ -27,3 +27,9 @@ Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2
 - [x] D21-T22 — Permiso de notificaciones persistente y solicitud contextual única
 - [x] D21-T23 — JaCoCo, matrices, trazabilidad, memoria, gates y cierre sin merge
 - [x] D21-T24 — Hotfix de estabilidad: handler de coroutines, safeAuthCall y regresiones offline (sin merge)
+- [x] D21-T25 — Auditoría contractual dirigida del flujo arrendador y comunicación (matriz + estados + brechas)
+- [x] D21-T26 — Catálogo único de etiquetas de preguntas rápidas y detalle en español
+- [x] D21-T27 — Navegación a conversación con conversationId real desde solicitud
+- [x] D21-T28 — Errores de moderación 422/503 mapeados con mensaje Spanish y conservación del formulario
+- [x] D21-T29 — Recarga del dashboard tras activación y al volver (ON_RESUME); availableFrom opcional
+- [x] D21-T30 — Pruebas HTTP/ViewModel, gates y evidencia de la adenda (sin merge)

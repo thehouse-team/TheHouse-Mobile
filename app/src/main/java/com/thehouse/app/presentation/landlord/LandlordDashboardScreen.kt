@@ -18,12 +18,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thehouse.app.domain.model.DashboardSummary
@@ -59,6 +63,18 @@ fun LandlordDashboardDestination(
 ) {
     val dashboardVm: LandlordDashboardViewModel = viewModel(factory = factory)
     val dashboardState by dashboardVm.uiState.collectAsStateWithLifecycle()
+    val firstResume = remember { mutableStateOf(true) }
+
+    // Toda mutación del flujo (crear/editar edificio o cuarto, activar perfil) se
+    // refleja al volver al dashboard sin refresh manual ni reinicio de la app.
+    // El init del ViewModel ya cargó una vez, por eso se omite el primer ON_RESUME.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (firstResume.value) {
+            firstResume.value = false
+        } else {
+            dashboardVm.onEvent(LandlordDashboardEvent.Load)
+        }
+    }
 
     if (dashboardState.notLandlord) {
         val profileVm: LandlordProfileViewModel = viewModel(
@@ -68,7 +84,13 @@ fun LandlordDashboardDestination(
         val profileState by profileVm.uiState.collectAsStateWithLifecycle()
         LaunchedEffect(Unit) {
             profileVm.effects.collect { effect ->
-                if (effect is LandlordProfileEffect.Activated) onActivated()
+                if (effect is LandlordProfileEffect.Activated) {
+                    // La navegación con launchSingleTop al mismo destino es un no-op:
+                    // recargar el dashboard aquí garantiza que el perfil recién creado
+                    // se refleje sin reiniciar la app ni depender del Back stack.
+                    dashboardVm.onEvent(LandlordDashboardEvent.Load)
+                    onActivated()
+                }
             }
         }
         LandlordProfileScreen(

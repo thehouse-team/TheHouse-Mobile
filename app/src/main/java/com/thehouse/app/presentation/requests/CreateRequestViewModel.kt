@@ -26,7 +26,7 @@ sealed interface CreateRequestEvent : UiEvent {
 
 sealed interface CreateRequestEffect : UiEffect {
     data class Created(val request: RoomRequest) : CreateRequestEffect
-    data object OpenConversation : CreateRequestEffect
+    data class OpenConversation(val conversationId: String) : CreateRequestEffect
 }
 
 class CreateRequestViewModel(

@@ -50,7 +50,9 @@ fun RequestDetailDestination(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
-            if (effect is RequestDetailEffect.OpenConversation) Unit
+            when (effect) {
+                is RequestDetailEffect.OpenConversation -> onOpenConversation(effect.conversationId)
+            }
         }
     }
     RequestDetailScreen(
@@ -58,11 +60,7 @@ fun RequestDetailDestination(
         onBack = onBack,
         onRetry = { viewModel.onEvent(RequestDetailEvent.Load) },
         onCancel = { viewModel.onEvent(RequestDetailEvent.Cancel) },
-        onOpenConversation = { conversationId ->
-            state.request?.let { request ->
-                if (request.conversationId == conversationId) onOpenConversation(conversationId)
-            }
-        },
+        onOpenConversation = { viewModel.onEvent(RequestDetailEvent.OpenConversation) },
         onReportRoom = { roomId -> onReportRoom(roomId) },
         onReportBuilding = { buildingId -> onReportBuilding(buildingId) },
     )
@@ -74,7 +72,7 @@ fun RequestDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onCancel: () -> Unit,
-    onOpenConversation: (String) -> Unit,
+    onOpenConversation: () -> Unit,
     onReportRoom: (String) -> Unit,
     onReportBuilding: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -160,7 +158,7 @@ fun RequestDetailScreen(
                                 )
                                 request.quickQuestions.forEach { question ->
                                     Text(
-                                        text = "· ${question.api}",
+                                        text = "· ${QuickQuestionLabels.label(question)}",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -200,10 +198,10 @@ fun RequestDetailScreen(
                         }
                     }
 
-                    request.conversationId?.takeIf { it.isNotBlank() }?.let { conversationId ->
+                    request.conversationId?.takeIf { it.isNotBlank() }?.let {
                         TheHousePrimaryButton(
                             text = "Abrir conversación",
-                            onClick = { onOpenConversation(conversationId) },
+                            onClick = onOpenConversation,
                         )
                     }
 

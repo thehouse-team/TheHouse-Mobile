@@ -39,16 +39,6 @@ import com.thehouse.app.ui.theme.Heights
 import com.thehouse.app.ui.theme.IconSizes
 import com.thehouse.app.ui.theme.Spacing
 
-private val quickQuestionLabels = mapOf(
-    QuickQuestion.AVAILABLE_NOW to "¿Disponible ahora?",
-    QuickQuestion.SERVICES_INCLUDED to "¿Qué servicios están incluidos?",
-    QuickQuestion.DEPOSIT to "¿Cuánto es el depósito?",
-    QuickQuestion.MINIMUM_CONTRACT to "¿Cuál es el contrato mínimo?",
-    QuickQuestion.VISIT_POSSIBLE to "¿Se pueden hacer visitas?",
-    QuickQuestion.PETS_ALLOWED to "¿Se aceptan mascotas?",
-    QuickQuestion.ROOMMATES to "¿Hay roommates?",
-)
-
 /** Composer de solicitud: Room Detail → Solicitar → quickQuestions/message → enviar. */
 @Composable
 fun CreateRequestDestination(
@@ -56,6 +46,7 @@ fun CreateRequestDestination(
     factory: ViewModelProvider.Factory,
     onBack: () -> Unit,
     onCreated: (com.thehouse.app.domain.model.RoomRequest) -> Unit,
+    onOpenConversation: (String) -> Unit,
 ) {
     val viewModel: CreateRequestViewModel = viewModel(
         key = "create-request:$roomId",
@@ -66,7 +57,7 @@ fun CreateRequestDestination(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is CreateRequestEffect.Created -> onCreated(effect.request)
-                CreateRequestEffect.OpenConversation -> Unit
+                is CreateRequestEffect.OpenConversation -> onOpenConversation(effect.conversationId)
             }
         }
     }
@@ -114,7 +105,7 @@ fun CreateRequestScreen(
                         title = "Preguntas rápidas",
                         subtitle = "Toca las que te interesen",
                     )
-                    quickQuestionLabels.forEach { (question, label) ->
+                    QuickQuestionLabels.all().forEach { (question, label) ->
                         val checked = question in state.quickQuestions
                         Row(
                             modifier = Modifier

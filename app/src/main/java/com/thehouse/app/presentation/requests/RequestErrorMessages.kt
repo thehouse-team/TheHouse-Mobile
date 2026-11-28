@@ -24,6 +24,10 @@ object RequestErrorMessages {
             "El cuarto ya no está disponible."
         RequestErrorCode.LANDLORD_REQUIRED ->
             "Necesitas activar el modo arrendador."
+        RequestErrorCode.CONTENT_REJECTED ->
+            "El mensaje no cumple las reglas de la comunidad. Revísalo y vuelve a intentarlo."
+        RequestErrorCode.MODERATION_UNAVAILABLE ->
+            "No pudimos revisar el mensaje en este momento. Intenta de nuevo en unos segundos."
         RequestErrorCode.UNKNOWN -> fallback(domainError)
         null -> fallback(domainError)
     }

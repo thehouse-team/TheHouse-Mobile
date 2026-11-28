@@ -127,3 +127,20 @@ Fuente: instrucción humana FASE C §21. Criterio de estado: `IMPLEMENTED` (cód
 | targetId inválido → bandeja sin HTTP | TESTED | `D21Nv20CompatibilityTest` |
 | Push e in-app centralizados | TESTED | `PushNavigationIntentParser`, `NotificationsScreen` |
 | Despliegue Backend de los 6 tipos | RUNTIME_PENDING | `D21_NV20_PR103_REPORT.md` |
+
+### Adenda D21 — Cierre integral del flujo arrendador (2026-11-27)
+
+| Requisito | Estado | Evidencia |
+|---|---|---|
+| Activación de arrendador sin duplicados y con estado persistente | IMPLEMENTED | `LandlordProfileViewModel` guard `isSaving`; `POST /landlord/profile` 409 `landlord_exists`; recarga del dashboard en `LandlordDashboardDestination` tras `Activated` |
+| Listado/creación/edición de edificios y habitaciones con reflexión inmediata | IMPLEMENTED | `LifecycleEventEffect(ON_RESUME)` en dashboard; `BuildingFormViewModel`/`RoomFormViewModel` con `version`; `BuildingDetailViewModel` recarga tras mutaciones |
+| Preguntas rápidas (7 códigos, máx 5, ≤500 chars) | TESTED | `D21LandlordFlowClosureTest` (labels, toggle, máx 5, payload HTTP real vía MockWebServer) |
+| conversationId real y acceso a conversación | TESTED | `RequestDetailViewModel` emite `RequestDetailEffect.OpenConversation(conversationId)`; `D21LandlordFlowClosureTest` |
+| Moderación 422/503 en solicitudes | TESTED | `RequestErrorCode.CONTENT_REJECTED` / `MODERATION_UNAVAILABLE`; `RequestsRepositoryImpl.errorFor`; prueba HTTP 422/503 |
+| Estados de publicación honestos (revisión ≠ publicado) | IMPLEMENTED | `LandlordErrorMessages.statusLabel` (`draft`, `in_review`, `verified`, `ready`, `available`, `paused`, `rented`, `rejected`, `suspended`); sin acciones staff |
+| Solicitudes recibidas, aceptación/rechazo y conversaciones bilaterales | IMPLEMENTED (preexistente preservado) | `LandlordRequestsViewModel.loadQuiet()`; `ConversationsRepositoryImpl` ETag/clientMessageId |
+| Visitas y convenios (solo operaciones soportadas) | IMPLEMENTED (preexistente preservado) | No se inventó `visits/reject`; `/admin` fuera de alcance Mobile |
+| Congelación visual | PRESERVED | Únicos cambios funcionales en `presentation/requests`, `presentation/landlord`, `domain/error`, `data/requests`, `MainActivity` (solo cableado de navegación) |
+| Gates adenda | TESTED | 726/0/0, lint 0 errores, assemble + androidTest SUCCESS, JaCoCo 33.41 % líneas / 31.75 % ramas, `git diff --check` exit 0 |
+
+Detalle completo: `docs/sdd/reports/D21_LANDLORD_END_TO_END_AUDIT.md`. RUNTIME_PENDING; PR #37 OPEN, NO MERGEAR.

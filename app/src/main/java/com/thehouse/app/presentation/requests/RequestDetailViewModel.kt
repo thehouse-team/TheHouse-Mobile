@@ -20,10 +20,11 @@ data class RequestDetailUiState(
 sealed interface RequestDetailEvent : UiEvent {
     data object Load : RequestDetailEvent
     data object Cancel : RequestDetailEvent
+    data object OpenConversation : RequestDetailEvent
 }
 
 sealed interface RequestDetailEffect : UiEffect {
-    data object OpenConversation : RequestDetailEffect
+    data class OpenConversation(val conversationId: String) : RequestDetailEffect
 }
 
 class RequestDetailViewModel(
@@ -42,6 +43,11 @@ class RequestDetailViewModel(
         when (event) {
             RequestDetailEvent.Load -> load()
             RequestDetailEvent.Cancel -> cancel()
+            RequestDetailEvent.OpenConversation -> {
+                uiState.value.request?.conversationId?.takeIf { it.isNotBlank() }?.let { id ->
+                    sendEffect(RequestDetailEffect.OpenConversation(id))
+                }
+            }
         }
     }
 

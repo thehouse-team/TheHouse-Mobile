@@ -12,6 +12,10 @@ enum class RequestErrorCode {
     REQUEST_STATE,
     ROOM_UNAVAILABLE,
     LANDLORD_REQUIRED,
+    /** Backend 422: el texto/mensaje fue rechazado por moderación. */
+    CONTENT_REJECTED,
+    /** Backend 503: moderación no disponible; Retry-After presente. */
+    MODERATION_UNAVAILABLE,
     UNKNOWN;
 
     companion object {
@@ -23,6 +27,8 @@ enum class RequestErrorCode {
             "request_state" -> REQUEST_STATE
             "room_unavailable" -> ROOM_UNAVAILABLE
             "landlord_required" -> LANDLORD_REQUIRED
+            "content_rejected" -> CONTENT_REJECTED
+            "moderation_unavailable" -> MODERATION_UNAVAILABLE
             else -> UNKNOWN
         }
     }

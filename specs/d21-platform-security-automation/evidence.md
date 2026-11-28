@@ -315,3 +315,31 @@ base `d11c3f18fe28ade4510a95bdb3bcc2cbbab8c6f2`. Congelaci�n visual total; sin m
 - DNS emulador: 10.0.2.3 en NetworkAgent pero resolución fallida también para dominios Google → entorno, no Mobile. Sin IP/DNS/TLS/timeouts modificados. WiFi restaurado.
 - Gates: 716/0/0, lint, assemble, compile/assemble androidTest, jacoco, diff-check — SUCCESS.
 - Emulador: app viva con DNS roto, reintento manual, navegación offline y arranque sin WiFi; sin crash. connectedDebugAndroidTest sigue PENDING.
+
+---
+
+## ADENDA D21-CIERRE-ARRENDADOR — 2026-11-27
+
+- Base: `6ab949e75018aa269b426ce9dc119e126af71e5c`; PR #37 verificado OPEN/MERGEABLE; SIN MERGE.
+- Auditoría contractual dirigida (solo lectura Backend): `docs/sdd/reports/D21_LANDLORD_END_TO_END_AUDIT.md`.
+- Contratos confirmados: 7 códigos de preguntas rápidas, máx 5, mensaje ≤500, `conversationId` no nullable, POST 201, 422 `content_rejected`, 503 `moderation_unavailable`, aprobación staff solo en `/admin` (fuera de alcance Mobile), visita `rejected` inexistente en v1.3.
+- Causas raíz corregidas (evidencia en código):
+  1. `RequestDetailEffect.OpenConversation` era `Unit` → ahora emite el `conversationId` real del Backend y MainActivity navega a `ConversationRoute`.
+  2. `RequestDetailScreen` mostraba `question.api` (`available_now`) → catálogo único `QuickQuestionLabels` compartido con el composer.
+  3. `RequestErrorCode.fromApi` no reconocía `content_rejected`/`moderation_unavailable` → mensaje genérico; ahora Spanish y con `DomainError.ValidationError`/`ServiceUnavailable`, formulario conservado.
+  4. `LandlordProfileEffect.Activated` hacía `launchSingleTop` al mismo destino (no-op) → recarga explícita del dashboard.
+  5. Dashboard sin refresco al volver de mutaciones → `LifecycleEventEffect(ON_RESUME)` con salto del primer evento.
+  6. `availableFrom` se exigía en UI aunque el contrato lo declara `string?` → ahora opcional con fecha inválida rechazada.
+- Gates reales: `clean compileDebugKotlin` SUCCESS; `testDebugUnitTest` **726/0/0** (716 baseline + 10 nuevos `D21LandlordFlowClosureTest`); `lintDebug` 0 errores; `assembleDebug` SUCCESS; `compileDebugAndroidTestKotlin` + `assembleDebugAndroidTest` SUCCESS; `jacocoDebugTestReport` SUCCESS; `git diff --check` exit 0.
+- JaCoCo real: 33.41 % líneas (7339/21969), 31.75 % ramas (2838/8939), sin exclusiones artificiales.
+- Sin secretos, sin servicios nuevos (COST-001 $0), sin datos productivos mutados, sin Backend/GenAI/ML/ONNX/infra, sin cambios visuales fuera del flujo arrendador.
+- RUNTIME_PENDING (sin dispositivo/emulador con conectividad). NO MERGEAR.
+
+### Runtime controlado (emulador, 2026-11-28)
+
+- `adb devices`: `emulator-5554 device` (SDK en `C:\Users\skinn\AppData\Local\Android\Sdk`).
+- Backend real `ca-thehouse-u2.grayisland-cb722b5f.eastus2.azurecontainerapps.io` (9.169.177.51) responde ping; DNS del host productivo resuelve correctamente en el emulador (a diferencia del host genérico `api.thehouse.mx` usado en el hotfix anterior).
+- `adb install -r app-debug.apk` SUCCESS; arranque tras `am force-stop` + monkey launcher: sin entradas en `logcat -b crash` y sin `FATAL EXCEPTION`.
+- `uiautomator dump`: Home invitado renderiza «Hola, invitado», «Publicar mi renta» antes de «Recomendados para ti», catálogo real y bottom bar — baseline visual preservado.
+- Tap controlado sobre «Publicar mi renta» (bounds `[53,1477][1027,1603]`) → pantalla «Inicia sesión en TheHouse». Guard de invitado confirmado, sin mutaciones productivas.
+- NO se ejecutó flujo autenticado de arrendador ni se crearon edificios/cuartos/solicitudes: sin credenciales y prohibido crear datos productivos sin autorización. `RUNTIME_AUTHENTICATED=PENDING`.

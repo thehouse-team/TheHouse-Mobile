@@ -1130,6 +1130,11 @@ fun TheHouseRoot(factory: U2ViewModelFactory, modifier: Modifier = Modifier) {
                                     launchSingleTop = true
                                 }
                             },
+                            onOpenConversation = { conversationId ->
+                                navController.navigate(ConversationRoute(conversationId).route) {
+                                    launchSingleTop = true
+                                }
+                            },
                         )
                     }
                 }
