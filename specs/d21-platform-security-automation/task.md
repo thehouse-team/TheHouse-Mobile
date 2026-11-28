@@ -33,3 +33,8 @@ Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2
 - [x] D21-T28 — Errores de moderación 422/503 mapeados con mensaje Spanish y conservación del formulario
 - [x] D21-T29 — Recarga del dashboard tras activación y al volver (ON_RESUME); availableFrom opcional
 - [x] D21-T30 — Pruebas HTTP/ViewModel, gates y evidencia de la adenda (sin merge)
+- [x] D21-T31 — Auditoría del botón deshabilitado y unificación de validaciones del formulario de edificio
+- [x] D21-T32 — submitAttempted, pendingFields, resumen compacto, scroll al primer campo y logging DEBUG seguro
+- [x] D21-T33 — Preselección/selección de universidad sin borrado indebido
+- [x] D21-T34 — 409 de solicitudes: REQUEST_IN_PROGRESS + recuperación de conversationId real
+- [x] D21-T35 — Pruebas (12 nuevas), gates y evidencia de la adenda (sin merge)

@@ -350,3 +350,18 @@ base `d11c3f18fe28ade4510a95bdb3bcc2cbbab8c6f2`. Congelaci�n visual total; sin m
 - Push: `6ab949e..ffeb61e feature/platform-security-automation -> feature/platform-security-automation` SUCCESS.
 - PR #37: OPEN / MERGEABLE (verificado con `gh pr view 37` tras el push). NO MERGEADO.
 - CI remoto: dos runs para `ffeb61e` (`46110222161`, `46110225627`) en estado `in_progress` al momento del reporte; run anterior `46089420527` sobre `6ab949e` = SUCCESS. `REMOTE_CI=PENDING` (no se afirma verde).
+
+---
+
+## ADENDA HOTFIX — Formulario Nuevo edificio y validaciones (2026-11-28)
+
+- Base `6a092b3`, MISMO PR #37 (OPEN/MERGEABLE), sin merge, sin Backend/GenAI/ML/ONNX/infra.
+- Causa raíz demostrada por código: `BuildingFormScreen.kt:342` deshabilitaba el botón con `enabled = !isLoading && isValid`, mientras `submit()` era el único lugar que activaba `submitAttempted`. Resultado: formulario inválido ⇒ botón no pulsable ⇒ nunca se mostraban todas las validaciones. No se afirma qué campo concreto bloqueó al usuario (sin evidencia de su estado real).
+- Contrato Backend verificado (`BuildingService.CreateAsync`, `Address`, `Location`, `ListingRules.Text`): name 2..120, street 1..120, number 1..20, neighborhood 1..120, city 1..80, state 1..60, postalCode 5 dígitos, lat 14..33, lng -118.5..-86, nearestUniversityId presente, rules <=2000.
+- Fix: fuente única `BuildingFormValidation.errors()`; `isValid` derivado de esa fuente; `submit()` siempre activa `submitAttempted`, calcula `pendingFields`/`firstInvalidField`, registra DEBUG seguro y NO llama HTTP si hay errores; botón habilitado cuando `!isLoading && !isSaving`; resumen compacto y scroll al primer campo; number/neighborhood ahora visibles con error.
+- Universidad: `load()` no sobrescribe selección válida/manual; `performNearbySearch()` ya no borra `universityId` con resultados vacíos; `isNearbyResult` solo con items no vacíos.
+- 409 `POST /rooms/{id}/requests`: códigos reales `active_request_exists`, `request_in_progress`, `active_requests_limit` (el Backend NO devuelve conversationId en el 409), más `active_requests_limit`. Se agregó `REQUEST_IN_PROGRESS` con mensaje Spanish; `active_request_exists` recupera el conversationId REAL vía `GET /users/me/requests` y ofrece «Abrir conversación existente». No se inventa ningún ID.
+- Gates: `compileDebugKotlin`, `testDebugUnitTest` **738/0/0** (726 baseline + 12), `lintDebug` 0 errores, `assembleDebug`, `compileDebugAndroidTestKotlin`, `assembleDebugAndroidTest`, `jacocoDebugTestReport`, `git diff --check` exit 0.
+- JaCoCo: 33.79 % líneas (7476/22123), 31.77 % ramas (2865/9017), sin exclusiones.
+- Runtime emulador `emulator-5554` (sesión autenticada preexistente, SIN mutaciones productivas): APK instalado, arranque sin crash; Home → «Publicar mi renta» → «Mis alojamientos» → «Crear edificio» → formulario. Pulsar Submit con campos vacíos mostró TODOS los errores (incluidos Número y Colonia), scroll al inicio del formulario y **ningún POST** a `/landlord/buildings`. Log DEBUG real: `BuildingFormFlow: validation_failed fields=name,street,number,neighborhood,city,state,postalCode,lat,lng` y `university_preselected source=catalog`. Sin datos personales en logs.
+- Nota de prueba: `BuildingFormViewModelTest.submit sends numeric lat and lng...` se reforzó (no se debilitó) añadiendo Número y Colonia para representar un formulario válido según el contrato Backend; la aserción de conversión numérica original se mantiene intacta.

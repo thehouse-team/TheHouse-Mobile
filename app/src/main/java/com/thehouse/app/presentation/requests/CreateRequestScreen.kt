@@ -33,6 +33,7 @@ import com.thehouse.app.domain.model.QuickQuestion
 import com.thehouse.app.presentation.components.SectionHeader
 import com.thehouse.app.presentation.components.TheHouseCard
 import com.thehouse.app.presentation.components.TheHousePrimaryButton
+import com.thehouse.app.presentation.components.TheHouseSecondaryButton
 import com.thehouse.app.presentation.components.TheHouseScreen
 import com.thehouse.app.presentation.components.TheHouseTextField
 import com.thehouse.app.ui.theme.Heights
@@ -67,6 +68,9 @@ fun CreateRequestDestination(
         onToggleQuestion = { viewModel.onEvent(CreateRequestEvent.QuickQuestionToggled(it)) },
         onMessageChanged = { viewModel.onEvent(CreateRequestEvent.MessageChanged(it)) },
         onSend = { viewModel.onEvent(CreateRequestEvent.Send) },
+        onOpenExistingConversation = {
+            viewModel.onEvent(CreateRequestEvent.OpenExistingConversation)
+        },
     )
 }
 
@@ -77,6 +81,7 @@ fun CreateRequestScreen(
     onToggleQuestion: (QuickQuestion) -> Unit,
     onMessageChanged: (String) -> Unit,
     onSend: () -> Unit,
+    onOpenExistingConversation: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     TheHouseScreen(
@@ -171,6 +176,13 @@ fun CreateRequestScreen(
                         )
                     }
                 }
+            }
+
+            state.existingConversationId?.takeIf { it.isNotBlank() }?.let {
+                TheHouseSecondaryButton(
+                    text = "Abrir conversación existente",
+                    onClick = onOpenExistingConversation,
+                )
             }
 
             TheHousePrimaryButton(

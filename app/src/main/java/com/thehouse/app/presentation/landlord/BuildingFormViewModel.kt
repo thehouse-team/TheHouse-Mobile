@@ -25,6 +25,117 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
+/**
+ * Única fuente de validación del formulario de edificio.
+ *
+ * Cada campo expone su propio error y [pendingFields] es la lista ordenada de
+ * campos pendientes. `isValid` se deriva de esa lista: no hay condiciones
+ * duplicadas entre el estado y los mensajes visibles.
+ *
+ * Reglas espejo del Backend (`BuildingService.CreateAsync` / `Address` /
+ * `Location`): name 2..120 tras trim; street 1..120; number 1..20;
+ * neighborhood 1..120; city 1..80; state 1..60; postalCode 5 dígitos tras trim;
+ * lat 14..33; lng -118.5..-86; nearestUniversityId presente; rules <= 2000.
+ */
+object BuildingFormValidation {
+
+    const val FIELD_NAME = "name"
+    const val FIELD_STREET = "street"
+    const val FIELD_NUMBER = "number"
+    const val FIELD_NEIGHBORHOOD = "neighborhood"
+    const val FIELD_CITY = "city"
+    const val FIELD_STATE = "state"
+    const val FIELD_POSTAL_CODE = "postalCode"
+    const val FIELD_LAT = "lat"
+    const val FIELD_LNG = "lng"
+    const val FIELD_UNIVERSITY = "university"
+    const val FIELD_RULES = "rules"
+
+    /** Nombres visibles en español para el resumen compacto. */
+    private val labels = mapOf(
+        FIELD_NAME to "Nombre",
+        FIELD_STREET to "Calle",
+        FIELD_NUMBER to "Número",
+        FIELD_NEIGHBORHOOD to "Colonia",
+        FIELD_CITY to "Ciudad",
+        FIELD_STATE to "Estado",
+        FIELD_POSTAL_CODE to "C.P.",
+        FIELD_LAT to "Latitud",
+        FIELD_LNG to "Longitud",
+        FIELD_UNIVERSITY to "Universidad cercana",
+        FIELD_RULES to "Reglas",
+    )
+
+    fun label(field: String): String = labels[field] ?: field
+
+    fun errors(
+        name: String,
+        street: String,
+        number: String,
+        neighborhood: String,
+        city: String,
+        state: String,
+        postalCode: String,
+        lat: String,
+        lng: String,
+        universityId: String,
+        rules: String,
+    ): Map<String, String> = buildMap {
+        fun check(field: String, condition: Boolean, message: String) {
+            if (!condition) put(field, message)
+        }
+        val trimmedName = name.trim()
+        check(
+            FIELD_NAME,
+            trimmedName.length in 2..120,
+            "Nombre de 2 a 120 caracteres.",
+        )
+        check(
+            FIELD_STREET,
+            street.trim().length in 1..120,
+            "La calle es obligatoria (máx. 120 caracteres).",
+        )
+        check(
+            FIELD_NUMBER,
+            number.trim().length in 1..20,
+            "El número es obligatorio (máx. 20 caracteres).",
+        )
+        check(
+            FIELD_NEIGHBORHOOD,
+            neighborhood.trim().length in 1..120,
+            "La colonia es obligatoria (máx. 120 caracteres).",
+        )
+        check(
+            FIELD_CITY,
+            city.trim().length in 1..80,
+            "La ciudad es obligatoria (máx. 80 caracteres).",
+        )
+        check(
+            FIELD_STATE,
+            state.trim().length in 1..60,
+            "El estado es obligatorio (máx. 60 caracteres).",
+        )
+        check(
+            FIELD_POSTAL_CODE,
+            postalCode.trim().matches(Regex("^\\d{5}$")),
+            "C.P. de 5 dígitos.",
+        )
+        check(
+            FIELD_LAT,
+            CoordinateParser.latitudeOrNull(lat) != null,
+            if (lat.isBlank()) "Escribe la latitud (14 a 33)." else "Latitud inválida. Usa números entre 14 y 33.",
+        )
+        check(
+            FIELD_LNG,
+            CoordinateParser.longitudeOrNull(lng) != null,
+            if (lng.isBlank()) "Escribe la longitud (-118.5 a -86)."
+            else "Longitud inválida. Usa números entre -118.5 y -86.",
+        )
+        check(FIELD_UNIVERSITY, universityId.isNotBlank(), "Selecciona la universidad más cercana.")
+        check(FIELD_RULES, rules.length <= 2000, "Las reglas no pueden superar 2000 caracteres.")
+    }
+}
+
 /** Formulario de edificio: crear (draft) o editar (PATCH parcial con version). */
 data class BuildingFormUiState(
     val isEdit: Boolean = false,
@@ -63,34 +174,49 @@ data class BuildingFormUiState(
     val versionConflict: Boolean = false,
     val errorCode: LandlordErrorCode? = null,
     val errorMessage: String? = null,
+    /** Campos pendientes tras pulsar Submit; se muestran como resumen compacto. */
+    val pendingFields: List<String> = emptyList(),
+    /** Primer campo inválido, para llevar el foco cuando sea viable. */
+    val firstInvalidField: String? = null,
 ) {
-    val nameError: String? = if (name.length in 2..120) null else "Nombre de 2 a 120 caracteres."
-    val streetError: String? = if (street.isNotBlank()) null else "La calle es obligatoria."
-    val cityError: String? = if (city.isNotBlank()) null else "La ciudad es obligatoria."
-    val stateError: String? = if (state.isNotBlank()) null else "El estado es obligatorio."
-    val postalCodeError: String? = if (postalCode.matches(Regex("^\\d{5}$"))) null else "C.P. de 5 dígitos."
+    /** Fuente única: todos los errores de campo salen del mismo mapa ordenado. */
+    private val fieldErrors: Map<String, String> by lazy {
+        BuildingFormValidation.errors(
+            name = name,
+            street = street,
+            number = number,
+            neighborhood = neighborhood,
+            city = city,
+            state = state,
+            postalCode = postalCode,
+            lat = lat,
+            lng = lng,
+            universityId = universityId,
+            rules = rules,
+        )
+    }
+
+    val nameError: String? get() = fieldErrors[BuildingFormValidation.FIELD_NAME]
+    val streetError: String? get() = fieldErrors[BuildingFormValidation.FIELD_STREET]
+    val numberError: String? get() = fieldErrors[BuildingFormValidation.FIELD_NUMBER]
+    val neighborhoodError: String? get() = fieldErrors[BuildingFormValidation.FIELD_NEIGHBORHOOD]
+    val cityError: String? get() = fieldErrors[BuildingFormValidation.FIELD_CITY]
+    val stateError: String? get() = fieldErrors[BuildingFormValidation.FIELD_STATE]
+    val postalCodeError: String? get() = fieldErrors[BuildingFormValidation.FIELD_POSTAL_CODE]
+    val rulesError: String? get() = fieldErrors[BuildingFormValidation.FIELD_RULES]
+    val universityError: String? get() = fieldErrors[BuildingFormValidation.FIELD_UNIVERSITY]
 
     /** Solo se muestra error después de interacción con el campo, pérdida de foco o envío. */
     val showLatError: Boolean get() = latBlurred || submitAttempted
     val showLngError: Boolean get() = lngBlurred || submitAttempted
-    val latError: String? = when {
-        lat.isBlank() -> if (showLatError) "Escribe la latitud (14 a 33)." else null
-        CoordinateParser.latitudeOrNull(lat) == null ->
-            if (showLatError) "Latitud inválida. Usa números entre 14 y 33." else null
-        else -> null
-    }
-    val lngError: String? = when {
-        lng.isBlank() -> if (showLngError) "Escribe la longitud (-118.5 a -86)." else null
-        CoordinateParser.longitudeOrNull(lng) == null ->
-            if (showLngError) "Longitud inválida. Usa números entre -118.5 y -86." else null
-        else -> null
-    }
-    val universityError: String? = if (universityId.isNotBlank()) null else "Selecciona la universidad más cercana."
-    val isValid: Boolean = name.length in 2..120 && street.isNotBlank() && city.isNotBlank() &&
-        state.isNotBlank() && postalCode.matches(Regex("^\\d{5}$")) &&
-        CoordinateParser.latitudeOrNull(lat) != null &&
-        CoordinateParser.longitudeOrNull(lng) != null &&
-        universityId.isNotBlank()
+    val latError: String? get() = fieldErrors[BuildingFormValidation.FIELD_LAT]?.takeIf { showLatError }
+    val lngError: String? get() = fieldErrors[BuildingFormValidation.FIELD_LNG]?.takeIf { showLngError }
+    val showNumberError: Boolean get() = submitAttempted
+    val showNeighborhoodError: Boolean get() = submitAttempted
+
+    /** Derivado de la misma fuente que los mensajes: sin condiciones duplicadas. */
+    val validationErrors: Map<String, String> get() = fieldErrors
+    val isValid: Boolean get() = fieldErrors.isEmpty()
 }
 
 sealed interface BuildingFormEvent : UiEvent {
@@ -207,13 +333,23 @@ class BuildingFormViewModel(
         launch {
             getUniversities().fold(
                 onSuccess = { universitiesPage ->
+                    val catalogIds = universitiesPage.items.map { it.id }.toSet()
                     updateState { current ->
+                        // Solo preseleccionar si no hay selección manual/válida. HTTP 200
+                        // no garantiza que el estado ya tuviera un ID correcto.
+                        val existing = current.universityId
+                        val resolved = when {
+                            existing.isNotBlank() && existing in catalogIds -> existing
+                            existing.isNotBlank() && manualUniversitySelected -> existing
+                            else -> universitiesPage.items.firstOrNull()?.id.orEmpty()
+                        }
                         current.copy(
                             universities = universitiesPage.items,
-                            universityId = current.universityId.ifBlank {
-                                universitiesPage.items.firstOrNull()?.id.orEmpty()
-                            },
+                            universityId = resolved,
                         )
+                    }
+                    if (uiState.value.universityId.isNotBlank()) {
+                        BuildingFormFlowLogger.universityPreselected("catalog")
                     }
                 },
                 onFailure = { throwable -> handleFailure(throwable) },
@@ -348,13 +484,24 @@ class BuildingFormViewModel(
                         CoordinateParser.longitudeOrNull(current.lng) == lng
                     if (!stillValid) return@updateState current.copy(nearbySearching = false)
                     val currentId = current.universityId
-                    val keepManual = manualUniversitySelected && items.any { it.id == currentId }
+                    val keepManual = manualUniversitySelected && currentId.isNotBlank() &&
+                        items.any { it.id == currentId }
+                    // Una búsqueda con resultados vacíos NO debe borrar una selección
+                    // válida: antes `firstOrNull()?.id.orEmpty()` la dejaba en blanco.
+                    val resolved = when {
+                        keepManual -> currentId
+                        currentId.isNotBlank() && items.isEmpty() -> currentId
+                        else -> items.firstOrNull()?.id ?: currentId
+                    }
+                    if (resolved == currentId && currentId.isNotBlank()) {
+                        BuildingFormFlowLogger.universitySelectionPreserved()
+                    }
                     current.copy(
                         nearbySearching = false,
                         nearbyError = null,
                         nearbyUniversities = items,
-                        isNearbyResult = true,
-                        universityId = if (keepManual) currentId else items.firstOrNull()?.id.orEmpty(),
+                        isNearbyResult = items.isNotEmpty(),
+                        universityId = resolved,
                     )
                 }
             },
@@ -371,10 +518,31 @@ class BuildingFormViewModel(
 
     /** PATCH parcial con version: solo campos editables; el Backend es autoridad. */
     private fun submit() {
+        if (uiState.value.isSaving || uiState.value.isLoading) return
         updateState { it.copy(submitAttempted = true) }
         val current = uiState.value
-        if (current.isSaving || !current.isValid || current.isLoading) return
-        updateState { it.copy(isSaving = true, errorCode = null, errorMessage = null, versionConflict = false) }
+        if (!current.isValid) {
+            val pending = current.validationErrors.keys.toList()
+            updateState {
+                it.copy(
+                    pendingFields = pending,
+                    firstInvalidField = pending.firstOrNull(),
+                )
+            }
+            // Diagnóstico seguro: solo nombres de campos, nunca valores del formulario.
+            BuildingFormFlowLogger.validationFailed(pending)
+            return
+        }
+        updateState {
+            it.copy(
+                isSaving = true,
+                errorCode = null,
+                errorMessage = null,
+                versionConflict = false,
+                pendingFields = emptyList(),
+                firstInvalidField = null,
+            )
+        }
         launch {
             val latValue = CoordinateParser.latitudeOrNull(current.lat)!!
             val lngValue = CoordinateParser.longitudeOrNull(current.lng)!!

@@ -213,6 +213,9 @@ class BuildingFormViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         vm.onEvent(BuildingFormEvent.NameChanged("Edificio Centro"))
         vm.onEvent(BuildingFormEvent.StreetChanged("Av Juárez"))
+        // Número y colonia son obligatorios en el contrato Backend (Address).
+        vm.onEvent(BuildingFormEvent.NumberChanged("12"))
+        vm.onEvent(BuildingFormEvent.NeighborhoodChanged("Centro"))
         vm.onEvent(BuildingFormEvent.CityChanged("Pachuca"))
         vm.onEvent(BuildingFormEvent.StateChanged("Hidalgo"))
         vm.onEvent(BuildingFormEvent.PostalCodeChanged("43600"))

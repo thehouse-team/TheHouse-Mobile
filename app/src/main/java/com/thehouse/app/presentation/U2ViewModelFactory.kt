@@ -91,6 +91,7 @@ class U2ViewModelFactory(
             com.thehouse.app.presentation.requests.CreateRequestViewModel(
                 roomId = roomId,
                 createRequest = container.createRequest,
+                getUserRequests = container.getUserRequests,
             )
         }
     }

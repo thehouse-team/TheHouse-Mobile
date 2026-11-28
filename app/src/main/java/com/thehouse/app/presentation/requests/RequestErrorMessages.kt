@@ -12,6 +12,8 @@ object RequestErrorMessages {
     fun map(code: RequestErrorCode?, domainError: DomainError? = null): String = when (code) {
         RequestErrorCode.ACTIVE_REQUEST_EXISTS ->
             "Ya tienes una solicitud activa para este cuarto."
+        RequestErrorCode.REQUEST_IN_PROGRESS ->
+            "Hay una solicitud en proceso. Espera un momento e intenta de nuevo."
         RequestErrorCode.ACTIVE_REQUESTS_LIMIT ->
             "Llegaste al límite de solicitudes activas."
         RequestErrorCode.PARTICIPANT_SUSPENDED ->

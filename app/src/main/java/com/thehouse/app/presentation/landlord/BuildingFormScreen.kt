@@ -84,6 +84,13 @@ fun BuildingFormScreen(
         )
     }
 
+    val scrollState = rememberScrollState()
+    // Al pulsar Submit con errores, volver al inicio del formulario para que el
+    // primer campo pendiente sea visible (los campos están ordenados de arriba abajo).
+    LaunchedEffect(state.pendingFields) {
+        if (state.pendingFields.isNotEmpty()) scrollState.animateScrollTo(0)
+    }
+
     TheHouseScreen(
         title = if (state.isEdit) "Editar edificio" else "Nuevo edificio",
         subtitle = "Datos, ubicación y servicios",
@@ -94,7 +101,7 @@ fun BuildingFormScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
@@ -160,6 +167,8 @@ fun BuildingFormScreen(
                                 value = state.number,
                                 onValueChange = { onEvent(BuildingFormEvent.NumberChanged(it)) },
                                 label = "Número",
+                                isError = state.showNumberError && state.numberError != null,
+                                errorMessage = if (state.showNumberError) state.numberError else null,
                                 modifier = Modifier.weight(1f),
                             )
                             TheHouseTextField(
@@ -168,6 +177,8 @@ fun BuildingFormScreen(
                                     onEvent(BuildingFormEvent.NeighborhoodChanged(it))
                                 },
                                 label = "Colonia",
+                                isError = state.showNeighborhoodError && state.neighborhoodError != null,
+                                errorMessage = if (state.showNeighborhoodError) state.neighborhoodError else null,
                                 modifier = Modifier.weight(2f),
                             )
                         }
@@ -273,7 +284,7 @@ fun BuildingFormScreen(
                                 label = { Text(label) },
                             )
                         }
-                        state.universityError?.let {
+                        state.universityError?.takeIf { state.submitAttempted }?.let {
                             InlineMessage(text = it, tone = com.thehouse.app.presentation.components.StatusTone.Warning)
                         }
                     }
@@ -323,6 +334,8 @@ fun BuildingFormScreen(
                             onValueChange = { onEvent(BuildingFormEvent.RulesChanged(it)) },
                             label = "Reglas (opcional, máx. 2000)",
                             supportingText = "${state.rules.length}/2000",
+                            isError = state.rulesError != null,
+                            errorMessage = state.rulesError,
                             singleLine = false,
                             minLines = 4,
                         )
@@ -332,6 +345,14 @@ fun BuildingFormScreen(
                         InlineMessage(text = message)
                     }
 
+                    // Resumen compacto: solo se muestra tras pulsar Submit con errores.
+                    if (state.submitAttempted && state.pendingFields.isNotEmpty()) {
+                        val resumen = state.pendingFields.joinToString(" · ") {
+                            BuildingFormValidation.label(it)
+                        }
+                        InlineMessage(text = "Revisa: $resumen")
+                    }
+
                     TheHousePrimaryButton(
                         text = when {
                             state.isSaving -> "Guardando…"
@@ -339,7 +360,9 @@ fun BuildingFormScreen(
                             else -> "Crear edificio"
                         },
                         onClick = { onEvent(BuildingFormEvent.Submit) },
-                        enabled = !state.isLoading && state.isValid,
+                        // El botón debe ser pulsable para poder activar submitAttempted
+                        // y mostrar TODAS las validaciones pendientes.
+                        enabled = !state.isLoading && !state.isSaving,
                         loading = state.isSaving,
                     )
                 }

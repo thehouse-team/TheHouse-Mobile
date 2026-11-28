@@ -6,6 +6,8 @@ package com.thehouse.app.domain.error
  */
 enum class RequestErrorCode {
     ACTIVE_REQUEST_EXISTS,
+    /** Backend 409: la operación de solicitud está en progreso (lock Redis). */
+    REQUEST_IN_PROGRESS,
     ACTIVE_REQUESTS_LIMIT,
     PARTICIPANT_SUSPENDED,
     OWN_ROOM,
@@ -21,6 +23,7 @@ enum class RequestErrorCode {
     companion object {
         fun fromApi(value: String?): RequestErrorCode = when (value) {
             "active_request_exists" -> ACTIVE_REQUEST_EXISTS
+            "request_in_progress" -> REQUEST_IN_PROGRESS
             "active_requests_limit" -> ACTIVE_REQUESTS_LIMIT
             "participant_suspended" -> PARTICIPANT_SUSPENDED
             "own_room" -> OWN_ROOM
