@@ -45,8 +45,12 @@ abstract class BaseViewModel<State, Event : UiEvent, Effect : UiEffect>(
         _effects.trySend(effect)
     }
 
+    /**
+     * D21 hotfix: todo launch de UI usa un CoroutineExceptionHandler que contiene
+     * IOException de red y registra defectos inesperados sin derribar el proceso.
+     */
     protected fun launch(block: suspend CoroutineScope.() -> Unit): Job =
-        viewModelScope.launch(block = block)
+        viewModelScope.launch(context = SafeCoroutineLauncher.handler, block = block)
 
     abstract fun onEvent(event: Event)
 

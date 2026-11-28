@@ -125,12 +125,20 @@ class DeviceSyncCoordinator(
                     val parts = key.split("|", limit = 3)
                     if (parts.size == 3) {
                         appScope.launch {
-                            repository.register(
-                                installationId = InstallationId(parts[1]),
-                                fcmToken = token,
-                                appVersion = null,
-                                locale = "es-MX",
-                            )
+                            val outcome = try {
+                                repository.register(
+                                    installationId = InstallationId(parts[1]),
+                                    fcmToken = token,
+                                    appVersion = null,
+                                    locale = "es-MX",
+                                )
+                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                return@launch
+                            } catch (network: java.io.IOException) {
+                                return@launch // reintento en la próxima transición offline→online
+                            }
+                            // Result se conserva para no afirmar registro remoto no confirmado.
+                            outcome.onFailure { pendingRetry[key] = token }
                         }
                     }
                 }

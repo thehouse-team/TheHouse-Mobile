@@ -281,7 +281,15 @@ class HomeViewModel(
         }
         updateState { it.copy(universities = CatalogLoadState.Loading) }
         launch {
-            val result = useCase().map { page -> page.items }
+            val result = try {
+                useCase().map { page -> page.items }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                return@launch
+            } catch (network: java.io.IOException) {
+                Result.failure(com.thehouse.app.domain.error.DomainException(
+                    com.thehouse.app.domain.error.DomainError.Network,
+                ))
+            }
             updateState {
                 it.copy(
                     universities = result.toCatalogState(),

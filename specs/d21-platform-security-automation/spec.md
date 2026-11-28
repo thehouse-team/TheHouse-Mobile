@@ -1,4 +1,4 @@
-﻿# D21 — Platform, Security and Automation
+# D21 — Platform, Security and Automation
 
 | Campo | Valor |
 |---|---|
@@ -201,3 +201,18 @@ Autorización humana explícita dentro del MISMO PR #37, rama `feature/platform-
 | D21-C08 | Cierre OWASP/DevSecOps, trazabilidad y memoria | EVIDENCIADO |
 
 **Estado:** D21-OFFLINE-TECHNICAL-COMPLETION-CODE-READY + D21-BUILDING-GEOLOCATION-CODE-READY. RUNTIME_PENDING (sin dispositivo). SIN MERGE.
+
+---
+
+## ADENDA HOTFIX — Estabilidad y conectividad (2026-11-28)
+
+Autorización humana sobre el MISMO PR #37, rama y commit base `4dc4e6e`, sin merge, sin cambios visuales.
+
+| ID | Requisito | Estado |
+|---|---|---|
+| D21-S01 | Contener IOException de red en launch de Main.immediate sin ocultar CancellationException | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-S02 | Login/register: SocketTimeoutException y UnknownHostException tipados a Result sin borrar sesión válida | IMPLEMENTADO / LOCAL_TEST_PASS |
+| D21-S03 | Catálogo, reintento de devices y navegación offline sin crash | IMPLEMENTADO / EMULATOR_PASS (parcial) |
+| D21-S04 | DNS del emulador diagnosticado como fallo de entorno; sin IP/DNS/TLS/timeoutmodificados | EVIDENCIADO |
+
+**Estado:** D21-NETWORK-STABILITY-HOTFIX-CODE-READY. CRASH_REPRODUCED: PARCIAL (stack real recuperado; offline reproducible, read-timeout no reproducible por DNS roto). SIN MERGE.

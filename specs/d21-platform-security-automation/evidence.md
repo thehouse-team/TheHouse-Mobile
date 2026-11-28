@@ -304,3 +304,14 @@ base `d11c3f18fe28ade4510a95bdb3bcc2cbbab8c6f2`. Congelaci�n visual total; sin m
 ### Pendiente
 - Sin dispositivo: GPS físico, UI de la nueva sección y `connectedDebugAndroidTest` → PENDING.
 - Push real → EXTERNAL_BLOCKER. Merge → NO AUTORIZADO.
+
+---
+
+## ADENDA HOTFIX RED — 2026-11-28
+
+- Crash buffer recuperado: SocketTimeoutException + StandaloneCoroutine{Cancelling}/Dispatchers.Main.immediate, PID 3067 (17:28). Incidentes posteriores sin stack completo; causalidad idéntica NO asumida.
+- Causa: sin CoroutineExceptionHandler + llamada de red de login/register fuera del try/catch. SafeHttpLoggingInterceptor/BearerTokenInterceptor son eslabanes del stack, no la causa.
+- Fix: SafeCoroutineLauncher en BaseViewModel y applicationScope; safeAuthCall tipa timeout/IOException sin borrar sesión válida; contención en Home/Explore/DeviceSyncCoordinator.
+- DNS emulador: 10.0.2.3 en NetworkAgent pero resolución fallida también para dominios Google → entorno, no Mobile. Sin IP/DNS/TLS/timeouts modificados. WiFi restaurado.
+- Gates: 716/0/0, lint, assemble, compile/assemble androidTest, jacoco, diff-check — SUCCESS.
+- Emulador: app viva con DNS roto, reintento manual, navegación offline y arranque sin WiFi; sin crash. connectedDebugAndroidTest sigue PENDING.

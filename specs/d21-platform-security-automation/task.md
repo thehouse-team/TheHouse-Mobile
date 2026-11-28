@@ -26,3 +26,4 @@ Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2
 - [x] D21-T21 — Fotos: DTO de respuesta real, moderación 422/503 y pruebas de transporte
 - [x] D21-T22 — Permiso de notificaciones persistente y solicitud contextual única
 - [x] D21-T23 — JaCoCo, matrices, trazabilidad, memoria, gates y cierre sin merge
+- [x] D21-T24 — Hotfix de estabilidad: handler de coroutines, safeAuthCall y regresiones offline (sin merge)

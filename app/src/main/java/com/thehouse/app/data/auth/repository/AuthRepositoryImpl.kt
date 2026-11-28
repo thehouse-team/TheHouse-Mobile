@@ -61,21 +61,48 @@ class AuthRepositoryImpl(
         password: String,
         acceptedTerms: Boolean,
         acceptedPrivacy: Boolean,
-    ): Result<UserSession?> = handleAuthResponse(
+    ): Result<UserSession?> = safeAuthCall {
+        // Contrato backend: SOLO email y password. `nombre` y
+        // consentimientos son solo UI y NO se envían.
         api.register(
-            // Contrato backend: SOLO email y password. `nombre` y
-            // consentimientos son solo UI y NO se envían.
             RegisterRequestDto(
                 email = email.trim(),
                 password = password,
             ),
-        ),
+        )
+    }.fold(
+        onSuccess = { handleAuthResponse(it) },
+        onFailure = { Result.failure(it) },
     )
 
     override suspend fun login(email: String, password: String): Result<UserSession?> =
-        handleAuthResponse(
-            api.login(LoginRequestDto(email = email.trim(), password = password)),
-        )
+        safeAuthCall { api.login(LoginRequestDto(email = email.trim(), password = password)) }
+            .fold(
+                onSuccess = { handleAuthResponse(it) },
+                onFailure = { Result.failure(it) },
+            )
+
+    /**
+     * D21 hotfix: la llamada de red se ejecutaba ANTES de `handleAuthResponse`,
+     * por fuera de sus try/catch. Un SocketTimeoutException/UnknownHostException
+     * escapaba como excepción no tipada hasta un viewModelScope.launch y
+     * terminaba en FATAL EXCEPTION: main. Aquí se tipa SIEMPRE a Result y, a
+     * diferencia de un error 401, NO se limpia una sesión válida por pérdida
+     * temporal de red.
+     */
+    private suspend fun safeAuthCall(
+        block: suspend () -> Response<AuthResponseDto>,
+    ): Result<Response<AuthResponseDto>> = try {
+        Result.success(block())
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+    } catch (timeout: SocketTimeoutException) {
+        Result.failure(DomainException(DomainError.Timeout))
+    } catch (network: IOException) {
+        Result.failure(DomainException(DomainError.Network))
+    } catch (serialization: kotlinx.serialization.SerializationException) {
+        Result.failure(DomainException(DomainError.Unknown))
+    }
 
     /**
      * Limpieza local sin red (NV-15): access token, refresh token y estado.

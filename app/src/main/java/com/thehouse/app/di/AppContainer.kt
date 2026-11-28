@@ -706,7 +706,10 @@ class AppContainer(context: Context) {
     // FCM-TOKEN-BACKEND-BLOCKED: el token se sincroniza con el Backend.
 
     val applicationScope: CoroutineScope by lazy {
-        CoroutineScope(SupervisorJob() + dispatchers.io)
+        CoroutineScope(
+            SupervisorJob() + dispatchers.io +
+                com.thehouse.app.presentation.common.SafeCoroutineLauncher.handler,
+        )
     }
 
     /** Señal FCM para que Home/Notification Center refresquen estado real del Backend. */
