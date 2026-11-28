@@ -365,3 +365,22 @@ base `d11c3f18fe28ade4510a95bdb3bcc2cbbab8c6f2`. Congelaci�n visual total; sin m
 - JaCoCo: 33.79 % líneas (7476/22123), 31.77 % ramas (2865/9017), sin exclusiones.
 - Runtime emulador `emulator-5554` (sesión autenticada preexistente, SIN mutaciones productivas): APK instalado, arranque sin crash; Home → «Publicar mi renta» → «Mis alojamientos» → «Crear edificio» → formulario. Pulsar Submit con campos vacíos mostró TODOS los errores (incluidos Número y Colonia), scroll al inicio del formulario y **ningún POST** a `/landlord/buildings`. Log DEBUG real: `BuildingFormFlow: validation_failed fields=name,street,number,neighborhood,city,state,postalCode,lat,lng` y `university_preselected source=catalog`. Sin datos personales en logs.
 - Nota de prueba: `BuildingFormViewModelTest.submit sends numeric lat and lng...` se reforzó (no se debilitó) añadiendo Número y Colonia para representar un formulario válido según el contrato Backend; la aserción de conversión numérica original se mantiene intacta.
+
+---
+
+## ADENDA — Mejora del flujo de publicación del arrendador (2026-11-28)
+
+Base `d821049`, MISMO PR #37 (verificado OPEN / MERGEABLE / CI SUCCESS antes de tocar código).
+Sin merge, sin rama/PR nuevo, sin Backend/GenAI/ML/ONNX/infra, sin mutaciones productivas.
+
+- `BUILDING_CREATION_RUNTIME=PASS` registrado por evidencia humana: `POST /api/v1/landlord/buildings` → 201, requestId `248c7019430449468e4570afd09644f6`, edificio UD3 `6b0a6e113f6d5ad952b41873`; detalle/rooms/verification/documents/publication → 200. No se repitió ni se modificó UD3.
+- Contratos Backend auditados solo lectura e informe: `docs/sdd/reports/D21_PUBLICATION_FLOW_IMPROVEMENT_AUDIT.md`.
+- Guía de publicación: `PublicationGuide.kt` deriva pasos/progreso del endpoint real; `PublicationGuideCard` y `PublicationCard` muestran completos, pendientes, estado, motivo de bloqueo y acción. Sin requisitos ni porcentajes inventados; sin simulación de aprobación administrativa.
+- Reordenación exclusiva de `BuildingDetailScreen`: guía → resumen (con advertencia de distancia) → foto → habitaciones → documentos → verificación → enviar a revisión → acciones existentes. Todas las funciones previas preservadas (edición, habitaciones, documentos, verificación, eliminación, solicitudes).
+- Coordenadas: `LandlordFlowPolicies.COORDINATE_HINT` explica 14..33 y -118.5..-86 en el formulario. Distancia UTTT 1957.9 km: calculada por Backend (Haversine) a partir de coordenadas y universidad seleccionada; se muestra advertencia sin bloqueo geográfico nuevo. GPS y `universities/search` intactos.
+- Documentos: `DocumentUploadPolicy` valida 10 MB, firma de bytes PDF/JPEG/PNG y mensajes específicos antes del envío (413/415 evitables); se muestran formatos y tamaño máximo antes de seleccionar. Sin conversión automática de PDF, sin contenido de identificación en logs, caché privado, fixtures sintéticos.
+- `GET /landlord/stats/rooms` 400: el Backend valida `to` contra la fecha de Ciudad de México; el dashboard usaba `LocalDate.now()` del dispositivo (`to` podía ser futuro). Fix con `America/Mexico_City` y rango de 30 días; sin estadísticas ficticias.
+- Refresco sin reiniciar: `BuildingDetailViewModel` recalcula la guía tras publicar y recarga `publication` tras pausar/reanudar cuartos y subir foto/documentos.
+- Gates: `clean`, `compileDebugKotlin`, `testDebugUnitTest`, `lintDebug`, `assembleDebug`, `compileDebugAndroidTestKotlin`, `assembleDebugAndroidTest`, `jacocoDebugTestReport`, `git diff --check` — BUILD SUCCESSFUL / exit 0.
+- Conteo real: **761 tests, 0 failures, 0 errors** (738 baseline + 23 nuevos: 18 D21PublicationFlowTest + 5 LandlordRoomStatsHttpTest).
+- JaCoCo: 34.89 % líneas (7771/22272), 32.46 % ramas (2954/9101), sin exclusiones.

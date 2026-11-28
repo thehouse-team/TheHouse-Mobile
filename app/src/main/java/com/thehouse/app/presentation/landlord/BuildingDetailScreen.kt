@@ -36,6 +36,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.thehouse.app.data.multimedia.MediaInspector
+import com.thehouse.app.domain.landlord.DocumentUploadPolicy
+import com.thehouse.app.domain.landlord.LandlordFlowPolicies
+import com.thehouse.app.domain.landlord.PublicationGuide
+import com.thehouse.app.domain.landlord.publicationStepLabel
 import com.thehouse.app.domain.model.Building
 import com.thehouse.app.domain.model.Room
 import com.thehouse.app.domain.model.RoomStatus
@@ -98,12 +102,14 @@ fun BuildingDetailDestination(
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val prepared = prepareDocument(context, uri)
-            if (prepared == null) {
-                localMessage = "Selecciona un PDF, JPEG o PNG de hasta 10 MB."
-            } else {
-                localMessage = null
-                viewModel.onEvent(BuildingDetailEvent.UploadIne(prepared.first, prepared.second))
+            when (val prepared = prepareDocument(context, uri)) {
+                is DocumentPreparation.Success -> {
+                    localMessage = null
+                    viewModel.onEvent(
+                        BuildingDetailEvent.UploadIne(prepared.file, prepared.mimeType),
+                    )
+                }
+                is DocumentPreparation.Rejected -> localMessage = prepared.message
             }
         }
     }
@@ -113,12 +119,14 @@ fun BuildingDetailDestination(
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val prepared = prepareDocument(context, uri)
-            if (prepared == null) {
-                localMessage = "Selecciona un PDF, JPEG o PNG de hasta 10 MB."
-            } else {
-                localMessage = null
-                viewModel.onEvent(BuildingDetailEvent.UploadPropertyProof(prepared.first, prepared.second))
+            when (val prepared = prepareDocument(context, uri)) {
+                is DocumentPreparation.Success -> {
+                    localMessage = null
+                    viewModel.onEvent(
+                        BuildingDetailEvent.UploadPropertyProof(prepared.file, prepared.mimeType),
+                    )
+                }
+                is DocumentPreparation.Rejected -> localMessage = prepared.message
             }
         }
     }
@@ -232,48 +240,10 @@ fun BuildingDetailScreen(
                     contentPadding = PaddingValues(bottom = Spacing.lg),
                 ) {
                     item {
-                        BuildingSummaryCard(building = building)
-                    }
-                    item {
-                        BuildingPhotoCard(
-                            building = building,
-                            isBusy = state.isUploadingPhoto,
-                            onPick = onPickBuildingPhoto,
-                            onDelete = onDeleteBuildingPhoto,
+                        PublicationGuideCard(
+                            guide = state.guide,
+                            statusLabel = LandlordErrorMessages.statusLabel(building.status.api),
                         )
-                    }
-                    item {
-                        DocumentsCard(
-                            documents = state.documents,
-                            isBusy = state.isUploadingDocument,
-                            onPickIne = onPickIne,
-                            onPickPropertyProof = onPickPropertyProof,
-                        )
-                    }
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                            TheHouseSecondaryButton(
-                                text = "Editar edificio",
-                                onClick = onEditBuilding,
-                            )
-                            TheHouseSecondaryButton(
-                                text = "Agregar cuartos",
-                                onClick = onAddRooms,
-                            )
-                        }
-                    }
-                    item {
-                        PublicationCard(
-                            building = building,
-                            publication = state.publication,
-                            isPublishing = state.isPublishing,
-                            onPublish = onPublish,
-                        )
-                    }
-                    state.verification?.let { verification ->
-                        item {
-                            VerificationCard(verification = verification)
-                        }
                     }
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -292,6 +262,31 @@ fun BuildingDetailScreen(
                                     )
                                 }
                             }
+                        }
+                    }
+                    item {
+                        BuildingSummaryCard(building = building)
+                    }
+                    // 2. Fotografía del edificio.
+                    item {
+                        BuildingPhotoCard(
+                            building = building,
+                            isBusy = state.isUploadingPhoto,
+                            onPick = onPickBuildingPhoto,
+                            onDelete = onDeleteBuildingPhoto,
+                        )
+                    }
+                    // 3. Agregar y configurar habitaciones (acciones + listado real).
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            TheHouseSecondaryButton(
+                                text = "Editar edificio",
+                                onClick = onEditBuilding,
+                            )
+                            TheHouseSecondaryButton(
+                                text = "Agregar cuartos",
+                                onClick = onAddRooms,
+                            )
                         }
                     }
                     item {
@@ -321,6 +316,30 @@ fun BuildingDetailScreen(
                                 onResume = { onResumeRoom(room.id) },
                             )
                         }
+                    }
+                    // 4. Documentación de verificación.
+                    item {
+                        DocumentsCard(
+                            documents = state.documents,
+                            isBusy = state.isUploadingDocument,
+                            onPickIne = onPickIne,
+                            onPickPropertyProof = onPickPropertyProof,
+                        )
+                    }
+                    state.verification?.let { verification ->
+                        item {
+                            VerificationCard(verification = verification)
+                        }
+                    }
+                    // 5. Enviar a revisión (estado y motivo reales del Backend).
+                    item {
+                        PublicationCard(
+                            building = building,
+                            publication = state.publication,
+                            guide = state.guide,
+                            isPublishing = state.isPublishing,
+                            onPublish = onPublish,
+                        )
                     }
                     item {
                         TheHouseSecondaryButton(
@@ -375,29 +394,56 @@ private fun BuildingSummaryCard(
                 value = "${building.nearestUniversity.name} · " +
                     "${building.distanceToUniversityKm} km",
             )
+            LandlordFlowPolicies.distanceWarning(building.distanceToUniversityKm)?.let { warning ->
+                InlineMessage(text = warning, tone = StatusTone.Warning)
+            }
         }
     }
 }
 
+/**
+ * Tarjeta guía: muestra el progreso calculado sobre los requisitos REALES del endpoint
+ * `publication`, separando completos y pendientes. No inventa porcentajes: si el Backend
+ * no devuelve pasos, muestra «Sin porcentaje disponible».
+ */
 @Composable
-private fun PublicationCard(
-    building: Building,
-    publication: com.thehouse.app.domain.model.PublicationStatus?,
-    isPublishing: Boolean,
-    onPublish: () -> Unit,
+private fun PublicationGuideCard(
+    guide: PublicationGuide,
+    statusLabel: String,
+    modifier: Modifier = Modifier,
 ) {
-    TheHouseCard {
+    TheHouseCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(
-                text = "Publicación",
+                text = "Cómo publicar tu alojamiento",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            publication?.steps?.forEach { step ->
+            Text(
+                text = "Sigue estos pasos en orden. El progreso se actualiza solo cuando el Backend confirma cada cambio.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            InfoRow(label = "Estado de publicación", value = statusLabel)
+            InfoRow(
+                label = "Progreso real",
+                value = if (guide.totalCount == 0 || guide.progressPercent == null) {
+                    "Sin porcentaje disponible"
+                } else {
+                    "${guide.completedCount} de ${guide.totalCount} requisitos" +
+                        " · ${guide.progressPercent}%"
+                },
+            )
+            guide.steps.forEachIndexed { index, step ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Text(
+                        text = "${index + 1}.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Text(
                         text = if (step.done) "✓" else "○",
                         style = MaterialTheme.typography.bodyMedium,
@@ -408,12 +454,38 @@ private fun PublicationCard(
                         },
                     )
                     Text(
-                        text = stepLabel(step.id),
+                        text = publicationStepLabel(step.id),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    StatusChip(
+                        label = if (step.done) "Completo" else "Pendiente",
+                        tone = if (step.done) StatusTone.Success else StatusTone.Warning,
+                    )
                 }
             }
+            guide.blockReason?.let { reason ->
+                InlineMessage(text = reason, tone = StatusTone.Warning)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PublicationCard(
+    building: Building,
+    publication: com.thehouse.app.domain.model.PublicationStatus?,
+    guide: PublicationGuide,
+    isPublishing: Boolean,
+    onPublish: () -> Unit,
+) {
+    TheHouseCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                text = "Enviar a revisión",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
             when (building.status) {
                 com.thehouse.app.domain.model.BuildingStatus.IN_REVIEW ->
                     InlineMessage(
@@ -422,13 +494,17 @@ private fun PublicationCard(
                     )
                 com.thehouse.app.domain.model.BuildingStatus.VERIFIED ->
                     InlineMessage(text = "Verificado", tone = StatusTone.Success)
-                com.thehouse.app.domain.model.BuildingStatus.DRAFT ->
+                com.thehouse.app.domain.model.BuildingStatus.DRAFT -> {
+                    if (!guide.canPublish) {
+                        guide.blockReason?.let { reason -> InlineMessage(text = reason) }
+                    }
                     TheHousePrimaryButton(
                         text = if (isPublishing) "Enviando…" else "Enviar a revisión",
                         onClick = onPublish,
                         enabled = !isPublishing && publication?.canPublish == true,
                         loading = isPublishing,
                     )
+                }
                 com.thehouse.app.domain.model.BuildingStatus.REJECTED ->
                     InlineMessage(text = "Tu publicación fue rechazada.")
                 com.thehouse.app.domain.model.BuildingStatus.SUSPENDED ->
@@ -477,16 +553,6 @@ private fun VerificationCard(
             }
         }
     }
-}
-
-private fun stepLabel(id: String): String = when (id) {
-    "building_data" -> "Datos del edificio"
-    "location" -> "Ubicación"
-    "services" -> "Servicios"
-    "room_ready" -> "Al menos un cuarto listo"
-    "building_photo" -> "Foto del edificio"
-    "documents" -> "Documentos"
-    else -> id
 }
 
 @Composable
@@ -639,6 +705,13 @@ private fun DocumentsCard(
                 onPick = onPickPropertyProof,
             )
             Text(
+                text = "Formatos aceptados: ${DocumentUploadPolicy.DISPLAY_FORMATS}. " +
+                    "Tamaño máximo: ${DocumentUploadPolicy.DISPLAY_MAX_SIZE} por archivo. " +
+                    "El formato se valida por su contenido real, no por el nombre del archivo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
                 text = "Solo se usan metadatos. No se muestra ni descarga el contenido del documento.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -698,9 +771,7 @@ private fun roomTone(status: RoomStatus): StatusTone = when (status) {
 }
 
 private const val MAX_BUILDING_PHOTO_BYTES = 5L * 1024L * 1024L
-private const val MAX_DOCUMENT_BYTES = 10L * 1024L * 1024L
 private val ALLOWED_IMAGE_MIME = setOf("image/jpeg", "image/png", "image/webp")
-private val ALLOWED_DOCUMENT_MIME = setOf("application/pdf", "image/jpeg", "image/png")
 
 private suspend fun prepareBuildingPhoto(context: Context, uri: Uri): Pair<File, String>? =
     withContext(Dispatchers.IO) {
@@ -717,42 +788,54 @@ private suspend fun prepareBuildingPhoto(context: Context, uri: Uri): Pair<File,
         }
     }
 
-private suspend fun prepareDocument(context: Context, uri: Uri): Pair<File, String>? =
+/** Resultado de la validación previa de un documento (antes de cualquier petición HTTP). */
+private sealed interface DocumentPreparation {
+    data class Success(val file: File, val mimeType: String) : DocumentPreparation
+    data class Rejected(val message: String) : DocumentPreparation
+}
+
+/**
+ * Copia el documento al caché privado de la app y valida tamaño yFIRMA DE BYTES real,
+ * igual que el Backend. Así se evitan 413/415 evitables y no se expone contenido de la
+ * identificación: el archivo se envía directamente al endpoint y se borra tras la subida.
+ */
+private suspend fun prepareDocument(context: Context, uri: Uri): DocumentPreparation =
     withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
-        val mime = resolver.getType(uri)?.lowercase()?.trim()
-        if (mime == null || mime !in ALLOWED_DOCUMENT_MIME) return@withContext null
-        val size = resolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
-            val len = afd.length
-            if (len >= 0) len else null
-        } ?: resolver.openInputStream(uri)?.use { input ->
-            var total = 0L
-            val buf = ByteArray(DEFAULT_BUFFER_SIZE)
-            while (true) {
-                val read = input.read(buf)
-                if (read <= 0) break
-                total += read
-                if (total > MAX_DOCUMENT_BYTES) return@use total
-            }
-            total
-        } ?: return@withContext null
-        if (size <= 0L || size > MAX_DOCUMENT_BYTES) return@withContext null
-        val outDir = File(context.cacheDir, "prepared_docs").apply { mkdirs() }
-        val ext = when (mime) {
-            "application/pdf" -> "pdf"
-            "image/png" -> "png"
-            else -> "jpg"
+        val declaredSize = resolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+            afd.length.takeIf { it >= 0 }
         }
-        val outFile = File(outDir, "doc_${System.currentTimeMillis()}.$ext")
+        if (declaredSize != null && declaredSize > DocumentUploadPolicy.MAX_DOCUMENT_BYTES) {
+            return@withContext DocumentPreparation.Rejected(
+                DocumentUploadPolicy.message(DocumentUploadPolicy.Validation.TooLarge),
+            )
+        }
+        val bytes = runCatching {
+            resolver.openInputStream(uri)?.use { it.readBytes() }
+        }.getOrNull() ?: return@withContext DocumentPreparation.Rejected(
+            DocumentUploadPolicy.message(DocumentUploadPolicy.Validation.EmptyOrUnreadable),
+        )
+        val validation = DocumentUploadPolicy.validate(bytes, declaredSize ?: bytes.size.toLong())
+        if (validation != DocumentUploadPolicy.Validation.Valid) {
+            return@withContext DocumentPreparation.Rejected(DocumentUploadPolicy.message(validation))
+        }
+        // El MIME se deriva de los bytes reales, nunca del ContentType declarado.
+        val mime = DocumentUploadPolicy.detectMime(bytes)!!
+        val outDir = File(context.cacheDir, "prepared_docs").apply { mkdirs() }
+        val outFile = File(
+            outDir,
+            "doc_${System.currentTimeMillis()}.${DocumentUploadPolicy.extensionFor(mime)}",
+        )
         val copied = runCatching {
-            resolver.openInputStream(uri)?.use { input ->
-                outFile.outputStream().use { output -> input.copyTo(output) }
-            } ?: -1L
+            outFile.outputStream().use { it.write(bytes) }
+            outFile.length()
         }.getOrDefault(-1L)
         if (copied <= 0L) {
             outFile.delete()
-            null
+            DocumentPreparation.Rejected(
+                DocumentUploadPolicy.message(DocumentUploadPolicy.Validation.EmptyOrUnreadable),
+            )
         } else {
-            outFile to mime
+            DocumentPreparation.Success(outFile, mime)
         }
     }

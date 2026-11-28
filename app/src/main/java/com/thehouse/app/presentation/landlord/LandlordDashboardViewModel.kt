@@ -2,6 +2,7 @@ package com.thehouse.app.presentation.landlord
 
 import com.thehouse.app.domain.error.LandlordErrorCode
 import com.thehouse.app.domain.error.LandlordException
+import com.thehouse.app.domain.landlord.LandlordFlowPolicies
 import com.thehouse.app.domain.model.Building
 import com.thehouse.app.domain.model.DashboardSummary
 import com.thehouse.app.domain.model.LandlordRoomStats
@@ -9,8 +10,6 @@ import com.thehouse.app.domain.model.RentalMode
 import com.thehouse.app.domain.usecase.GetLandlordBuildingsUseCase
 import com.thehouse.app.domain.usecase.GetLandlordProfileUseCase
 import com.thehouse.app.domain.usecase.GetLandlordStatsRoomsUseCase
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import com.thehouse.app.presentation.common.BaseViewModel
@@ -101,9 +100,9 @@ class LandlordDashboardViewModel(
     }
 
     private suspend fun loadRoomStats(): Result<List<LandlordRoomStats>> {
-        val today = LocalDate.now()
-        val from = today.minusDays(30).format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val to = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        // Backend valida "to" contra la fecha de Ciudad de México, no contra la zona del
+        // dispositivo. Usar LocalDate.now() podía enviar un "to" futuro y provocar 400.
+        val (from, to) = LandlordFlowPolicies.statsRange()
         return getLandlordStatsRooms(from = from, to = to).map { it.items }
     }
 

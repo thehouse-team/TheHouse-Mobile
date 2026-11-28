@@ -38,3 +38,9 @@ Todas las tasks están autorizadas por instrucción humana explícita (FASE C, 2
 - [x] D21-T33 — Preselección/selección de universidad sin borrado indebido
 - [x] D21-T34 — 409 de solicitudes: REQUEST_IN_PROGRESS + recuperación de conversationId real
 - [x] D21-T35 — Pruebas (12 nuevas), gates y evidencia de la adenda (sin merge)
+- [x] D21-T36 — Evidencia productiva BUILDING_CREATION_RUNTIME=PASS (UD3, requestId 248c70…)
+- [x] D21-T37 — Experiencia guiada de publicación en `BuildingDetailScreen` desde requisitos reales del endpoint `publication`
+- [x] D21-T38 — Explicación de rangos contractuales de coordenadas y advertencia de distancia excesiva UTTT (1957.9 km)
+- [x] D21-T39 — Contrato real de documentos: validación previa, formatos/tamaño, 413/415, privacidad, fixtures sintéticos
+- [x] D21-T40 — Diagnóstico y corrección de `GET /landlord/stats/rooms` 400 + pruebas MockWebServer
+- [x] D21-T41 — Gates completos, documentación D21, memoria, commit/push a PR #37, CI remoto (sin merge)

@@ -210,6 +210,11 @@ fun BuildingFormScreen(
                     }
 
                     FormSection(title = "Ubicación") {
+                        Text(
+                            text = com.thehouse.app.domain.landlord.LandlordFlowPolicies.COORDINATE_HINT,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                             TheHouseTextField(
                                 value = state.lat,
